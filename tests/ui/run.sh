@@ -6,7 +6,7 @@ playfin=$1 imgdiff=$2 script=$3 refs=$4 out=$5
 shift 5
 rm -rf "$out"
 mkdir -p "$out"
-SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
+LC_ALL=fr_FR.UTF-8 SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
     "$playfin" --hidden "$@" --data-dir "$out/data" --test-script "$script" --test-output "$out"
 shopt -s nullglob
 references=("$refs"/*.png)

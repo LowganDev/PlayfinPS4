@@ -16,7 +16,7 @@ for _ in $(seq 1 50); do
     [ -s "$out/url" ] && break
     sleep 0.1
 done
-SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
+LC_ALL=fr_FR.UTF-8 SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
     "$playfin" --hidden --no-discovery --screen shell --data-dir "$out/data" --test-script "$script" --test-output "$out" \
     $appOptions
 if grep -q "tok-demo" "$out/data/playfin.log"; then

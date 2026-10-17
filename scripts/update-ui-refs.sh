@@ -29,7 +29,7 @@ for script in tests/ui/*.script; do
             sleep 0.1
         done
     fi
-    SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
+    LC_ALL=fr_FR.UTF-8 SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
         build/linux-debug/playfin --hidden --no-discovery --screen "$screen" --data-dir "$out/data" \
         --test-script "$script" --test-output "$out" $appOptions
     if [ -n "$server" ]; then
