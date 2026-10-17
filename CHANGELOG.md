@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Home screen icon: the halo above "Playfin." in Jellyfin's purple-to-blue gradient.
+
 ## 1.0.0 (2026-10-17)
 
 - Servers: several servers and several users per server, found on the network or added by address; sign-in with

@@ -3,8 +3,9 @@
 
     python3 scripts/make-ps4-art.py
 
-icon0.png (512x512): "Playfin." under a blue halo. pic1.png (1920x1080): the app's background with the halo and the
-logo, shown by the PS4 behind the selected app. docs/images/logo-on-dark.png and logo-on-light.png: the "Playfin."
+icon0.png (512x512): "Playfin." under a halo in Jellyfin's purple-to-blue gradient. pic1.png (1920x1080): the same
+halo and logo, shown by the PS4 behind the selected app. Jellyfin's branding guide forbids its logo inside another
+logo without permission and allows its gradient on a shape of our own: only the gradient is used. docs/images/logo-on-dark.png and logo-on-light.png: the "Playfin."
 wordmark on a transparent background for the README (GitHub's dark and light themes). docs/images/download.png: the
 README's download button. Colours from the theme (src/ui/theme.cpp).
 """
@@ -18,11 +19,13 @@ BACKGROUND = (0x0E, 0x0E, 0x11)
 ACCENT = (0x00, 0x70, 0xD1)
 TEXT = (0xF2, 0xF2, 0xF5)
 DOT = (0x2F, 0x8C, 0xFF)  # lighter than the accent: legible at icon size
+GRADIENT = ((0xAA, 0x5C, 0xC3), (0x00, 0xA4, 0xDC))  # Jellyfin's, left to right, for the home screen art
 FONT = os.path.join(ROOT, "resources", "fonts", "Sora-Bold.ttf")
 
 
-def halo(width, height, centre_y, radius_x, radius_y, strength):
-    """Background with an elliptical light of the accent (strength at the centre, gone at 70 % of the radii)."""
+def halo(width, height, centre_y, radius_x, radius_y, strength, colours=(ACCENT, ACCENT)):
+    """Background with an elliptical light (strength at the centre, gone at 70 % of the radii) whose colour goes from
+    colours[0] on the left edge to colours[1] on the right."""
     image = Image.new("RGB", (width, height))
     pixels = image.load()
     cx, cy = width / 2, centre_y * height
@@ -32,18 +35,20 @@ def halo(width, height, centre_y, radius_x, radius_y, strength):
             dy = (y + 0.5 - cy) / (radius_y * height)
             d = math.sqrt(dx * dx + dy * dy)
             light = 0.0 if d >= 0.7 else strength * (1 - d / 0.7)
-            pixels[x, y] = tuple(round(b + (a - b) * light) for a, b in zip(ACCENT, BACKGROUND))
+            t = (x + 0.5) / width
+            colour = tuple(l + (r - l) * t for l, r in zip(*colours))
+            pixels[x, y] = tuple(round(b + (a - b) * light) for a, b in zip(colour, BACKGROUND))
     return image
 
 
-def logo(image, size, centre_y):
+def logo(image, size, centre_y, dot=DOT):
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(FONT, size)
     name_width = draw.textlength("Playfin", font=font)
     dot_width = draw.textlength(".", font=font)
     x = (image.width - name_width - dot_width) / 2
     draw.text((x, centre_y), "Playfin", font=font, fill=TEXT, anchor="lm")
-    draw.text((x + name_width, centre_y), ".", font=font, fill=DOT, anchor="lm")
+    draw.text((x + name_width, centre_y), ".", font=font, fill=dot, anchor="lm")
 
 
 def wordmark(text_colour, dot_colour, size=160, margin=16):
@@ -85,11 +90,11 @@ def download_button(scale=2):
 
 def main():
     out = os.path.join(ROOT, "resources", "ps4", "sce_sys")
-    icon = halo(512, 512, 0.0, 0.9, 0.9, 0.6)
-    logo(icon, 104, 270)
+    icon = halo(512, 512, 0.0, 0.9, 0.9, 0.6, GRADIENT)
+    logo(icon, 104, 270, GRADIENT[1])
     icon.save(os.path.join(out, "icon0.png"))
-    picture = halo(1920, 1080, -0.1, 0.7, 0.55, 0.3)
-    logo(picture, 160, 330)
+    picture = halo(1920, 1080, -0.1, 0.7, 0.55, 0.3, GRADIENT)
+    logo(picture, 160, 330, GRADIENT[1])
     picture.save(os.path.join(out, "pic1.png"))
     images = os.path.join(ROOT, "docs", "images")
     os.makedirs(images, exist_ok=True)
