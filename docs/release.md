@@ -32,10 +32,10 @@ The checklist for a release; release tags are the version number without "v" (`1
 1. Commit "build: Playfin x.y.z", tag `x.y.z`, push the tag.
 2. GitHub release "Playfin x.y.z" on the tag, with:
    - `IV0001-PLFN00000_00-PLFN000000100000.pkg`;
-   - the dependencies' source: an archive of the upstream tarballs named in `scripts/ps4/*/PKGBUILD` (and the
-     pacbrew image's libraries: FriBidi, zlib, libsamplerate) with the patches, and the OpenOrbis toolchain's
-     source at the version in the pacbrew image (GPL-3.0; its `crt1.o`, `crti.o` and `crtn.o` are linked into
-     `eboot.bin`), so that the GPL and LGPL components' corresponding source is offered with the binary;
+   - the corresponding source, `dist/playfin-x.y.z-sources.tar`, made by `scripts/ps4/source-archive.sh` (run at
+     the release's commit): Playfin, every recipe of `scripts/ps4` with its patches and upstream sources, and the
+     build image's FriBidi, zlib, libsamplerate and OpenOrbis toolchain (GPL-3.0: crt and `link.x`) with their
+     PacBrew recipes, all checked against pinned checksums;
    - the changelog section as notes.
 3. For the first public release: make the repository public, then switch CI on (add `push` and `pull_request` to
    `on:` in `.github/workflows/ci.yml`; it runs on `workflow_dispatch` only until then).
