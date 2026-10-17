@@ -1,0 +1,13 @@
+# PS4 dependencies installed before building Playfin (name-version-release of the pacbrew packages).
+# They are built from the recipes of this folder (scripts/ps4/build-deps.sh) and
+# published as the "deps" release of the repository. Bump a line here when its recipe changes.
+musl-1.5-3
+mbedtls-3.6.7-1
+sdl2-2.0.18-20
+libcurl-8.22.0-2
+dav1d-1.5.4-1
+freetype-2.13.3-1
+harfbuzz-11.2.1-1
+libass-0.17.3-2
+ffmpeg-7.1.5-6
+libmpv-0.36.0-4

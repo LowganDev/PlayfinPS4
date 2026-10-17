@@ -1,0 +1,21 @@
+# Jellyfin test server with Live TV channels (see README). Started by up.sh, which sets DATA, UID and GID.
+name: playfin-testserver
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.8
+    user: "${UID}:${GID}"
+    ports:
+      - "8097:8096"
+    volumes:
+      - ${DATA}/config:/config
+      - ${DATA}/cache:/cache
+      - ${DATA}/media:/media:ro
+      - ${DATA}/recordings:/recordings
+    restart: "no"
+  # the live channels' HLS streams, reached by Jellyfin as http://streams/chN/index.m3u8 (no port on the PC)
+  streams:
+    image: nginx:1.27-alpine
+    volumes:
+      - ${DATA}/hls:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: "no"

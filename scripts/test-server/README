@@ -1,0 +1,7 @@
+Jellyfin test server with music and Live TV (docs/testing.md, "Test server").
+
+    scripts/test-server/up.sh     # media (first time), 3 live channels, Jellyfin on port 8097, set-up
+    scripts/test-server/down.sh   # stops everything; data kept in ~/.local/share/playfin-testserver
+
+Sign in as "playfin" / "playfin-test" (local test server only). Remove ~/.local/share/playfin-testserver to start
+from scratch.

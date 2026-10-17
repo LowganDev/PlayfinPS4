@@ -1,0 +1,65 @@
+# Maintainer: cpasjuste <cpasjuste@gmail.com>
+
+pkgname=ps4-openorbis-ffmpeg
+pkgver=7.1.5
+pkgrel=6
+pkgdesc='ffmpeg port'
+arch=('any')
+url='https://ffmpeg.org/'
+license=('LGPL' 'GPL')
+options=(!strip !debug staticlibs)
+makedepends=('ps4-openorbis-pkg-config' 'ps4-openorbis-vars' 'ps4-openorbis-mbedtls')
+depends=('ps4-openorbis-zlib' 'ps4-openorbis-libfribidi' 'ps4-openorbis-freetype')
+source=("https://ffmpeg.org/releases/ffmpeg-$pkgver.tar.xz")
+sha256sums=('de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f')
+groups=('ps4-openorbis-portlibs')
+
+build() {
+  cd ffmpeg-$pkgver
+
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+
+  # Playfin plays what a Jellyfin server sends: direct play of common containers or HLS transcodes
+  # (MPEG-TS / fMP4). Only those components are built, the full list costs ~10 MB in the PS4 binary.
+  # No bzlib: the image's bzip2 1.0.6 has published flaws and only rare Matroska tracks need it.
+  local video="h264,hevc,mpeg1video,mpeg2video,mpeg4,msmpeg4v1,msmpeg4v2,msmpeg4v3,h263,vc1,wmv1,wmv2,wmv3,vp8,vp9,libdav1d,theora,mjpeg,png,bmp,gif,webp"
+  local audio="aac,aac_latm,ac3,eac3,dca,truehd,mlp,mp1,mp2,mp3,mp3float,flac,alac,opus,vorbis,wmav1,wmav2,wmapro,wmalossless,ape,wavpack,tta,mpc7,mpc8,dsd_lsbf,dsd_msbf,dsd_lsbf_planar,dsd_msbf_planar,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s24be,pcm_s32le,pcm_s32be,pcm_f32le,pcm_f32be,pcm_f64le,pcm_u8,pcm_alaw,pcm_mulaw,pcm_bluray,pcm_dvd"
+  local subtitle="ass,ssa,srt,subrip,webvtt,mov_text,hdmv_pgs_subtitle,dvdsub,dvbsub,text,microdvd,subviewer,subviewer1,sami"
+  local demuxers="matroska,mov,mpegts,mpegtsraw,mpegps,hls,avi,asf,flv,ogg,wav,w64,aiff,caf,flac,mp3,aac,ac3,eac3,dts,truehd,mlp,loas,ape,wv,tta,mpc,mpc8,dsf,h264,hevc,m4v,mpegvideo,vc1,ass,srt,webvtt,sup,vobsub,microdvd,subviewer,subviewer1,sami,image2,image_png_pipe,image_jpeg_pipe,concat,data"
+  local parsers="h264,hevc,mpegvideo,mpeg4video,h263,vc1,vp8,vp9,av1,aac,aac_latm,ac3,dca,mlp,mpegaudio,flac,opus,vorbis,dvbsub,dvdsub,png,mjpeg,bmp,gif,webp"
+  local protocols="file,http,https,tcp,tls,hls,crypto,data,httpproxy,subfile,concat,pipe,cache"
+
+  ./configure --prefix="${OPENORBIS}/usr" \
+    --enable-cross-compile --cross-prefix=${OPENORBIS}/bin/ \
+    --arch=x86_64 --target-os=freebsd \
+    --disable-shared --enable-static \
+    --pkg-config=openorbis-pkg-config \
+    --disable-programs --disable-debug --disable-doc \
+    --disable-avdevice --disable-hwaccels --disable-encoders --disable-muxers \
+    --disable-decoders --enable-decoder="$video,$audio,$subtitle" \
+    --disable-demuxers --enable-demuxer="$demuxers" \
+    --disable-parsers --enable-parser="$parsers" \
+    --disable-protocols --enable-protocol="$protocols" \
+    --enable-swscale --enable-swresample --enable-network --enable-version3 \
+    --enable-zlib --disable-bzlib --enable-libdav1d --enable-mbedtls \
+    --disable-filters --enable-filter=hflip,vflip,transpose \
+    --cc=$CC --cxx=$CXX --nm=$NM --strip=$STRIP --ar=$AR --ranlib=$RANLIB
+
+  # TODO: fix this
+  sed -i s'|#define HAVE_SYSCTL 1|//#define HAVE_SYSCTL 1|'g config.h
+
+  sed -i s'|#define HAVE_GETADDRINFO 0|#define HAVE_GETADDRINFO 1|'g config.h
+
+  make --quiet -j$(nproc)
+}
+
+package() {
+  cd ffmpeg-$pkgver
+
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+
+  make DESTDIR="$pkgdir" install
+
+  # remove examples
+  rm -r "$pkgdir"${OPENORBIS}/usr/share
+}

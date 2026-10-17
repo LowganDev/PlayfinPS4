@@ -1,0 +1,40 @@
+# Toolkit gallery: rows, focus moves, dialog, text field, grid screen, back
+wait 30
+screenshot home
+press Right
+press Right
+wait 20
+screenshot posters_right
+press Down
+wait 20
+screenshot thumbnails
+press Down
+wait 20
+screenshot controls
+press Confirm
+wait 20
+screenshot dialog
+press Back
+wait 20
+press Right
+press Right
+press Confirm
+wait 10
+type Ana 日本
+wait 5
+screenshot typing
+press Confirm
+wait 20
+screenshot typed
+press Right
+press Confirm
+wait 40
+screenshot grid
+press Down
+press Right
+wait 20
+screenshot grid_moved
+press Back
+wait 20
+screenshot back_home
+quit

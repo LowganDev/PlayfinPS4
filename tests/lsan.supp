@@ -1,0 +1,10 @@
+# LeakSanitizer suppressions: only leaks inside system graphics libraries (never Playfin code).
+# Mesa keeps per-process driver state allocated during EGL setup and the first draw calls, then the driver is
+# unloaded at exit, so its frames print as "<unknown module>" and cannot be matched by library name. They are
+# matched by the call that entered the driver instead:
+#  - EGL/driver setup done inside SDL_CreateWindow (platform::init allocates nothing else on the heap)
+leak:playfin::platform::init
+#  - driver allocations behind NanoVG's first glDrawArrays
+leak:glnvg__renderFlush
+#  - driver allocations behind the first glDrawArrays of the software frame presenter (same Mesa state)
+leak:playfin::platform::presentFrame

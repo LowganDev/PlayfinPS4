@@ -1,0 +1,67 @@
+--- a/src/audio/ps4/SDL_ps4audio.c	2026-09-25 09:38:22.807365428 +0200
++++ b/src/audio/ps4/SDL_ps4audio.c	2026-09-25 09:38:22.821334546 +0200
+@@ -35,6 +35,13 @@
+ 
+ extern void PS4_LoadModules();
+ 
++/* 8 channel formats missing from the OpenOrbis headers. The _STD layout is the
++   standard 7.1 order, the same as SDL: FL FR FC LFE BL BR SL SR. The system
++   downmixes to the audio output (TV speakers) or encodes to Dolby Digital /
++   DTS when the console output is set to bitstream. */
++#define PS4_AUDIO_OUT_PARAM_FORMAT_S16_8CH_STD 6
++#define PS4_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH_STD 7
++
+ inline static Uint16
+ ps4_sample_size(Uint16 size) {
+     if (size >= 2048) return 2048;
+@@ -62,16 +69,23 @@
+     }
+     SDL_zerop(this->hidden);
+ 
++    /* the system only takes 1, 2 or 8 channels: SDL converts 5.1 and the others to 7.1 */
++    if (this->spec.channels > 2) {
++        this->spec.channels = 8;
++    }
++
+     test_format = SDL_FirstAudioFormat(this->spec.format);
+     while ((!supported_format) && (test_format)) {
+         if (test_format == AUDIO_S16LSB) {
+             supported_format = SDL_TRUE;
+-            fmt = (this->spec.channels == 1) ? ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_MONO
+-                                             : ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO;
++            fmt = (this->spec.channels == 1)   ? ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_MONO
++                  : (this->spec.channels == 2) ? ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO
++                                               : PS4_AUDIO_OUT_PARAM_FORMAT_S16_8CH_STD;
+         } else if (test_format == AUDIO_F32LSB) {
+             supported_format = SDL_TRUE;
+-            fmt = (this->spec.channels == 1) ? ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_MONO
+-                                             : ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_STEREO;
++            fmt = (this->spec.channels == 1)   ? ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_MONO
++                  : (this->spec.channels == 2) ? ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_STEREO
++                                               : PS4_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH_STD;
+         } else {
+             test_format = SDL_NextAudioFormat();
+         }
+@@ -99,6 +113,22 @@
+ 
+     this->hidden->aout = sceAudioOutOpen(ORBIS_USER_SERVICE_USER_ID_SYSTEM, ORBIS_AUDIO_OUT_PORT_TYPE_MAIN,
+                                          0, this->spec.samples, 48000, fmt);
++    if (this->hidden->aout < 1 && this->spec.channels == 8) {
++        /* 8 channels refused: fall back to stereo (SDL downmixes) */
++        SDL_Log("PS4AUD_OpenDevice: 8 channels refused (0x%08x), using stereo\n", this->hidden->aout);
++        free(this->hidden->rawbuf);
++        this->spec.channels = 2;
++        fmt = (test_format == AUDIO_F32LSB) ? ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_STEREO
++                                            : ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO;
++        SDL_CalculateAudioSpec(&this->spec);
++        mix_len = this->spec.size * NUM_BUFFERS;
++        this->hidden->rawbuf = (Uint8 *) memalign(64, mix_len);
++        if (this->hidden->rawbuf == NULL) {
++            return SDL_SetError("PS4AUD_OpenDevice: couldn't allocate mix buffer");
++        }
++        this->hidden->aout = sceAudioOutOpen(ORBIS_USER_SERVICE_USER_ID_SYSTEM, ORBIS_AUDIO_OUT_PORT_TYPE_MAIN,
++                                             0, this->spec.samples, 48000, fmt);
++    }
+     if (this->hidden->aout < 1) {
+         free(this->hidden->rawbuf);
+         this->hidden->rawbuf = NULL;

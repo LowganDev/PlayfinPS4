@@ -1,0 +1,36 @@
+{
+  "MediaSources": [
+    {
+      "Protocol": "File",
+      "Id": "ms-1",
+      "Path": "/media/films/Pilot.mkv",
+      "Type": "Default",
+      "Container": "mkv",
+      "Size": 1500000000,
+      "Name": "Pilot",
+      "IsRemote": false,
+      "RunTimeTicks": 26000000000,
+      "SupportsTranscoding": true,
+      "SupportsDirectStream": true,
+      "SupportsDirectPlay": true,
+      "MediaStreams": [
+        {"Codec": "h264", "Type": "Video", "Index": 0, "Width": 1920, "Height": 1080, "BitDepth": 8, "IsDefault": true,
+         "IsExternal": false, "DisplayTitle": "1080p H264 SDR"},
+        {"Codec": "eac3", "Language": "fre", "Type": "Audio", "Index": 1, "Channels": 6, "IsDefault": true,
+         "IsExternal": false, "DisplayTitle": "Français - Dolby Digital+ - 5.1 - Par défaut", "Title": "VF"},
+        {"Codec": "aac", "Language": "eng", "Type": "Audio", "Index": 2, "Channels": 2, "IsDefault": false,
+         "IsExternal": false, "DisplayTitle": "English - AAC - Stéréo"},
+        {"Codec": "subrip", "Language": "fre", "Type": "Subtitle", "Index": 3, "IsDefault": false, "IsForced": true,
+         "IsExternal": false, "DisplayTitle": "Français (forcés) - SUBRIP", "DeliveryMethod": "Embed"},
+        {"Codec": "srt", "Language": "eng", "Type": "Subtitle", "Index": 4, "IsDefault": false, "IsExternal": true,
+         "DisplayTitle": "English - SRT - Externe", "DeliveryMethod": "External",
+         "DeliveryUrl": "/Videos/e-1/ms-1/Subtitles/4/0/Stream.srt"},
+        {"Codec": "PGSSUB", "Language": "jpn", "Type": "Subtitle", "Index": 5, "IsDefault": false,
+         "IsExternal": false, "DisplayTitle": "Japanese - PGSSUB", "DeliveryMethod": "Embed"}
+      ],
+      "DefaultAudioStreamIndex": 1,
+      "DefaultSubtitleStreamIndex": 3
+    }
+  ],
+  "PlaySessionId": "ps-direct-1"
+}

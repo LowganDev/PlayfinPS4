@@ -1,0 +1,30 @@
+# Fonts for libass (subtitles). Replaces the pacbrew image's FreeType 2.10.1 (CVE-2020-15999). Built minimal:
+# Playfin's own TrueType fonts only (mpv does not load fonts attached to media), so no bzip2, PNG glyphs, brotli
+# (WOFF2) or HarfBuzz auto-hinting.
+pkgname=ps4-openorbis-freetype
+pkgver=2.13.3
+pkgrel=1
+pkgdesc='Font rasterization library'
+arch=('any')
+url='https://freetype.org'
+license=('FTL' 'GPL2')
+source=("https://download.savannah.gnu.org/releases/freetype/freetype-${pkgver}.tar.xz")
+sha256sums=('0550350666d427c74daeb85d5ac7bb353acba5f76956395995311a9c6f063289')
+options=(!strip !debug staticlibs)
+makedepends=('ps4-openorbis-vars')
+groups=('ps4-openorbis-portlibs')
+
+build() {
+  cd freetype-$pkgver
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+  ./configure --prefix="${OPENORBIS}/usr" --host=x86_64-freebsd12 \
+    --disable-shared --enable-static \
+    --with-zlib=no --with-bzip2=no --with-png=no --with-harfbuzz=no --with-brotli=no
+  make -j$(nproc)
+}
+
+package() {
+  cd freetype-$pkgver
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+  make DESTDIR="$pkgdir" install
+}

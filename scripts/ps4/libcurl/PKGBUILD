@@ -1,0 +1,53 @@
+# Maintainer: cpasjuste <cpasjuste@gmail.com>
+
+# With c-ares, curl can using custom DNS server,
+# You can also use musl with custom DNS support to do similar things (Recommended)
+
+pkgname=ps4-openorbis-libcurl
+pkgver=8.22.0
+pkgrel=2
+pkgdesc='An URL retrieval utility and library'
+arch=('any')
+url='https://curl.haxx.se/'
+license=('curl')
+source=("https://curl.haxx.se/download/curl-${pkgver}.tar.xz")
+sha256sums=('f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7')
+options=(!strip !debug libtool staticlibs)
+depends=('ps4-openorbis-zlib' 'ps4-openorbis-mbedtls')
+makedepends=('ps4-openorbis-pkg-config' 'ps4-openorbis-vars')
+groups=('ps4-openorbis-portlibs')
+
+prepare() {
+  cd curl-$pkgver
+
+  # TODO: fix this (use proper patch)...
+  sed -i 's|#include <osreldate.h>|//#include <osreldate.h>|g' include/curl/curl.h
+}
+
+build() {
+  cd curl-$pkgver
+
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+
+  autoreconf -fi
+
+  # --disable-socketpair: the PS4 musl declares eventfd() but the kernel does not have it. Since curl 8.x a
+  # multi handle cannot be created without its wakeup channel, so every transfer failed with "Out of memory".
+
+  CFLAGS="${CFLAGS} -DSOL_IP=0" LIBS="${LIBS} -lSceNet" \
+  ./configure --prefix="${OPENORBIS}/usr" --host=x86_64-freebsd12 \
+    --disable-shared --enable-static --enable-websockets \
+    --with-mbedtls --without-libpsl --disable-socketpair --disable-manual --with-ca-bundle="/system/common/cert/CA_LIST.cer"
+
+  make -j$(nproc) -C lib
+}
+
+package() {
+  cd curl-$pkgver
+
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+
+  make DESTDIR="$pkgdir" -C lib install
+  make DESTDIR="$pkgdir" -C include install
+  make DESTDIR="$pkgdir" install-binSCRIPTS
+}

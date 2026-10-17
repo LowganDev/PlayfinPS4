@@ -1,0 +1,38 @@
+# Subtitles inside mpv. Replaces the pacbrew image's libass 0.14.0 (CVE-2020-24994, CVE-2020-26682: crafted
+# subtitles overflowed the outline code); since 0.15 libass needs HarfBuzz. Fonts come from Playfin's resources
+# (no fontconfig, no system font provider); fallback.patch lets a character missing from the requested and
+# default fonts come from any loaded font that has it (Japanese, Korean and Chinese from Noto Sans CJK).
+pkgname=ps4-openorbis-libass
+pkgver=0.17.3
+pkgrel=2
+pkgdesc='Portable library for rendering ASS/SSA subtitles'
+arch=('any')
+url='https://github.com/libass/libass'
+license=('ISC')
+source=("https://github.com/libass/libass/releases/download/${pkgver}/libass-${pkgver}.tar.xz" "fallback.patch")
+sha256sums=('eae425da50f0015c21f7b3a9c7262a910f0218af469e22e2931462fed3c50959'
+            'f543ac18226be8dbfa7ea63d8c3b26a6b2c53200e81fdc862c7a8bfc21bd98e2')
+options=(!strip !debug staticlibs)
+depends=('ps4-openorbis-freetype' 'ps4-openorbis-libfribidi' 'ps4-openorbis-harfbuzz')
+makedepends=('ps4-openorbis-vars')
+groups=('ps4-openorbis-portlibs')
+
+prepare() {
+  cd libass-$pkgver
+  patch -Np1 -i "$srcdir/fallback.patch"
+}
+
+build() {
+  cd libass-$pkgver
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+  ./configure --prefix="${OPENORBIS}/usr" --host=x86_64-freebsd12 \
+    --disable-shared --enable-static --disable-fontconfig --disable-require-system-font-provider \
+    --disable-asm --disable-libunibreak
+  make -j$(nproc)
+}
+
+package() {
+  cd libass-$pkgver
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+  make DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,30 @@
+# Text shaping for libass (required since libass 0.15). Only the FreeType integration is built.
+pkgname=ps4-openorbis-harfbuzz
+pkgver=11.2.1
+pkgrel=1
+pkgdesc='OpenType text shaping engine'
+arch=('any')
+url='https://harfbuzz.github.io'
+license=('MIT')
+source=("https://github.com/harfbuzz/harfbuzz/releases/download/${pkgver}/harfbuzz-${pkgver}.tar.xz" 'cross.txt')
+sha256sums=('093714c8548a285094685f0bdc999e202d666b59eeb3df2ff921ab68b8336a49' 'SKIP')
+options=(!strip !debug staticlibs)
+depends=('ps4-openorbis-freetype')
+makedepends=('ps4-openorbis-vars')
+groups=('ps4-openorbis-portlibs')
+
+build() {
+  source /opt/pacbrew/ps4/openorbis/ps4vars.sh
+  meson setup build harfbuzz-${pkgver} \
+    --buildtype=release --cross-file=cross.txt \
+    --default-library=static --libdir=lib \
+    --prefix="${OPENORBIS}/usr" \
+    -Dfreetype=enabled -Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dchafa=disabled \
+    -Dicu=disabled -Dgraphite2=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=disabled \
+    -Dintrospection=disabled -Dbenchmark=disabled
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "${pkgdir}"
+}

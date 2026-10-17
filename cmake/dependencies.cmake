@@ -1,0 +1,36 @@
+# System libraries: from pkg-config on Linux, from the OpenOrbis toolchain on PS4.
+# PS4: always by name. pkg-config IMPORTED_TARGETs pass full paths, which lld records as the module to load
+# (/opt/pacbrew/...) and the console cannot resolve (scripts/check-ps4-imports.sh).
+add_library(playfin_sdl2 INTERFACE)
+add_library(playfin_curl INTERFACE)
+add_library(playfin_crypto INTERFACE)
+add_library(playfin_mpv INTERFACE)
+if(PLATFORM_PS4)
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    target_include_directories(playfin_sdl2 SYSTEM INTERFACE ${SDL2_INCLUDE_DIRS})
+    target_link_directories(playfin_sdl2 INTERFACE ${SDL2_LIBRARY_DIRS})
+    target_link_libraries(playfin_sdl2 INTERFACE ${SDL2_LIBRARIES})
+    # system keyboard (UTF-16 dialog) and user service, by name
+    target_link_libraries(playfin_sdl2 INTERFACE SceImeDialog SceCommonDialog SceSysmodule SceUserService)
+    # static libcurl without a .pc file: its dependencies come from libcurl.la (mbed TLS, zlib, SceNet)
+    target_include_directories(playfin_curl SYSTEM INTERFACE $ENV{OPENORBIS}/usr/include)
+    target_link_directories(playfin_curl INTERFACE $ENV{OPENORBIS}/usr/lib)
+    target_link_libraries(playfin_curl INTERFACE curl mbedtls mbedx509 mbedcrypto z SceNet)
+    target_include_directories(playfin_crypto SYSTEM INTERFACE $ENV{OPENORBIS}/usr/include)
+    target_link_directories(playfin_crypto INTERFACE $ENV{OPENORBIS}/usr/lib)
+    target_link_libraries(playfin_crypto INTERFACE mbedx509 mbedcrypto)
+    # static libmpv and what it was built with (mpv.pc's Libs.private), by name
+    target_include_directories(playfin_mpv SYSTEM INTERFACE $ENV{OPENORBIS}/usr/include)
+    target_link_directories(playfin_mpv INTERFACE $ENV{OPENORBIS}/usr/lib)
+    target_link_libraries(playfin_mpv INTERFACE mpv avformat avfilter avcodec swscale swresample avutil dav1d ass
+        harfbuzz fribidi freetype samplerate z mbedtls mbedx509 mbedcrypto SceAudioOut ScePad)
+else()
+    pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+    target_link_libraries(playfin_sdl2 INTERFACE PkgConfig::SDL2)
+    pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
+    target_link_libraries(playfin_curl INTERFACE PkgConfig::CURL)
+    pkg_check_modules(LIBCRYPTO REQUIRED IMPORTED_TARGET libcrypto)
+    target_link_libraries(playfin_crypto INTERFACE PkgConfig::LIBCRYPTO)
+    pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+    target_link_libraries(playfin_mpv INTERFACE PkgConfig::MPV)
+endif()

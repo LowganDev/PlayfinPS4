@@ -1,0 +1,58 @@
+# Continuous integration. Manual only while the repository is private (docs/release.md, step 4: add push and
+# pull_request when it becomes public).
+name: ci
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        preset: [linux-debug, linux-asan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake pkg-config libsdl2-dev libgles-dev libegl-dev mesa-utils \
+            libcurl4-openssl-dev libssl-dev libmpv-dev xvfb
+      - name: Build
+        run: |
+          cmake --preset ${{ matrix.preset }}
+          cmake --build --preset ${{ matrix.preset }} -j"$(nproc)"
+      - name: Tests
+        run: ctest --preset ${{ matrix.preset }} --timeout 600
+      - name: Screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-out-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}/ui-out
+
+  fuzz:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake pkg-config libsdl2-dev libgles-dev libegl-dev \
+            libcurl4-openssl-dev libssl-dev libmpv-dev
+      - name: Fuzz (30 s per target)
+        run: |
+          cmake --preset linux-fuzz
+          cmake --build --preset linux-fuzz -j"$(nproc)"
+          ctest --preset linux-fuzz --timeout 300
+
+  ps4:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package
+        run: scripts/build-ps4.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playfin-ps4
+          path: dist/IV0001-PLFN00000_00-PLFN000000100000.pkg

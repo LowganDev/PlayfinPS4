@@ -1,0 +1,24 @@
+{
+  "MediaSources": [
+    {
+      "Id": "ms-2",
+      "Container": "mkv",
+      "RunTimeTicks": 72000000000,
+      "SupportsTranscoding": true,
+      "SupportsDirectStream": false,
+      "SupportsDirectPlay": false,
+      "TranscodingUrl": "/videos/m-transcode/master.m3u8?DeviceId=dev&MediaSourceId=ms-2&VideoCodec=h264&AudioCodec=aac&PlaySessionId=ps-tc-1&api_key=tok-demo&TranscodeReasons=VideoResolutionNotSupported",
+      "TranscodingSubProtocol": "hls",
+      "TranscodingContainer": "ts",
+      "MediaStreams": [
+        {"Codec": "hevc", "Type": "Video", "Index": 0, "Width": 3840, "Height": 2160, "BitDepth": 10},
+        {"Codec": "truehd", "Language": "eng", "Type": "Audio", "Index": 1, "Channels": 8, "IsDefault": true},
+        {"Codec": "ass", "Language": "fre", "Type": "Subtitle", "Index": 2, "DeliveryMethod": "External",
+         "DeliveryUrl": "/Videos/m-transcode/ms-2/Subtitles/2/0/Stream.ass", "IsExternal": false}
+      ],
+      "DefaultAudioStreamIndex": 1,
+      "DefaultSubtitleStreamIndex": -1
+    }
+  ],
+  "PlaySessionId": "ps-tc-1"
+}

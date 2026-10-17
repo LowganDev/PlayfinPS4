@@ -1,0 +1,20 @@
+--- a/libass/ass_fontselect.c
++++ b/libass/ass_fontselect.c
+@@ -905,6 +905,17 @@
+                     *postscript_name ? *postscript_name : "(none)");
+     }
+ 
++    // No system font provider (the PS4 build): take the first loaded font that has the character, so
++    // Japanese, Korean and Chinese text falls back to the CJK faces of the fonts directory.
++    if (!res && code && !(default_provider && default_provider->funcs.get_fallback)) {
++        for (int i = 0; i < priv->n_font && !res; i++) {
++            ASS_FontInfo *info = &priv->font_infos[i];
++            if (info->n_family > 0 && check_glyph(info, code))
++                res = select_font(priv, info->families[0], false, bold, italic,
++                        index, postscript_name, uid, data, code);
++        }
++    }
++
+     if (!res && default_provider && default_provider->funcs.get_fallback) {
+         const char *search_family = family;
+         if (!search_family || !*search_family)

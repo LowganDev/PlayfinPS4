@@ -1,0 +1,24 @@
+# Third-party components of the PS4 package and the Linux build: name|version|licence|licence files|PS4 libraries
+# The texts are in this folder (taken from the sources of these versions). THIRD_PARTY_LICENSES summarises them.
+# System libraries of the console (-lkernel, -lSce*, -lm, -lpthread) are the console's own modules, not shipped.
+SDL2|2.0.18|Zlib|sdl2.txt|SDL2
+NanoVG and fontstash|2019 (memononen/nanovg)|Zlib|nanovg.txt|nanovg
+stb (stb_image, stb_truetype, stb_image_write)|stb_image 2.30, stb_truetype 1.24, stb_image_write 1.16|MIT or public domain|stb.txt|stb
+yyjson|0.13.0|MIT|yyjson.txt|yyjson
+libcurl|8.22.0|curl|curl.txt|curl
+Mbed TLS|3.6.7|Apache-2.0|mbedtls.txt,Apache-2.0.txt|mbedcrypto,mbedtls,mbedx509
+FFmpeg|7.1.5|LGPL-3.0-or-later|ffmpeg.txt,LGPL-3.0.txt|avcodec,avfilter,avformat,avutil,swresample,swscale
+mpv|0.36.0|GPL-2.0-or-later|mpv.txt,GPL-2.0.txt|mpv
+libass|0.17.3|ISC|libass.txt|ass
+HarfBuzz|11.2.1|MIT|harfbuzz.txt|harfbuzz
+FreeType|2.13.3|FTL|freetype.txt|freetype
+GNU FriBidi|1.0.4|LGPL-2.1-or-later|LGPL-2.1.txt|fribidi
+zlib|1.3.1|Zlib|zlib.txt|z
+libsamplerate|0.1.9|BSD-2-Clause|libsamplerate.txt|samplerate
+dav1d|1.5.4|BSD-2-Clause|dav1d.txt|dav1d
+musl (PacBrew PS4 port)|1.5|MIT|musl.txt|c
+LLVM libc++ and compiler-rt|12|Apache-2.0 WITH LLVM-exception|llvm.txt|c++,clang_rt.builtins-x86_64
+OpenOrbis PS4 Toolchain (files in the package)|0.5|GPL-3.0|GPL-3.0.txt|
+Sora|google/fonts (variable font, static instances)|OFL-1.1|OFL-Sora.txt|
+Noto Sans and Noto Sans CJK|notofonts|OFL-1.1|OFL-Noto.txt|
+Mozilla CA certificate list|2026-09-25|MPL-2.0|MPL-2.0.txt|

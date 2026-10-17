@@ -1,0 +1,92 @@
+Playfin is free software under the GNU General Public License v3.0 (LICENSE). It includes or links the following
+third-party components, each under its own licence. The full texts are in resources/licenses/ (shipped in the
+PS4 package and shown in the app: Paramètres → À propos → Licences tierces); resources/licenses/manifest.txt lists
+them with their versions. The sources of the PS4 builds are the upstream releases named in scripts/ps4/*/PKGBUILD
+with the patches next to them; the packages the image provides (FriBidi, zlib, libsamplerate)
+come from the pacbrew PS4 repository built from the same upstream releases.
+
+== In the PS4 package and the Linux build ==
+
+SDL2 (PacBrew PS4 port; system SDL2 on Linux) 2.0.18 — zlib licence (sdl2.txt)
+  Copyright (C) 1997-2021 Sam Lantinga. https://github.com/PacBrew/SDL
+  PS4 patches in scripts/ps4/SDL2: sdl2.patch by dragonflylee (https://github.com/dragonflylee), zlib licence;
+  sdl2-multichannel.patch by the Playfin authors.
+
+NanoVG and fontstash — zlib licence (nanovg.txt)
+  Copyright (c) 2013 Mikko Mononen. https://github.com/memononen/nanovg
+
+stb (stb_image, stb_truetype, stb_image_write) — public domain or MIT (stb.txt)
+  Sean Barrett. https://github.com/nothings/stb
+
+yyjson 0.13.0 — MIT licence (yyjson.txt)
+  Copyright (c) 2020 YaoYuan. https://github.com/ibireme/yyjson
+
+libcurl 8.22.0 — curl licence, MIT-like (curl.txt)
+  Copyright (c) Daniel Stenberg and many contributors. https://curl.se
+
+Mbed TLS 3.6.7 (PS4 build) — Apache License 2.0 (mbedtls.txt, Apache-2.0.txt)
+  Copyright The Mbed TLS Contributors. https://github.com/Mbed-TLS/mbedtls
+
+FFmpeg 7.1.5 — GNU Lesser General Public License v3 or later (ffmpeg.txt, LGPL-3.0.txt)
+  Copyright the FFmpeg developers. https://ffmpeg.org
+  Built with --enable-version3 (for Mbed TLS) and without --enable-gpl: the libraries are LGPL v3.
+
+mpv 0.36.0 (libmpv) — GNU General Public License v2 or later (mpv.txt, GPL-2.0.txt)
+  Copyright the mpv developers. https://mpv.io
+  PS4 patch scripts/ps4/libmpv/mpv.patch (OpenGL backend ra_ps4, timers, audio filters) by dragonflylee, under
+  mpv's licence.
+
+libass 0.17.3 — ISC licence (libass.txt). https://github.com/libass/libass (renders subtitles inside mpv;
+  built by scripts/ps4/libass with fallback.patch by the Playfin authors)
+
+HarfBuzz 11.2.1 — MIT licence (harfbuzz.txt). https://harfbuzz.github.io (text shaping for libass; built by
+  scripts/ps4/harfbuzz)
+
+FreeType 2.13.3 — FreeType License (freetype.txt), used by libass; built by scripts/ps4/freetype.
+  Portions of this software are copyright © 2024 The FreeType Project (www.freetype.org). All rights reserved.
+
+GNU FriBidi 1.0.4 — GNU Lesser General Public License v2.1 or later (LGPL-2.1.txt).
+  Copyright (C) 1999-2000, 2017 Dov Grobgeld; Copyright (C) 2001-2002, 2004-2005 Behdad Esfahbod;
+  Copyright (C) 2004 Sharif FarsiWeb, Inc. https://github.com/fribidi/fribidi (used by libass)
+
+zlib 1.3.1 — zlib licence (zlib.txt). Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler. https://zlib.net
+
+libsamplerate 0.1.9 — BSD 2-Clause (libsamplerate.txt). Copyright (c) 2012-2016 Erik de Castro Lopo.
+  https://github.com/libsndfile/libsamplerate (used by mpv)
+
+dav1d 1.5.4 — BSD 2-Clause (dav1d.txt). Copyright VideoLAN and dav1d authors.
+  https://code.videolan.org/videolan/dav1d (AV1 decoding in FFmpeg)
+
+musl (PacBrew PS4 port) 1.5 — MIT licence (musl.txt). Copyright Rich Felker, et al.
+  https://github.com/PacBrew/ps4-openorbis-musl. Patch scripts/ps4/musl/dns.patch by the Playfin authors.
+
+LLVM libc++ and compiler-rt (OpenOrbis toolchain, clang 12) — Apache License 2.0 with LLVM Exceptions
+  (llvm.txt). https://llvm.org
+
+OpenOrbis PS4 Toolchain (files in the package) — GPL-3.0 (GPL-3.0.txt).
+  https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain
+  The package includes sce_sys/about/right.sprx and the stub modules sce_module/libc.prx and
+  sce_module/libSceFios2.prx as provided by the toolchain samples. scripts/ps4/link.x is the toolchain's linker
+  script with changes by the Playfin authors.
+
+Sora — SIL Open Font License 1.1 (OFL-Sora.txt)
+  Copyright 2019 The Sora Project Authors. https://github.com/sora-xor/sora-font
+  Static instances (Regular, SemiBold, Bold) made from the variable font with scripts/make-sora.py.
+
+Noto Sans and Noto Sans CJK — SIL Open Font License 1.1 (OFL-Noto.txt)
+  Noto Sans: Copyright 2022 The Noto Project Authors. https://github.com/notofonts/latin-greek-cyrillic
+  Noto Sans CJK: Copyright 2014-2021 Adobe (http://www.adobe.com/). https://github.com/notofonts/noto-cjk
+
+Mozilla CA certificate list (resources/certs/cacert.pem, as converted by the curl project) — Mozilla Public
+  License 2.0 (MPL-2.0.txt). https://curl.se/docs/caextract.html
+
+== Linux build only (not in the package) ==
+
+OpenSSL libcrypto (the system's, for certificate fingerprints) — Apache License 2.0. https://openssl.org
+libmpv, FFmpeg and their dependencies on Linux are the system's.
+
+== Development and tests only (not shipped) ==
+
+doctest — MIT licence. Copyright (c) 2016-2023 Viktor Kirilov. https://github.com/doctest/doctest
+cpp-httplib — MIT licence. Copyright (c) 2017 yhirose. https://github.com/yhirose/cpp-httplib
+Jellyfin (the test server of scripts/test-server, run in Docker, not distributed) — GPL-2.0.
