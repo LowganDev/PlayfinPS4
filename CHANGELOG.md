@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 (2026-10-17)
 
 - Home screen icon: the halo above "Playfin." in Jellyfin's purple-to-blue gradient.
 
