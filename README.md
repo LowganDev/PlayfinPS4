@@ -7,9 +7,9 @@
 
 A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN).
 
-<a href="https://github.com/LowganDev/Playfin/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
+<a href="https://github.com/LowganDev/PlayfinPS4/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
 
-The latest version's package; earlier versions are on the [Releases](https://github.com/LowganDev/Playfin/releases)
+The latest version's package; earlier versions are on the [Releases](https://github.com/LowganDev/PlayfinPS4/releases)
 page.
 
 
