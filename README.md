@@ -1,4 +1,9 @@
-# Playfin
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-on-dark.png">
+    <img alt="Playfin" src="docs/images/logo-on-light.png" width="300">
+  </picture>
+</h1>
 
 A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN).
 

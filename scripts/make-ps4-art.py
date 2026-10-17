@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Makes the PS4 home screen art of Playfin from the shipped Sora font (needs Pillow).
+"""Makes the PS4 home screen art and the README logo of Playfin from the shipped Sora font (needs Pillow).
 
     python3 scripts/make-ps4-art.py
 
 icon0.png (512x512): "Playfin." under a blue halo. pic1.png (1920x1080): the app's background with the halo and the
-logo, shown by the PS4 behind the selected app. Colours from the theme (src/ui/theme.cpp).
+logo, shown by the PS4 behind the selected app. docs/images/logo-on-dark.png and logo-on-light.png: the "Playfin."
+wordmark on a transparent background for the README (GitHub's dark and light themes). Colours from the theme
+(src/ui/theme.cpp).
 """
 import math
 import os
@@ -44,6 +46,20 @@ def logo(image, size, centre_y):
     draw.text((x + name_width, centre_y), ".", font=font, fill=DOT, anchor="lm")
 
 
+def wordmark(text_colour, dot_colour, size=160, margin=16):
+    """"Playfin." alone, cropped to its ink plus a margin, on a transparent background."""
+    font = ImageFont.truetype(FONT, size)
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    name_width = probe.textlength("Playfin", font=font)
+    left, top, right, bottom = probe.textbbox((0, 0), "Playfin.", font=font)
+    image = Image.new("RGBA", (right - left + 2 * margin, bottom - top + 2 * margin), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    origin = (margin - left, margin - top)
+    draw.text(origin, "Playfin", font=font, fill=text_colour)
+    draw.text((origin[0] + name_width, origin[1]), ".", font=font, fill=dot_colour)
+    return image
+
+
 def main():
     out = os.path.join(ROOT, "resources", "ps4", "sce_sys")
     icon = halo(512, 512, 0.0, 0.9, 0.9, 0.6)
@@ -52,6 +68,10 @@ def main():
     picture = halo(1920, 1080, -0.1, 0.7, 0.55, 0.3)
     logo(picture, 160, 330)
     picture.save(os.path.join(out, "pic1.png"))
+    images = os.path.join(ROOT, "docs", "images")
+    os.makedirs(images, exist_ok=True)
+    wordmark(TEXT, DOT).save(os.path.join(images, "logo-on-dark.png"))
+    wordmark(BACKGROUND, ACCENT).save(os.path.join(images, "logo-on-light.png"))
 
 
 if __name__ == "__main__":
