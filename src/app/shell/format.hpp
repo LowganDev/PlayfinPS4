@@ -15,8 +15,9 @@ std::string clockText(double seconds);
 std::string metaLine(const jellyfin::Item& item);
 // Episodes show their series; everything else its own name.
 std::string cardTitle(const jellyfin::Item& item);
-// Episodes: "S1 · E2 Name"; albums and tracks: the artist; playlists: the count; movies and series: the year.
-std::string cardSubtitle(const jellyfin::Item& item);
+// Episodes: "S1 · E2 Name"; albums and tracks: the artist; playlists: the count; programmes: their times at
+// `utcOffsetMinutes` (AppSession::utcOffsetMinutes); movies and series: the year.
+std::string cardSubtitle(const jellyfin::Item& item, int utcOffsetMinutes = 0);
 // Wide: episode image, thumb, series thumb, backdrop, series backdrop, primary. Poster: series primary for
 // episodes, else primary. Empty when the item has no usable image.
 std::string imageUrlFor(const jellyfin::Client& client, const jellyfin::Item& item, bool wide, int width, int height);

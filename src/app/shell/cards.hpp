@@ -29,7 +29,7 @@ public:
     explicit ItemCard(CardShape shape);
     explicit ItemCard(bool wide) : ItemCard(shapeOf(wide)) {}
     ~ItemCard() override;
-    void show(const jellyfin::Item& item, const std::string& imageUrl);
+    void show(const jellyfin::Item& item, const std::string& imageUrl, int utcOffsetMinutes);
     std::function<void()> onPress;
     float focusProgress() const { return focus_; }
     void onFocusChanged(bool focused) override;

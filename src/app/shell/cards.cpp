@@ -178,13 +178,13 @@ void ItemCard::draw(NVGcontext* vg) const {
     nvgRestore(vg);
 }
 
-void ItemCard::show(const jellyfin::Item& item, const std::string& imageUrl) {
+void ItemCard::show(const jellyfin::Item& item, const std::string& imageUrl, int utcOffsetMinutes) {
     // a programme without its own picture shows its channel's logo whole
     image_->fit = item.type == jellyfin::ItemType::Program && item.images.primary.empty() ? ui::ImageView::Fit::Contain
                                                                                          : ui::ImageView::Fit::Cover;
     image_->setUrl(imageUrl);
     title_->setText(cardTitle(item));
-    subtitle_->setText(cardSubtitle(item));
+    subtitle_->setText(cardSubtitle(item, utcOffsetMinutes));
     const double percent = item.userData.playedPercentage;
     progress_->visible = percent > 0 && percent < 100;
     progress_->value = static_cast<float>(percent / 100.0);
@@ -284,7 +284,8 @@ void ItemsSource::bind(ui::View& view, int index) {
     const auto client = session_.client();
     card.show(item, client ? imageUrlFor(*client, item, shape_ == CardShape::Wide, static_cast<int>(size.width),
                                          static_cast<int>(size.height))
-                           : std::string());
+                           : std::string(),
+              session_.utcOffsetMinutes(item.startUtc));
     card.onPress = [this, index] {
         if (onPress_ && index < count()) {
             onPress_(items_[static_cast<std::size_t>(index)]);

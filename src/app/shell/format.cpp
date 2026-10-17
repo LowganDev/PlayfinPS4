@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "app/shell/guide.hpp"
-#include "platform/platform.hpp"
 #include "ui/i18n.hpp"
 
 namespace playfin::app {
@@ -76,7 +75,7 @@ std::string cardTitle(const jellyfin::Item& item) {
     return item.name;
 }
 
-std::string cardSubtitle(const jellyfin::Item& item) {
+std::string cardSubtitle(const jellyfin::Item& item, int utcOffsetMinutes) {
     if (item.type == jellyfin::ItemType::Episode) {
         return ui::tr("shell.details.season_episode",
                       {std::to_string(item.parentIndexNumber), std::to_string(item.indexNumber)}) +
@@ -86,7 +85,7 @@ std::string cardSubtitle(const jellyfin::Item& item) {
         return !item.albumArtist.empty() ? item.albumArtist : !item.artists.empty() ? item.artists.front() : "";
     }
     if (item.type == jellyfin::ItemType::Program && item.startUtc > 0) {
-        return timeRange(item, platform::utcOffsetMinutes(item.startUtc));
+        return timeRange(item, utcOffsetMinutes);
     }
     if (item.type == jellyfin::ItemType::Playlist && item.childCount > 0) {
         return ui::translator().plural("music.track_count", item.childCount);

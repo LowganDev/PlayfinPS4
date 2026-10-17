@@ -65,6 +65,11 @@ TEST_CASE("item texts") {
     const auto episode = fixtureItem("jellyfin/item_episode.json");
     CHECK(app::cardTitle(episode) == "Test Show");
     CHECK(app::cardSubtitle(episode) == "S1 · E1 Pilot");
+    jellyfin::Item program;
+    program.type = jellyfin::ItemType::Program;
+    program.startUtc = jellyfin::parseUtc("2026-10-16T19:30:00Z");
+    program.endUtc = jellyfin::parseUtc("2026-10-16T20:30:00Z");
+    CHECK(app::cardSubtitle(program, 120) == "21:30 \xE2\x80\x93 22:30");  // the app's clock (Paris), not the machine's
 }
 
 TEST_CASE("image choices: thumbnails for wide cards, series posters for episodes") {
