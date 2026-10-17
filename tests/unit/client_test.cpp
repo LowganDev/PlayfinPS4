@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "core/version.hpp"
 #include "jellyfin/client.hpp"
 #include "net/crypto.hpp"
 #include "support/fake_jellyfin.hpp"
@@ -37,8 +38,8 @@ TEST_CASE("authorization header") {
     Session s = session("http://x");
     s.deviceName = "PlayStation 4";
     s.deviceId = "d1";
-    const std::string base =
-        "MediaBrowser Client=\"Playfin\", Device=\"PlayStation 4\", DeviceId=\"d1\", Version=\"0.1.0\"";
+    const std::string base = "MediaBrowser Client=\"Playfin\", Device=\"PlayStation 4\", DeviceId=\"d1\", Version=\"" +
+                             std::string(core::version()) + "\"";
     CHECK(jellyfin::authorizationHeader(s) == base);
     s.token = "t\"x,y\n";
     CHECK(jellyfin::authorizationHeader(s) == base + ", Token=\"txy\"");

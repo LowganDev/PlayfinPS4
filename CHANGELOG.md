@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (not released yet)
+## 1.0.0 (2026-10-17)
 
 - Servers: several servers and several users per server, found on the network or added by address; sign-in with
   a password or Quick Connect; HTTPS with certificate pinning for self-signed servers.
