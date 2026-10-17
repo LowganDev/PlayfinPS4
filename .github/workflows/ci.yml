@@ -1,8 +1,10 @@
-# Continuous integration. Manual only while the repository is private (docs/release.md, step 4: add push and
-# pull_request when it becomes public).
+# Continuous integration: the Linux tests (debug and ASan), a short fuzz run and the PS4 package.
 name: ci
 
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:

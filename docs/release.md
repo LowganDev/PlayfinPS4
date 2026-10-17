@@ -37,8 +37,6 @@ The checklist for a release; release tags are the version number without "v" (`1
      build image's FriBidi, zlib, libsamplerate and OpenOrbis toolchain (GPL-3.0: crt and `link.x`) with their
      PacBrew recipes, all checked against pinned checksums;
    - the changelog section as notes.
-3. For the first public release: make the repository public, then switch CI on (add `push` and `pull_request` to
-   `on:` in `.github/workflows/ci.yml`; it runs on `workflow_dispatch` only until then).
 
 ## Dependency packages
 
