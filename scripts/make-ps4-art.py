@@ -5,8 +5,8 @@
 
 icon0.png (512x512): "Playfin." under a blue halo. pic1.png (1920x1080): the app's background with the halo and the
 logo, shown by the PS4 behind the selected app. docs/images/logo-on-dark.png and logo-on-light.png: the "Playfin."
-wordmark on a transparent background for the README (GitHub's dark and light themes). Colours from the theme
-(src/ui/theme.cpp).
+wordmark on a transparent background for the README (GitHub's dark and light themes). docs/images/download.png: the
+README's download button. Colours from the theme (src/ui/theme.cpp).
 """
 import math
 import os
@@ -60,6 +60,29 @@ def wordmark(text_colour, dot_colour, size=160, margin=16):
     return image
 
 
+def download_button(scale=2):
+    """"Download for PS4" with an arrow into a tray, white on the accent, drawn at `scale` for sharp screens."""
+    font = ImageFont.truetype(FONT, 22 * scale)
+    label = "Download for PS4"
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    text_width = probe.textlength(label, font=font)
+    pad, icon, gap, height = 22 * scale, 22 * scale, 12 * scale, 56 * scale
+    image = Image.new("RGBA", (round(pad + icon + gap + text_width + pad), height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((0, 0, image.width - 1, height - 1), radius=height // 2, fill=ACCENT)
+    stroke = round(2.6 * scale)
+    left, top = pad, (height - icon) / 2
+    middle = left + icon / 2
+    draw.line((middle, top, middle, top + icon * 0.62), fill=TEXT, width=stroke)
+    head = icon * 0.3
+    draw.line((middle - head, top + icon * 0.62 - head, middle, top + icon * 0.62), fill=TEXT, width=stroke, joint="curve")
+    draw.line((middle + head, top + icon * 0.62 - head, middle, top + icon * 0.62), fill=TEXT, width=stroke, joint="curve")
+    draw.line((left, top + icon * 0.72, left, top + icon, left + icon, top + icon, left + icon, top + icon * 0.72),
+              fill=TEXT, width=stroke, joint="curve")
+    draw.text((left + icon + gap, height / 2), label, font=font, fill=TEXT, anchor="lm")
+    return image
+
+
 def main():
     out = os.path.join(ROOT, "resources", "ps4", "sce_sys")
     icon = halo(512, 512, 0.0, 0.9, 0.9, 0.6)
@@ -72,6 +95,7 @@ def main():
     os.makedirs(images, exist_ok=True)
     wordmark(TEXT, DOT).save(os.path.join(images, "logo-on-dark.png"))
     wordmark(BACKGROUND, ACCENT).save(os.path.join(images, "logo-on-light.png"))
+    download_button().save(os.path.join(images, "download.png"))
 
 
 if __name__ == "__main__":

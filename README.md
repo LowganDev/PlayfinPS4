@@ -7,6 +7,11 @@
 
 A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN).
 
+<a href="https://github.com/LowganDev/Playfin/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
+
+The latest version's package; earlier versions are on the [Releases](https://github.com/LowganDev/Playfin/releases)
+page.
+
 
 ## What it does
 
@@ -35,8 +40,8 @@ A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN)
 
 ## Installing
 
-1. Copy `IV0001-PLFN00000_00-PLFN000000100000.pkg` to the console (USB drive or FTP) and install it from
-   GoldHEN → Debug Settings → Package Installer.
+1. Download `IV0001-PLFN00000_00-PLFN000000100000.pkg` with the button at the top, copy it to the console (USB
+   drive or FTP) and install it from GoldHEN → Debug Settings → Package Installer.
 2. Start Playfin from the home screen. Servers on your network are found automatically; others are added by
    address (for example `192.168.1.20:8096` or `https://media.example.com`).
 

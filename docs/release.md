@@ -31,7 +31,8 @@ The checklist for a release; release tags are the version number without "v" (`1
 
 1. Commit "build: Playfin x.y.z", tag `x.y.z`, push the tag.
 2. GitHub release "Playfin x.y.z" on the tag, with:
-   - `IV0001-PLFN00000_00-PLFN000000100000.pkg`;
+   - `IV0001-PLFN00000_00-PLFN000000100000.pkg` (this exact name: the README's download button links to
+     `releases/latest/download/` with it, and "latest" skips pre-releases);
    - the corresponding source, `dist/playfin-x.y.z-sources.tar`, made by `scripts/ps4/source-archive.sh` (run at
      the release's commit): Playfin, every recipe of `scripts/ps4` with its patches and upstream sources, and the
      build image's FriBidi, zlib, libsamplerate and OpenOrbis toolchain (GPL-3.0: crt and `link.x`) with their
