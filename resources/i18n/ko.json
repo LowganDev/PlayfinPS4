@@ -66,7 +66,7 @@
   "player.skip_intro": "인트로 건너뛰기",
   "player.skip_credits": "엔딩 크레딧 건너뛰기",
   "player.next_episode": "다음 에피소드",
-  "player.next_in": "{0}초 후 다음 에피소드",
+  "player.next_in": "{0}초 후",
   "player.audio": "오디오",
   "player.subtitles": "자막",
   "player.subtitles_off": "없음",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "녹화됨",
   "livetv.nothing": "아직 녹화가 없습니다.",
   "livetv.home_row": "지금 TV에서",
-  "settings.licenses.intro": "Playfin은 GNU GPL v3에 따른 자유 소프트웨어입니다. 아래 구성 요소로 만들어졌으며 각각 고유한 라이선스를 따릅니다."
+  "settings.licenses.intro": "Playfin은 GNU GPL v3에 따른 자유 소프트웨어입니다. 아래 구성 요소로 만들어졌으며 각각 고유한 라이선스를 따릅니다.",
+  "player.play_now": "지금 재생"
 }

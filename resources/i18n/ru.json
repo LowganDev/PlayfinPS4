@@ -68,7 +68,7 @@
   "player.skip_intro": "Пропустить заставку",
   "player.skip_credits": "Пропустить титры",
   "player.next_episode": "Следующая серия",
-  "player.next_in": "Следующая серия через {0} с",
+  "player.next_in": "Через {0} с",
   "player.audio": "Аудио",
   "player.subtitles": "Субтитры",
   "player.subtitles_off": "Нет",
@@ -171,5 +171,6 @@
   "livetv.recorded_title": "Записанные",
   "livetv.nothing": "Записей пока нет.",
   "livetv.home_row": "Сейчас по ТВ",
-  "settings.licenses.intro": "Playfin — свободная программа под лицензией GNU GPL v3. Она использует перечисленные ниже компоненты, каждый под своей лицензией."
+  "settings.licenses.intro": "Playfin — свободная программа под лицензией GNU GPL v3. Она использует перечисленные ниже компоненты, каждый под своей лицензией.",
+  "player.play_now": "Смотреть сейчас"
 }

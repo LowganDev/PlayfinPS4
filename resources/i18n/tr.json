@@ -66,7 +66,7 @@
   "player.skip_intro": "Girişi atla",
   "player.skip_credits": "Jeneriği atla",
   "player.next_episode": "Sonraki bölüm",
-  "player.next_in": "Sonraki bölüm {0} sn sonra",
+  "player.next_in": "{0} sn sonra",
   "player.audio": "Ses",
   "player.subtitles": "Altyazılar",
   "player.subtitles_off": "Yok",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "Kaydedilenler",
   "livetv.nothing": "Henüz kayıt yok.",
   "livetv.home_row": "Şimdi TV'de",
-  "settings.licenses.intro": "Playfin, GNU GPL v3 altında özgür bir yazılımdır. Her biri kendi lisansına sahip aşağıdaki bileşenlerle oluşturulmuştur."
+  "settings.licenses.intro": "Playfin, GNU GPL v3 altında özgür bir yazılımdır. Her biri kendi lisansına sahip aşağıdaki bileşenlerle oluşturulmuştur.",
+  "player.play_now": "Şimdi oynat"
 }

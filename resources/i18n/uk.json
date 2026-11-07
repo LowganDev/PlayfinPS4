@@ -68,7 +68,7 @@
   "player.skip_intro": "Пропустити заставку",
   "player.skip_credits": "Пропустити титри",
   "player.next_episode": "Наступна серія",
-  "player.next_in": "Наступна серія через {0} с",
+  "player.next_in": "Через {0} с",
   "player.audio": "Аудіо",
   "player.subtitles": "Субтитри",
   "player.subtitles_off": "Немає",
@@ -171,5 +171,6 @@
   "livetv.recorded_title": "Записані",
   "livetv.nothing": "Записів поки немає.",
   "livetv.home_row": "Зараз на ТБ",
-  "settings.licenses.intro": "Playfin — вільна програма за ліцензією GNU GPL v3. Вона використовує наведені нижче компоненти, кожен за власною ліцензією."
+  "settings.licenses.intro": "Playfin — вільна програма за ліцензією GNU GPL v3. Вона використовує наведені нижче компоненти, кожен за власною ліцензією.",
+  "player.play_now": "Дивитися зараз"
 }

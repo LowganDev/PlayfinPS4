@@ -66,7 +66,7 @@
   "player.skip_intro": "跳過片頭",
   "player.skip_credits": "跳過片尾",
   "player.next_episode": "下一集",
-  "player.next_in": "{0} 秒後播放下一集",
+  "player.next_in": "{0} 秒後",
   "player.audio": "音訊",
   "player.subtitles": "字幕",
   "player.subtitles_off": "無",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "已錄影",
   "livetv.nothing": "還沒有錄影。",
   "livetv.home_row": "電視正在播出",
-  "settings.licenses.intro": "Playfin 是採用 GNU GPL v3 的自由軟體，使用了以下元件，每個元件都有各自的授權。"
+  "settings.licenses.intro": "Playfin 是採用 GNU GPL v3 的自由軟體，使用了以下元件，每個元件都有各自的授權。",
+  "player.play_now": "立即播放"
 }

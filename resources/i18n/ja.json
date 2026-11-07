@@ -66,7 +66,7 @@
   "player.skip_intro": "イントロをスキップ",
   "player.skip_credits": "エンディングをスキップ",
   "player.next_episode": "次のエピソード",
-  "player.next_in": "{0} 秒後に次のエピソード",
+  "player.next_in": "あと {0} 秒",
   "player.audio": "音声",
   "player.subtitles": "字幕",
   "player.subtitles_off": "なし",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "録画済み",
   "livetv.nothing": "録画はまだありません。",
   "livetv.home_row": "今テレビで",
-  "settings.licenses.intro": "Playfin は GNU GPL v3 のフリーソフトウェアです。以下のコンポーネントを使用しており、それぞれに独自のライセンスがあります。"
+  "settings.licenses.intro": "Playfin は GNU GPL v3 のフリーソフトウェアです。以下のコンポーネントを使用しており、それぞれに独自のライセンスがあります。",
+  "player.play_now": "今すぐ再生"
 }

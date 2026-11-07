@@ -126,6 +126,18 @@ void texts(const ui::View& view, std::vector<std::string>& out) {
     }
 }
 
+// a visible label holding `part`
+bool showsSomewhere(ui::Application& app, const std::string& part) {
+    std::vector<std::string> all;
+    texts(app.root(), all);
+    for (const std::string& t : all) {
+        if (t.find(part) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool shows(ui::Application& app, const std::string& text) {
     std::vector<std::string> all;
     texts(app.root(), all);
@@ -195,7 +207,9 @@ TEST_CASE("details of a partly watched item offer to resume or to start over") {
 
 TEST_CASE("the player reports the session to the server and stops when leaving") {
     Playing p;
-    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    jellyfin::Item alone = episode();
+    alone.seasonId.clear();  // no next episode: no card takes the first ◯
+    p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
     p.frames(10);
     REQUIRE(p.shell.application->videoSource() != nullptr);
     CHECK(p.shell.application->videoSource()->videoLayer().width == 320);
@@ -235,7 +249,7 @@ TEST_CASE("settings are saved next to servers.json and read back by a new sessio
 TEST_CASE("the intro skip button shows at the start of an episode with an intro and seeks past it") {
     Playing p;
     jellyfin::Item alone = episode();
-    alone.seasonId.clear();  // no next episode: the 4 s clip is all "last 30 s", the next-episode button would win
+    alone.seasonId.clear();  // no next episode: the 4 s clip is all "last 10 s", the next-episode card would win
     p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
     p.frames(10);
     CHECK(shows(*p.shell.application, "Skip intro"));
@@ -279,11 +293,54 @@ TEST_CASE("an audio change that restarts a transcode ends the first play session
     p.shell.press(Action::Back);
 }
 
-TEST_CASE("near the end of an episode with a next one, the next-episode button shows") {
+TEST_CASE("next-episode card: in the last 10 s, \u2715 plays the next episode now") {
     Playing p;
-    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));  // the 4 s clip: all last 10 s
     p.frames(10);
     CHECK(shows(*p.shell.application, "Next episode"));
+    CHECK(showsSomewhere(*p.shell.application, "In 4 s"));
+    CHECK(showsSomewhere(*p.shell.application, "E2"));
+    p.shell.press(Action::Confirm);
+    p.frames(10);
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 1);
+    CHECK(p.shell.application->depth() == 2);  // the next episode took the player's place
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("next-episode card: \u25cb cancels it, the episode ends and the player closes") {
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 30000000));  // 3 s of 4
+    p.frames(10);
+    REQUIRE(shows(*p.shell.application, "Next episode"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    CHECK_FALSE(shows(*p.shell.application, "Next episode"));
+    CHECK(p.shell.application->depth() == 2);  // still playing
+    // its credits are on screen there: "Skip credits" took the focus; the player itself plays on
+    REQUIRE(p.shell.application->focus().focus(p.shell.application->top()));
+    p.shell.press(Action::Confirm);  // the test player starts paused: play to the end
+    for (int i = 0; i < 400 && p.shell.application->depth() == 2; ++i) {
+        p.frames(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    CHECK(p.shell.application->depth() == 1);
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 0);
+}
+
+TEST_CASE("next-episode card: left alone, the next episode plays when the episode ends") {
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 30000000));  // 3 s of 4
+    p.frames(10);
+    REQUIRE(shows(*p.shell.application, "Next episode"));
+    REQUIRE(p.shell.application->focus().focus(p.shell.application->top()));
+    p.shell.press(Action::Confirm);  // the player itself: play (the test player starts paused)
+    for (int i = 0; i < 400 && p.server.count("/Items/e-2/PlaybackInfo") == 0; ++i) {
+        p.frames(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 1);
+    p.frames(5);
+    p.shell.press(Action::Back);
 }
 
 TEST_CASE("at the end of a film the player closes itself cleanly") {

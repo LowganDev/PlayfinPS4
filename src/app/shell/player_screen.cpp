@@ -23,6 +23,7 @@
 #include "player/tracks.hpp"
 #include "ui/context.hpp"
 #include "ui/i18n.hpp"
+#include "ui/image_view.hpp"
 #include "ui/label.hpp"
 #include "ui/theme.hpp"
 #include "ui/video_source.hpp"
@@ -34,7 +35,6 @@ namespace {
 
 constexpr std::int64_t kBarMs = 4000;          // the bar hides after 4 s without input
 constexpr std::int64_t kHoldGapMs = 300;       // presses closer than this are one held button
-constexpr std::int64_t kCountdownMs = 10000;   // next episode after 10 s
 constexpr std::int64_t kStatsMs = 1000;
 
 struct Loaded {
@@ -117,11 +117,6 @@ private:
         middle->horizontal = ui::CrossAlign::Center;
         middle->vertical = ui::CrossAlign::Center;
         spinner_ = middle->add<ui::Spinner>();
-        countdown_ = middle->add<ui::Label>("", ui::FontStyle{ui::theme().fontTitle, ui::FontWeight::SemiBold});
-        countdown_->background = ui::theme().scrim;
-        countdown_->cornerRadius = ui::theme().radius;
-        countdown_->padding = ui::Insets::symmetric(ui::theme().spacingM, ui::theme().spacingL);
-        countdown_->visible = false;
 
         auto* bottom = add<ui::Box>(ui::Axis::Column);
         bottom->width = ui::SizeSpec::fill();
@@ -129,6 +124,8 @@ private:
         bottom->align = ui::Align::End;
         bottom->padding = {0, 96, 64, 96};
         bottom->gap = ui::theme().spacingL;
+
+        buildNextCard(*bottom);
 
         auto* skipRow = bottom->add<ui::Box>(ui::Axis::Row);
         skipRow->width = ui::SizeSpec::fill();
@@ -148,6 +145,47 @@ private:
         progress_->width = ui::SizeSpec::fill();
         time_ = bar_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         time_->color = ui::theme().textSecondary;
+    }
+
+    // "Épisode suivant": its picture, its number and title, the seconds left; ✕ plays it now, ◯ cancels
+    void buildNextCard(ui::Box& bottom) {
+        auto* row = bottom.add<ui::Box>(ui::Axis::Row);
+        row->width = ui::SizeSpec::fill();
+        row->align = ui::Align::End;
+        nextCard_ = row->add<ui::Box>(ui::Axis::Row);
+        nextCard_->background = ui::withAlpha(ui::theme().surfaceRaised, 0xF0);
+        nextCard_->cornerRadius = ui::theme().radius;
+        nextCard_->padding = ui::Insets::all(ui::theme().spacingM);
+        nextCard_->gap = ui::theme().spacingL;
+        nextCard_->crossAlign = ui::CrossAlign::Center;
+        nextCard_->focusable = true;
+        nextCard_->drawsOwnFocus = true;
+        nextCard_->visible = false;
+        nextImage_ = nextCard_->add<ui::ImageView>();
+        nextImage_->width = ui::SizeSpec::fixed(320);
+        nextImage_->height = ui::SizeSpec::fixed(180);
+        nextImage_->cornerRadius = 8;
+        nextImage_->clip = true;
+        nextImage_->background = ui::theme().surface;
+        auto* texts = nextCard_->add<ui::Box>(ui::Axis::Column);
+        texts->gap = ui::theme().spacingS;
+        auto* heading = texts->add<ui::Label>(ui::tr("player.next_episode"),
+                                              ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
+        heading->color = ui::theme().textSecondary;
+        nextTitle_ = texts->add<ui::Label>("", ui::FontStyle{ui::theme().fontTitle, ui::FontWeight::SemiBold});
+        nextTitle_->width = ui::SizeSpec::fixed(560);
+        nextTitle_->maxLines = 2;
+        nextCountdown_ = texts->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
+        nextCountdown_->color = ui::theme().accent;
+        nextCard_->bind(platform::Action::Confirm, ui::tr("player.play_now"), [this] {
+            playNext();
+            return true;
+        });
+        nextCard_->bind(platform::Action::Back, ui::tr("ui.cancel"), [this] {
+            nextCardState_.cancel();
+            hideNextCard();
+            return true;
+        });
     }
 
     std::string barTitle() const {
@@ -220,13 +258,8 @@ private:
         bind(platform::Action::Menu, "", [this] { return press([this] { openTracks(); }); });
     }
 
-    // Every key: during the next-episode countdown it cancels it and goes back; otherwise it does its job.
     template <typename Action>
     bool press(Action action) {
-        if (countdownUntil_ > 0) {
-            leave();
-            return true;
-        }
         action();
         return true;
     }
@@ -284,9 +317,7 @@ private:
     }
 
     void pressSkip() {
-        if (shownButton_.kind == player::SegmentButton::NextEpisode) {
-            playNext();
-        } else if (shownButton_.kind != player::SegmentButton::None && engine_) {
+        if (shownButton_.kind != player::SegmentButton::None && engine_) {
             engine_->seekTo(shownButton_.seekTo);
             reporter_.onSeek(now(), playbackState());
             hideSkip();
@@ -509,13 +540,13 @@ private:
             }
         }
         updateSkip(state, t);
-        updateCountdown(t);
+        updateNextCard(state);
         logStats(freshPicture, t);
     }
 
     void updateSkip(const player::Engine::State& state, std::int64_t t) {
-        const player::SegmentButton wanted = player::buttonAt(state.position, state.duration, segments_,
-                                                              next_.has_value());
+        const player::SegmentButton wanted =
+            nextCard_->visible ? player::SegmentButton{} : player::buttonAt(state.position, segments_);
         const player::SegmentButton shown = buttonTimer_.visible(wanted, t);
         if (shown.kind == shownButton_.kind && shown.seekTo == shownButton_.seekTo) {
             return;
@@ -525,9 +556,7 @@ private:
             hideSkip();
             return;
         }
-        const char* key = shown.kind == player::SegmentButton::SkipIntro   ? "player.skip_intro"
-                          : shown.kind == player::SegmentButton::SkipOutro ? "player.skip_credits"
-                                                                           : "player.next_episode";
+        const char* key = shown.kind == player::SegmentButton::SkipIntro ? "player.skip_intro" : "player.skip_credits";
         skip_->setText(ui::tr(key));
         skip_->visible = true;
         markDirty();
@@ -549,28 +578,50 @@ private:
     }
 
     void ended() {
-        if (next_) {
-            countdownUntil_ = now() + kCountdownMs;
-            updateCountdown(now());
+        if (nextCardState_.playsNextAtEnd(next_.has_value())) {
+            playNext();
             return;
         }
         leave();
     }
 
-    void updateCountdown(std::int64_t t) {
-        if (countdownUntil_ <= 0) {
+    void updateNextCard(const player::Engine::State& state) {
+        if (live_ || !frameShown_) {
             return;
         }
-        if (t >= countdownUntil_) {
-            playNext();
+        const double position = seek_.pending() ? seek_.target() : state.position;
+        const player::NextCard::View view = nextCardState_.at(position, state.duration, next_.has_value());
+        if (!view.shown) {
+            hideNextCard();
             return;
         }
-        const auto seconds = static_cast<long>((countdownUntil_ - t + 999) / 1000);
-        const std::string text = ui::tr("player.next_in", {std::to_string(seconds)});
-        if (text != countdown_->text() || !countdown_->visible) {
-            countdown_->setText(text);
-            countdown_->visible = true;
-            markDirty();
+        const std::string text = ui::tr("player.next_in", {std::to_string(view.seconds)});
+        if (text != nextCountdown_->text()) {
+            nextCountdown_->setText(text);
+        }
+        if (nextCard_->visible) {
+            return;
+        }
+        if (const auto client = session().client()) {
+            nextImage_->setUrl(imageUrlFor(*client, *next_, true, 320, 180));
+        }
+        nextTitle_->setText(cardSubtitle(*next_));
+        nextCard_->visible = true;
+        hideSkip();
+        markDirty();
+        if (ui::Application* app = ui::Application::current(); app != nullptr && !app->hasModal()) {
+            app->focus().focus(nextCard_);
+        }
+    }
+
+    void hideNextCard() {
+        if (!nextCard_->visible) {
+            return;
+        }
+        nextCard_->visible = false;
+        markDirty();
+        if (ui::Application* app = ui::Application::current(); app != nullptr && !app->hasModal()) {
+            app->focus().focus(this);
         }
     }
 
@@ -587,10 +638,10 @@ private:
     }
 
     void playNext() {
-        if (!next_) {
+        if (!next_ || leaving_) {
             return;
         }
-        countdownUntil_ = 0;
+        leaving_ = true;
         AppSession* appSession = &session();
         const jellyfin::Item next = *next_;
         later([appSession, next] {
@@ -790,7 +841,11 @@ private:
     player::SegmentButton shownButton_;
 
     ui::Spinner* spinner_ = nullptr;
-    ui::Label* countdown_ = nullptr;
+    player::NextCard nextCardState_;
+    ui::Box* nextCard_ = nullptr;
+    ui::ImageView* nextImage_ = nullptr;
+    ui::Label* nextTitle_ = nullptr;
+    ui::Label* nextCountdown_ = nullptr;
     ui::Button* skip_ = nullptr;
     ui::Box* bar_ = nullptr;
     ui::Label* title_ = nullptr;
@@ -805,7 +860,7 @@ private:
     int audioIndex_ = -1;
     int subtitleIndex_ = -1;
     std::int64_t barUntil_ = 0;
-    std::int64_t countdownUntil_ = 0;
+    bool leaving_ = false;  // the next episode takes this screen's place
     std::int64_t lastSeekPressMs_ = 0;
     std::int64_t holdStartMs_ = 0;
     int lastDirection_ = 0;

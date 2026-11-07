@@ -108,20 +108,18 @@ TEST_CASE("reporting: start once, progress every 10 s and on events, stop once")
     CHECK(sent == std::vector<K>{K::Start, K::Progress, K::Progress, K::Progress, K::Stopped});
 }
 
-TEST_CASE("segment buttons: intro, credits and next episode") {
+TEST_CASE("segment buttons: intro and credits (the next episode has its own card)") {
     std::vector<jellyfin::MediaSegment> segments = {{jellyfin::SegmentType::Intro, 0, 600000000},
                                                     {jellyfin::SegmentType::Outro, 24000000000, 25500000000}};
     using B = player::SegmentButton;
-    player::SegmentButton intro = player::buttonAt(30, 2600, segments, false);
+    player::SegmentButton intro = player::buttonAt(30, segments);
     CHECK(intro.kind == B::SkipIntro);
     CHECK(intro.seekTo == doctest::Approx(60));
-    CHECK(player::buttonAt(100, 2600, segments, true).kind == B::None);
-    player::SegmentButton outro = player::buttonAt(2450, 2600, segments, true);
+    CHECK(player::buttonAt(100, segments).kind == B::None);
+    player::SegmentButton outro = player::buttonAt(2450, segments);
     CHECK(outro.kind == B::SkipOutro);
     CHECK(outro.seekTo == doctest::Approx(2550));
-    CHECK(player::buttonAt(2580, 2600, segments, true).kind == B::NextEpisode);
-    CHECK(player::buttonAt(2580, 2600, segments, false).kind == B::None);
-    CHECK(player::buttonAt(2580, 2600, {}, true).kind == B::NextEpisode);
+    CHECK(player::buttonAt(2580, segments).kind == B::None);
 }
 
 TEST_CASE("segment buttons leave after 8 s on screen") {
@@ -130,8 +128,27 @@ TEST_CASE("segment buttons leave after 8 s on screen") {
     CHECK(timer.visible(intro, 1000).kind == player::SegmentButton::SkipIntro);
     CHECK(timer.visible(intro, 8999).kind == player::SegmentButton::SkipIntro);
     CHECK(timer.visible(intro, 9001).kind == player::SegmentButton::None);
-    const player::SegmentButton next{player::SegmentButton::NextEpisode, 0};
-    CHECK(timer.visible(next, 9500).kind == player::SegmentButton::NextEpisode);  // a new button starts again
+    const player::SegmentButton outro{player::SegmentButton::SkipOutro, 2550};
+    CHECK(timer.visible(outro, 9500).kind == player::SegmentButton::SkipOutro);  // a new button starts again
+}
+
+TEST_CASE("next-episode card: the last 10 s, the seconds left, cancelled until sought back") {
+    player::NextCard card;
+    CHECK_FALSE(card.at(2589, 2600, true).shown);
+    const auto shown = card.at(2590.2, 2600, true);
+    CHECK(shown.shown);
+    CHECK(shown.seconds == 10);
+    CHECK(card.at(2599.5, 2600, true).seconds == 1);
+    CHECK_FALSE(card.at(2595, 2600, false).shown);  // no next episode
+    CHECK_FALSE(card.at(0, 0, true).shown);         // no duration yet
+    CHECK(card.playsNextAtEnd(true));
+    card.cancel();
+    CHECK_FALSE(card.at(2595, 2600, true).shown);
+    CHECK_FALSE(card.playsNextAtEnd(true));
+    CHECK_FALSE(card.at(2500, 2600, true).shown);  // sought back out of the last 10 s: the card may come again
+    CHECK(card.at(2595, 2600, true).shown);
+    CHECK(card.playsNextAtEnd(true));
+    CHECK_FALSE(card.playsNextAtEnd(false));
 }
 
 TEST_CASE("tracks: labels, mpv ids and the current one") {

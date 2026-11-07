@@ -66,7 +66,7 @@
   "player.skip_intro": "Bỏ qua phần mở đầu",
   "player.skip_credits": "Bỏ qua phần kết",
   "player.next_episode": "Tập tiếp theo",
-  "player.next_in": "Tập tiếp theo sau {0} giây",
+  "player.next_in": "Sau {0} giây",
   "player.audio": "Âm thanh",
   "player.subtitles": "Phụ đề",
   "player.subtitles_off": "Không",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "Đã ghi",
   "livetv.nothing": "Chưa có bản ghi nào.",
   "livetv.home_row": "Đang chiếu trên TV",
-  "settings.licenses.intro": "Playfin là phần mềm tự do theo giấy phép GNU GPL v3. Ứng dụng được xây dựng từ các thành phần dưới đây, mỗi thành phần có giấy phép riêng."
+  "settings.licenses.intro": "Playfin là phần mềm tự do theo giấy phép GNU GPL v3. Ứng dụng được xây dựng từ các thành phần dưới đây, mỗi thành phần có giấy phép riêng.",
+  "player.play_now": "Phát ngay"
 }

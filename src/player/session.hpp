@@ -63,14 +63,28 @@ private:
 };
 
 struct SegmentButton {
-    enum Kind { None, SkipIntro, SkipOutro, NextEpisode } kind = None;
-    double seekTo = 0;  // seconds (skip buttons)
+    enum Kind { None, SkipIntro, SkipOutro } kind = None;
+    double seekTo = 0;  // seconds
 };
 
-// The button for this moment: Passer l'intro inside an Intro, Passer le générique inside an Outro, Épisode
-// suivant in the last 30 s when there is a next episode (it wins over the Outro button there).
-SegmentButton buttonAt(double position, double duration, const std::vector<jellyfin::MediaSegment>& segments,
-                       bool hasNext);
+// The button for this moment: Passer l'intro inside an Intro, Passer le générique inside an Outro.
+SegmentButton buttonAt(double position, const std::vector<jellyfin::MediaSegment>& segments);
+
+// The next-episode card: shown in the last 10 s of a video that has a next episode, with the whole seconds left. Cancelled (◯), it stays hidden until playback goes back before the last 10 s.
+class NextCard {
+public:
+    struct View {
+        bool shown = false;
+        int seconds = 0;
+    };
+    View at(double position, double duration, bool hasNext);
+    void cancel() { cancelled_ = true; }
+    // at the end of the file: the next episode plays unless the card was cancelled
+    bool playsNextAtEnd(bool hasNext) const { return hasNext && !cancelled_; }
+
+private:
+    bool cancelled_ = false;
+};
 
 // A button stays on screen 8 s at most; a different button starts its own 8 s.
 class ButtonTimer {

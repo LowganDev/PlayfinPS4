@@ -9,7 +9,7 @@ namespace playfin::player {
 namespace {
 
 constexpr std::int64_t kProgressMs = 10000;
-constexpr double kNextEpisodeSeconds = 30;
+constexpr double kNextCardSeconds = 10;
 constexpr std::int64_t kButtonMs = 8000;
 
 // A path of the server joined to its address; an absolute URL only when it is on the same server (the
@@ -87,11 +87,7 @@ void Reporter::stop(const jellyfin::PlaybackState& state) {
     send_(ReportKind::Stopped, state);
 }
 
-SegmentButton buttonAt(double position, double duration, const std::vector<jellyfin::MediaSegment>& segments,
-                       bool hasNext) {
-    if (hasNext && duration > 0 && position >= duration - kNextEpisodeSeconds) {
-        return {SegmentButton::NextEpisode, 0};
-    }
+SegmentButton buttonAt(double position, const std::vector<jellyfin::MediaSegment>& segments) {
     for (const jellyfin::MediaSegment& segment : segments) {
         const double start = static_cast<double>(segment.startTicks) / kTicksPerSecond;
         const double end = static_cast<double>(segment.endTicks) / kTicksPerSecond;
@@ -106,6 +102,23 @@ SegmentButton buttonAt(double position, double duration, const std::vector<jelly
         }
     }
     return {};
+}
+
+NextCard::View NextCard::at(double position, double duration, bool hasNext) {
+    const double left = duration - position;
+    if (!hasNext || duration <= 0 || left > kNextCardSeconds) {
+        if (left > kNextCardSeconds) {
+            cancelled_ = false;  // sought back: the card may come again
+        }
+        return {};
+    }
+    if (cancelled_) {
+        return {};
+    }
+    View view;
+    view.shown = true;
+    view.seconds = left <= 0 ? 0 : static_cast<int>(left + 0.999);
+    return view;
 }
 
 SegmentButton ButtonTimer::visible(const SegmentButton& wanted, std::int64_t nowMs) {

@@ -66,7 +66,7 @@
   "player.skip_intro": "Skip intro",
   "player.skip_credits": "Skip credits",
   "player.next_episode": "Next episode",
-  "player.next_in": "Next episode in {0} s",
+  "player.next_in": "In {0} s",
   "player.audio": "Audio",
   "player.subtitles": "Subtitles",
   "player.subtitles_off": "None",
@@ -167,5 +167,6 @@
   "livetv.recorded_title": "Recorded",
   "livetv.nothing": "No recordings yet.",
   "livetv.home_row": "On TV now",
-  "settings.licenses.intro": "Playfin is free software under the GNU GPL v3. It is built with the components below, each under its own licence."
+  "settings.licenses.intro": "Playfin is free software under the GNU GPL v3. It is built with the components below, each under its own licence.",
+  "player.play_now": "Play now"
 }

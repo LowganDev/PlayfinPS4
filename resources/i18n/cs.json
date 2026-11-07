@@ -67,7 +67,7 @@
   "player.skip_intro": "Přeskočit úvod",
   "player.skip_credits": "Přeskočit titulky",
   "player.next_episode": "Další díl",
-  "player.next_in": "Další díl za {0} s",
+  "player.next_in": "Za {0} s",
   "player.audio": "Zvuk",
   "player.subtitles": "Titulky",
   "player.subtitles_off": "Žádné",
@@ -169,5 +169,6 @@
   "livetv.recorded_title": "Nahrané",
   "livetv.nothing": "Zatím žádné nahrávky.",
   "livetv.home_row": "Právě v televizi",
-  "settings.licenses.intro": "Playfin je svobodný software pod licencí GNU GPL v3. Používá níže uvedené komponenty, každou pod vlastní licencí."
+  "settings.licenses.intro": "Playfin je svobodný software pod licencí GNU GPL v3. Používá níže uvedené komponenty, každou pod vlastní licencí.",
+  "player.play_now": "Přehrát hned"
 }
