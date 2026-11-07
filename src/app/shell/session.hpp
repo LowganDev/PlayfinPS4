@@ -56,6 +56,7 @@ public:
     void forgetToken();
 
     Settings& settings() { return settings_; }
+    const Settings& settings() const { return settings_; }
     bool saveSettings();
 
     core::Result<std::string> fetchImage(const std::string& url, const core::CancelToken& token) const;

@@ -193,6 +193,11 @@ void Engine::setAudioTrack(int mpvId) {
     mpv_set_property_string(impl_->mpv, "aid", mpvId > 0 ? std::to_string(mpvId).c_str() : "no");
 }
 
+void Engine::setVolume(int percent) {
+    double value = percent < 0 ? 0 : percent > 100 ? 100 : percent;
+    mpv_set_property(impl_->mpv, "volume", MPV_FORMAT_DOUBLE, &value);
+}
+
 void Engine::setSubtitleTrack(int mpvId) {
     mpv_set_property_string(impl_->mpv, "sid", mpvId > 0 ? std::to_string(mpvId).c_str() : "no");
 }

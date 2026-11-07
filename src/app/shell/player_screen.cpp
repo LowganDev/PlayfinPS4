@@ -102,7 +102,14 @@ public:
     }
 
     platform::VideoLayer videoLayer() const override {
-        return {frame_.pixels.empty() ? nullptr : frame_.pixels.data(), frame_.width, frame_.height, false};
+        platform::VideoLayer layer{frame_.pixels.empty() ? nullptr : frame_.pixels.data(), frame_.width,
+                                   frame_.height, false};
+        const std::string& fit = session().settings().pictureFit;
+        layer.fit = fit == "fill"      ? platform::VideoFit::Fill
+                    : fit == "stretch" ? platform::VideoFit::Stretch
+                                       : platform::VideoFit::Fit;
+        layer.scale = session().settings().pictureSize / 100.0;
+        return layer;
     }
 
 private:
@@ -213,7 +220,12 @@ private:
             return;
         }
         const double position = seek_.pending() ? seek_.target() : state.position;
-        const std::string text = clockText(position) + " / " + clockText(state.duration);
+        std::string text = clockText(position) + " / " + clockText(state.duration);
+        if (state.duration > 0) {  // when it would end, playing on from here
+            const std::int64_t at = session().now();
+            const auto end = at + static_cast<std::int64_t>(state.duration - position);
+            text += " \xC2\xB7 " + ui::tr("player.ends_at", {clock24(end, session().utcOffsetMinutes(end))});
+        }
         if (text != time_->text()) {
             time_->setText(text);
         }
@@ -252,8 +264,11 @@ private:
         bind(platform::Action::Right, "", [this] { return press([this] { live_ ? showBar() : seekBy(1); }); });
         bind(platform::Action::L1, "", [this] { return press([this] { live_ ? zap(-1) : seekSeconds(-60); }); });
         bind(platform::Action::R1, "", [this] { return press([this] { live_ ? zap(1) : seekSeconds(60); }); });
-        bind(platform::Action::Up, "", [this] { return press([this] { showBar(); }); });
-        bind(platform::Action::Down, "", [this] { return press([this] { showBar(); }); });
+        bind(platform::Action::L2, "", [this] { return press([this] { live_ ? showBar() : seekSeconds(-300); }); });
+        bind(platform::Action::R2, "", [this] { return press([this] { live_ ? showBar() : seekSeconds(300); }); });
+        // a channel: ↑ / ↓ set the volume; a video: they show the bar
+        bind(platform::Action::Up, "", [this] { return press([this] { live_ ? stepVolume(10) : showBar(); }); });
+        bind(platform::Action::Down, "", [this] { return press([this] { live_ ? stepVolume(-10) : showBar(); }); });
         bind(platform::Action::Options, "", [this] { return press([this] { openTracks(); }); });
         bind(platform::Action::Menu, "", [this] { return press([this] { openTracks(); }); });
     }
@@ -419,6 +434,9 @@ private:
     bool createEngine(const jellyfin::Client& client) {
         // the frame loop polls the engine every frame
         engine_ = player::Engine::create(engineOptionsFor(client, session().synchronous), [] {});
+        if (engine_) {
+            engine_->setVolume(session().settings().volume);
+        }
         return engine_ != nullptr;
     }
 
@@ -733,7 +751,68 @@ private:
                             subtitleName,
             {{ui::tr("player.audio"), [this] { chooseTrack(jellyfin::StreamType::Audio); }},
              {ui::tr("player.subtitles"), [this] { chooseTrack(jellyfin::StreamType::Subtitle); }},
+             {ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
+              [this] { later([this] { chooseVolume(); }); }},
+             {ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); }},
              {ui::tr("ui.cancel"), {}}}));
+    }
+
+    // ---- volume and picture (kept in the settings for the next videos)
+
+    void setVolume(int percent) {
+        percent = percent < 0 ? 0 : percent > 100 ? 100 : percent;
+        session().settings().volume = percent;
+        session().saveSettings();
+        if (engine_) {
+            engine_->setVolume(percent);
+        }
+    }
+
+    void stepVolume(int delta) {
+        setVolume(session().settings().volume + delta);
+        if (ui::Application* app = ui::Application::current()) {
+            app->toast(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}), 1500);
+        }
+    }
+
+    void chooseVolume() {
+        std::vector<std::string> names;
+        int selected = 0;
+        for (int i = 0; i <= 10; ++i) {
+            const int percent = 100 - i * 10;
+            names.push_back(std::to_string(percent) + " %");
+            selected = percent == session().settings().volume ? i : selected;
+        }
+        ui::Application::current()->showModal(ui::makeChoiceDialog(
+            ui::tr("player.volume"), names, selected, [this](int index) { setVolume(100 - index * 10); }));
+    }
+
+    void choosePicture() {
+        static const char* const kFits[] = {"fit", "fill", "stretch"};
+        static const int kSizes[] = {100, 95, 90, 85, 80};
+        std::vector<std::string> names;
+        int selected = 0;
+        for (int f = 0; f < 3; ++f) {
+            for (int z = 0; z < (f == 0 ? 5 : 1); ++z) {  // a smaller picture only makes sense whole
+                std::string name = ui::tr(std::string("player.picture.") + kFits[f]);
+                if (f == 0 && z > 0) {
+                    name += " \xC2\xB7 " + std::to_string(kSizes[z]) + " %";
+                }
+                if (session().settings().pictureFit == kFits[f] &&
+                    (f != 0 || session().settings().pictureSize == kSizes[z])) {
+                    selected = static_cast<int>(names.size());
+                }
+                names.push_back(name);
+            }
+        }
+        ui::Application::current()->showModal(
+            ui::makeChoiceDialog(ui::tr("player.picture"), names, selected, [this](int index) {
+                Settings& settings = session().settings();
+                settings.pictureFit = index < 5 ? "fit" : index == 5 ? "fill" : "stretch";
+                settings.pictureSize = index < 5 ? kSizes[index] : 100;
+                session().saveSettings();
+                markDirty();
+            }));
     }
 
     void chooseTrack(jellyfin::StreamType type) {

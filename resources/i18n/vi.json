@@ -168,5 +168,12 @@
   "livetv.nothing": "Chưa có bản ghi nào.",
   "livetv.home_row": "Đang chiếu trên TV",
   "settings.licenses.intro": "Playfin là phần mềm tự do theo giấy phép GNU GPL v3. Ứng dụng được xây dựng từ các thành phần dưới đây, mỗi thành phần có giấy phép riêng.",
-  "player.play_now": "Phát ngay"
+  "player.play_now": "Phát ngay",
+  "player.ends_at": "Kết thúc lúc {0}",
+  "player.volume": "Âm lượng",
+  "player.volume_value": "Âm lượng: {0}%",
+  "player.picture": "Hình ảnh",
+  "player.picture.fit": "Toàn bộ hình",
+  "player.picture.fill": "Lấp đầy màn hình",
+  "player.picture.stretch": "Kéo giãn"
 }

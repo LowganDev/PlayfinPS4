@@ -53,6 +53,7 @@ public:
     void seekTo(double seconds);
     void setAudioTrack(int mpvId);     // mpv track ids start at 1
     void setSubtitleTrack(int mpvId);  // 0: no subtitles
+    void setVolume(int percent);       // 0 to 100
 
     struct State {
         double position = 0;

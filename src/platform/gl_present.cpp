@@ -124,7 +124,8 @@ void drawVideo(Presenter& p, const VideoLayer& video, int screenWidth, int scree
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, video.width, video.height, GL_RGBA, GL_UNSIGNED_BYTE, video.rgb0);
     }
-    const render::Box box = render::letterbox(video.width, video.height, screenWidth, screenHeight);
+    const render::Box box =
+        render::videoBox(video.width, video.height, screenWidth, screenHeight, video.fit, video.scale);
     const float sw = static_cast<float>(screenWidth);
     const float sh = static_cast<float>(screenHeight);
     drawQuad(p, p.video, box.x / sw * 2 - 1, 1 - box.y / sh * 2, (box.x + box.width) / sw * 2 - 1,

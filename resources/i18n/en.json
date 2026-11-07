@@ -168,5 +168,12 @@
   "livetv.nothing": "No recordings yet.",
   "livetv.home_row": "On TV now",
   "settings.licenses.intro": "Playfin is free software under the GNU GPL v3. It is built with the components below, each under its own licence.",
-  "player.play_now": "Play now"
+  "player.play_now": "Play now",
+  "player.ends_at": "Ends at {0}",
+  "player.volume": "Volume",
+  "player.volume_value": "Volume: {0}%",
+  "player.picture": "Picture",
+  "player.picture.fit": "Whole picture",
+  "player.picture.fill": "Fill the screen",
+  "player.picture.stretch": "Stretched"
 }

@@ -172,5 +172,12 @@
   "livetv.nothing": "Записів поки немає.",
   "livetv.home_row": "Зараз на ТБ",
   "settings.licenses.intro": "Playfin — вільна програма за ліцензією GNU GPL v3. Вона використовує наведені нижче компоненти, кожен за власною ліцензією.",
-  "player.play_now": "Дивитися зараз"
+  "player.play_now": "Дивитися зараз",
+  "player.ends_at": "Закінчиться о {0}",
+  "player.volume": "Гучність",
+  "player.volume_value": "Гучність: {0} %",
+  "player.picture": "Зображення",
+  "player.picture.fit": "Повністю",
+  "player.picture.fill": "Заповнити екран",
+  "player.picture.stretch": "Розтягнути"
 }

@@ -51,6 +51,14 @@ Settings loadSettings(const std::string& path) {
         settings.maxBitrate = bitrate;
     }
     settings.language = jellyfin::json::string(root, "language");
+    const std::int64_t volume = jellyfin::json::integer(root, "volume", 100);
+    settings.volume = volume >= 0 && volume <= 100 ? static_cast<int>(volume) : 100;
+    const std::string fit = jellyfin::json::string(root, "pictureFit");
+    if (fit == "fit" || fit == "fill" || fit == "stretch") {
+        settings.pictureFit = fit;
+    }
+    const std::int64_t size = jellyfin::json::integer(root, "pictureSize", 100);
+    settings.pictureSize = size >= 80 && size <= 100 ? static_cast<int>(size) : 100;
     for (const std::string& term : jellyfin::json::strings(root, "recentSearches")) {
         if (settings.recentSearches.size() < kMaxRecent && !core::trimmed(term).empty()) {
             settings.recentSearches.push_back(term.substr(0, kMaxTermBytes));
@@ -66,6 +74,9 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     writer.key("accent").value(settings.accent);
     writer.key("maxBitrate").value(settings.maxBitrate);
     writer.key("language").value(settings.language);
+    writer.key("volume").value(settings.volume);
+    writer.key("pictureFit").value(settings.pictureFit);
+    writer.key("pictureSize").value(settings.pictureSize);
     writer.key("recentSearches").array();
     for (const std::string& term : settings.recentSearches) {
         writer.value(term);

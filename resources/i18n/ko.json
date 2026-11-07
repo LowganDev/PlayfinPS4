@@ -168,5 +168,12 @@
   "livetv.nothing": "아직 녹화가 없습니다.",
   "livetv.home_row": "지금 TV에서",
   "settings.licenses.intro": "Playfin은 GNU GPL v3에 따른 자유 소프트웨어입니다. 아래 구성 요소로 만들어졌으며 각각 고유한 라이선스를 따릅니다.",
-  "player.play_now": "지금 재생"
+  "player.play_now": "지금 재생",
+  "player.ends_at": "{0}에 종료",
+  "player.volume": "볼륨",
+  "player.volume_value": "볼륨: {0}%",
+  "player.picture": "화면",
+  "player.picture.fit": "전체 화면 맞춤",
+  "player.picture.fill": "화면 채우기",
+  "player.picture.stretch": "늘이기"
 }

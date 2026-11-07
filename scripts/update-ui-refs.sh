@@ -14,11 +14,10 @@ for script in tests/ui/*.script; do
     mkdir -p "$out" "tests/ui/references/$name"
     screen=$name
     fakeOptions=
-    appOptions=
+    appOptions="--fixed-time 2026-10-16T19:45:00Z --utc-offset 120"  # the clock of every screenshot
     if [ "$name" = media ]; then
         screen=shell
         fakeOptions=--media
-        appOptions="--fixed-time 2026-10-16T19:45:00Z --utc-offset 120"
     fi
     if [ "$screen" = shell ]; then
         # shellcheck disable=SC2086

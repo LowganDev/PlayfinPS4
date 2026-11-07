@@ -19,10 +19,35 @@ Box letterbox(int videoWidth, int videoHeight, int screenWidth, int screenHeight
     return box;
 }
 
+Box videoBox(int videoWidth, int videoHeight, int screenWidth, int screenHeight, platform::VideoFit fit,
+             double scale) {
+    if (videoWidth <= 0 || videoHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) {
+        return {};
+    }
+    scale = std::clamp(scale, 0.5, 1.0);
+    const double areaWidth = screenWidth * scale;
+    const double areaHeight = screenHeight * scale;
+    double width = areaWidth;
+    double height = areaHeight;
+    if (fit != platform::VideoFit::Stretch) {
+        const double sx = areaWidth / videoWidth;
+        const double sy = areaHeight / videoHeight;
+        const double s = fit == platform::VideoFit::Fill ? std::max(sx, sy) : std::min(sx, sy);
+        width = videoWidth * s;
+        height = videoHeight * s;
+    }
+    Box box;
+    box.width = static_cast<float>(width);
+    box.height = static_cast<float>(height);
+    box.x = (static_cast<float>(screenWidth) - box.width) / 2;
+    box.y = (static_cast<float>(screenHeight) - box.height) / 2;
+    return box;
+}
+
 void compositeForTest(std::vector<std::uint8_t>& out, int width, int height, const platform::VideoLayer& video,
                       const std::vector<std::uint8_t>& ui) {
     out.assign(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4, 0);
-    const Box box = letterbox(video.width, video.height, width, height);
+    const Box box = videoBox(video.width, video.height, width, height, video.fit, video.scale);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             std::uint8_t* d = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +

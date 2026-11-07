@@ -168,5 +168,12 @@
   "livetv.nothing": "还没有录制。",
   "livetv.home_row": "电视正在播出",
   "settings.licenses.intro": "Playfin 是基于 GNU GPL v3 的自由软件，使用了以下组件，每个组件都有各自的许可。",
-  "player.play_now": "立即播放"
+  "player.play_now": "立即播放",
+  "player.ends_at": "{0} 结束",
+  "player.volume": "音量",
+  "player.volume_value": "音量：{0}%",
+  "player.picture": "画面",
+  "player.picture.fit": "完整画面",
+  "player.picture.fill": "填满屏幕",
+  "player.picture.stretch": "拉伸"
 }

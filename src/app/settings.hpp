@@ -15,6 +15,9 @@ struct Settings {
     std::int64_t maxBitrate = 40000000;  // bits/s, sent as MaxStreamingBitrate
     std::string language;                // UI language tag, "" = the console's
     std::vector<std::string> recentSearches;  // newest first, at most 8
+    int volume = 100;                     // the player's, 0 to 100
+    std::string pictureFit = "fit";       // "fit", "fill" or "stretch"
+    int pictureSize = 100;                // percent of the screen the picture may take, 80 to 100
 };
 
 // Missing file: defaults. Damaged file: renamed .bad, defaults. Unknown or invalid values: their defaults.

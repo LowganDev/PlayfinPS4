@@ -168,5 +168,12 @@
   "livetv.nothing": "Henüz kayıt yok.",
   "livetv.home_row": "Şimdi TV'de",
   "settings.licenses.intro": "Playfin, GNU GPL v3 altında özgür bir yazılımdır. Her biri kendi lisansına sahip aşağıdaki bileşenlerle oluşturulmuştur.",
-  "player.play_now": "Şimdi oynat"
+  "player.play_now": "Şimdi oynat",
+  "player.ends_at": "{0} itibarıyla biter",
+  "player.volume": "Ses düzeyi",
+  "player.volume_value": "Ses düzeyi: %{0}",
+  "player.picture": "Görüntü",
+  "player.picture.fit": "Tam görüntü",
+  "player.picture.fill": "Ekranı doldur",
+  "player.picture.stretch": "Uzatılmış"
 }

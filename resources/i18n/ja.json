@@ -168,5 +168,12 @@
   "livetv.nothing": "録画はまだありません。",
   "livetv.home_row": "今テレビで",
   "settings.licenses.intro": "Playfin は GNU GPL v3 のフリーソフトウェアです。以下のコンポーネントを使用しており、それぞれに独自のライセンスがあります。",
-  "player.play_now": "今すぐ再生"
+  "player.play_now": "今すぐ再生",
+  "player.ends_at": "{0} に終了",
+  "player.volume": "音量",
+  "player.volume_value": "音量: {0}%",
+  "player.picture": "画面",
+  "player.picture.fit": "全体を表示",
+  "player.picture.fill": "画面いっぱい",
+  "player.picture.stretch": "引き伸ばし"
 }

@@ -170,5 +170,12 @@
   "livetv.nothing": "Zatím žádné nahrávky.",
   "livetv.home_row": "Právě v televizi",
   "settings.licenses.intro": "Playfin je svobodný software pod licencí GNU GPL v3. Používá níže uvedené komponenty, každou pod vlastní licencí.",
-  "player.play_now": "Přehrát hned"
+  "player.play_now": "Přehrát hned",
+  "player.ends_at": "Skončí v {0}",
+  "player.volume": "Hlasitost",
+  "player.volume_value": "Hlasitost: {0} %",
+  "player.picture": "Obraz",
+  "player.picture.fit": "Celý obraz",
+  "player.picture.fill": "Vyplnit obrazovku",
+  "player.picture.stretch": "Roztažený"
 }

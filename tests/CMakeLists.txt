@@ -34,10 +34,12 @@ add_test(NAME ui_gallery_gl
         ${CMAKE_BINARY_DIR}/ui-out/gallery-gl --screen gallery --renderer gl)
 set_tests_properties(ui_gallery_gl PROPERTIES TIMEOUT 180)
 
+# the clock fixed (Paris, UTC+2): the player's "Se termine à" is the same on every run
 add_test(NAME ui_shell
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ui/run_shell.sh $<TARGET_FILE:playfin> $<TARGET_FILE:playfin_imgdiff>
         $<TARGET_FILE:fake_jellyfin> ${CMAKE_CURRENT_SOURCE_DIR}/ui/shell.script
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui/references/shell ${CMAKE_BINARY_DIR}/ui-out/shell)
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/references/shell ${CMAKE_BINARY_DIR}/ui-out/shell
+        "" "--fixed-time 2026-10-16T19:45:00Z --utc-offset 120")
 set_tests_properties(ui_shell PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
 
 # music and Live TV on the fake server with the test server's views, the guide's clock fixed (Paris, UTC+2)

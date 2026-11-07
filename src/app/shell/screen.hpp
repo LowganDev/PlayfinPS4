@@ -18,6 +18,7 @@ public:
     ~ShellScreen() override { token_.cancel(); }
 
     AppSession& session() { return session_; }
+    const AppSession& session() const { return session_; }
     // A request the user started (connecting, choosing a user) is running: presses meanwhile are ignored.
     bool busy = false;
     // Cancelled when the screen goes away: pass it to network calls so they stop early.

@@ -29,6 +29,25 @@ TEST_CASE("letterboxing keeps the video's aspect ratio, centred") {
     CHECK(none.width == doctest::Approx(0));
 }
 
+TEST_CASE("the picture: whole (letterboxed), filling the screen (cut), stretched, and smaller") {
+    using F = platform::VideoFit;
+    const render::Box fit = render::videoBox(1920, 800, 1920, 1080, F::Fit, 1.0);
+    CHECK(fit.height == doctest::Approx(800));
+    const render::Box fill = render::videoBox(1920, 800, 1920, 1080, F::Fill, 1.0);
+    CHECK(fill.height == doctest::Approx(1080));
+    CHECK(fill.width == doctest::Approx(2592));  // the sides are cut
+    CHECK(fill.x == doctest::Approx(-336));
+    const render::Box stretch = render::videoBox(1920, 800, 1920, 1080, F::Stretch, 1.0);
+    CHECK(stretch.width == doctest::Approx(1920));
+    CHECK(stretch.height == doctest::Approx(1080));
+    CHECK(stretch.y == doctest::Approx(0));
+    const render::Box smaller = render::videoBox(1920, 1080, 1920, 1080, F::Fit, 0.9);
+    CHECK(smaller.width == doctest::Approx(1728));
+    CHECK(smaller.x == doctest::Approx(96));
+    CHECK(smaller.y == doctest::Approx(54));
+    CHECK(render::videoBox(0, 0, 1920, 1080, F::Fill, 1.0).width == doctest::Approx(0));
+}
+
 TEST_CASE("the test composite puts the UI over the letterboxed video") {
     std::vector<std::uint8_t> video(4 * 2 * 4, 0);
     for (std::size_t i = 0; i < video.size(); i += 4) {

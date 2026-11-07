@@ -172,5 +172,12 @@
   "livetv.nothing": "Записей пока нет.",
   "livetv.home_row": "Сейчас по ТВ",
   "settings.licenses.intro": "Playfin — свободная программа под лицензией GNU GPL v3. Она использует перечисленные ниже компоненты, каждый под своей лицензией.",
-  "player.play_now": "Смотреть сейчас"
+  "player.play_now": "Смотреть сейчас",
+  "player.ends_at": "Закончится в {0}",
+  "player.volume": "Громкость",
+  "player.volume_value": "Громкость: {0} %",
+  "player.picture": "Изображение",
+  "player.picture.fit": "Целиком",
+  "player.picture.fill": "Заполнить экран",
+  "player.picture.stretch": "Растянуть"
 }

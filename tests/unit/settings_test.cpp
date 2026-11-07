@@ -50,8 +50,14 @@ TEST_CASE("settings round trip") {
     settings.maxBitrate = 4000000;
     settings.language = "de";
     settings.recentSearches = {"dune", "alien"};
+    settings.volume = 70;
+    settings.pictureFit = "fill";
+    settings.pictureSize = 90;
     REQUIRE(app::saveSettings(path, settings));
     const app::Settings loaded = app::loadSettings(path);
+    CHECK(loaded.volume == 70);
+    CHECK(loaded.pictureFit == "fill");
+    CHECK(loaded.pictureSize == 90);
     CHECK(loaded.accent == "red");
     CHECK(loaded.maxBitrate == 4000000);
     CHECK(loaded.language == "de");
@@ -65,6 +71,9 @@ TEST_CASE("missing settings give the defaults") {
     CHECK(settings.maxBitrate == 40000000);
     CHECK(settings.language.empty());
     CHECK(settings.recentSearches.empty());
+    CHECK(settings.volume == 100);
+    CHECK(settings.pictureFit == "fit");
+    CHECK(settings.pictureSize == 100);
 }
 
 TEST_CASE("damaged settings are kept aside and the defaults used") {
@@ -85,9 +94,13 @@ TEST_CASE("out of range values fall back to the defaults") {
     const std::string path = dir.path + "/settings.json";
     {
         std::ofstream out(path);
-        out << R"({"version":1,"accent":7,"maxBitrate":-5,"language":"xx-unknown","recentSearches":["a",3,"b"]})";
+        out << R"({"version":1,"accent":7,"maxBitrate":-5,"language":"xx-unknown","recentSearches":["a",3,"b"],)"
+               R"("volume":150,"pictureFit":"zoom","pictureSize":40})";
     }
     const app::Settings settings = app::loadSettings(path);
+    CHECK(settings.volume == 100);
+    CHECK(settings.pictureFit == "fit");
+    CHECK(settings.pictureSize == 100);
     CHECK(settings.accent == "playstation");
     CHECK(settings.maxBitrate == 40000000);
     CHECK(settings.recentSearches == std::vector<std::string>{"a", "b"});

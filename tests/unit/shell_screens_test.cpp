@@ -1694,3 +1694,30 @@ TEST_CASE("profiles also offer the users saved on this console that the server d
     CHECK(shell.session.data().lastUserId == "u-hidden");
     CHECK(shell.application->depth() == 1);  // signed in with the saved token: home
 }
+
+TEST_CASE("player menu: the volume and the picture, kept for the next videos; the bar says when it ends") {
+    Playing p;
+    jellyfin::Item alone = episode();
+    alone.seasonId.clear();
+    p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
+    p.frames(10);
+    CHECK(showsSomewhere(*p.shell.application, "Ends at "));
+    p.shell.press(Action::Options);
+    pressAnywhere(p.shell, "Volume: 100%");
+    p.frames(3);
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "60 %");
+    p.frames(2);
+    CHECK(p.shell.session.settings().volume == 60);
+    p.shell.press(Action::Options);
+    pressAnywhere(p.shell, "Picture");
+    p.frames(3);
+    pressAnywhere(p.shell, "Fill the screen");
+    p.frames(2);
+    CHECK(p.shell.session.settings().pictureFit == "fill");
+    CHECK(p.shell.application->videoSource()->videoLayer().fit == platform::VideoFit::Fill);
+    const app::Settings saved = app::loadSettings(p.shell.dir.path + "/settings.json");
+    CHECK(saved.volume == 60);
+    CHECK(saved.pictureFit == "fill");
+    p.shell.press(Action::Back);
+}
