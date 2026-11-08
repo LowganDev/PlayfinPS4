@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "app/shell/downloads.hpp"
 #include "app/shell/engine_options.hpp"
 #include "app/shell/format.hpp"
 #include "app/shell/guide.hpp"
@@ -343,6 +344,12 @@ private:
     // ---- loading
 
     void start(std::int64_t startTicks) {
+        if (!live_) {  // a download plays from the console, server or not
+            if (const auto file = session().downloads().localFile(item_.id)) {
+                startLocal(*file, startTicks);
+                return;
+            }
+        }
         const auto client = session().client();
         if (!client) {
             showError();
@@ -433,6 +440,24 @@ private:
         }
     }
 
+    void startLocal(const std::string& file, std::int64_t startTicks) {
+        local_ = true;
+        if (!engine_) {
+            engine_ = player::Engine::create(engineOptionsLocal(session().synchronous), [] {});
+            if (!engine_) {
+                showError();
+                return;
+            }
+            engine_->setVolume(session().settings().volume);
+        }
+        session().music().stop();
+        PF_LOG_INFO("player: %s from the console", item_.id.c_str());
+        engine_->load(file, static_cast<double>(startTicks) / player::kTicksPerSecond);
+        if (session().synchronous) {
+            showFirstPictureNow();
+        }
+    }
+
     bool createEngine(const jellyfin::Client& client) {
         // the frame loop polls the engine every frame
         engine_ = player::Engine::create(engineOptionsFor(client, session().synchronous), [] {});
@@ -505,7 +530,9 @@ private:
             break;
         case player::EngineEvent::FirstFrame:
             PF_LOG_INFO("player: %s", engine_->describe().c_str());
-            reporter_.onFirstFrame(now(), playbackState());
+            if (!local_) {  // a download played offline tells the server nothing
+                reporter_.onFirstFrame(now(), playbackState());
+            }
             break;
         case player::EngineEvent::Seeked:
             break;
@@ -520,6 +547,9 @@ private:
 
     // External subtitles in order (their mpv ids follow the embedded ones), then the chosen tracks.
     void applyTracks() {
+        if (local_) {
+            return;  // the file's own default tracks
+        }
         for (const player::ExternalSubtitle& subtitle : choice_.externalSubtitles) {
             engine_->addSubtitle(subtitle.url, false);
         }
@@ -677,6 +707,12 @@ private:
             app->setVideoSource(nullptr);
         }
         if (engine_) {
+            if (local_) {  // where it was left, for the next time it is played offline
+                const player::Engine::State state = engine_->state();
+                const bool nearEnd = state.duration > 0 && state.position > state.duration - 30;
+                session().downloads().setPosition(
+                    item_.id, nearEnd ? 0 : static_cast<std::int64_t>(state.position * player::kTicksPerSecond));
+            }
             reporter_.stop(playbackState());
             engine_.reset();
         }
@@ -943,6 +979,7 @@ private:
     int subtitleIndex_ = -1;
     std::int64_t barUntil_ = 0;
     bool leaving_ = false;  // the next episode takes this screen's place
+    bool local_ = false;    // a download, played from the console
     std::int64_t lastSeekPressMs_ = 0;
     std::int64_t holdStartMs_ = 0;
     int lastDirection_ = 0;

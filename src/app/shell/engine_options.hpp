@@ -8,5 +8,7 @@ namespace playfin::app {
 // The player's engine options for streams of `client`'s server: SDL audio and 4 decoder threads on the PS4, no
 // audio output in tests (`synchronous`), the fonts and CA list of the resources, the Authorization header.
 player::EngineOptions engineOptionsFor(const jellyfin::Client& client, bool synchronous);
+// The same for a file on the console (a download): no server, no header.
+player::EngineOptions engineOptionsLocal(bool synchronous);
 
 }  // namespace playfin::app

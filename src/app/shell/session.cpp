@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <ctime>
 
+#include "app/shell/downloads.hpp"
 #include "app/shell/music_player.hpp"
+#include "core/data_dir.hpp"
+#include "core/file_io.hpp"
 #include "core/log.hpp"
 #include "core/version.hpp"
 #include "net/url.hpp"
@@ -43,6 +46,14 @@ MusicPlayer& AppSession::music() {
         music_ = std::make_unique<MusicPlayer>(*this);
     }
     return *music_;
+}
+
+Downloads& AppSession::downloads() {
+    if (!downloads_) {
+        downloads_ = std::make_unique<Downloads>(*this);
+        downloads_->load();
+    }
+    return *downloads_;
 }
 
 std::int64_t AppSession::now() const {
@@ -198,6 +209,19 @@ void AppSession::forgetToken() {
 }
 
 core::Result<std::string> AppSession::fetchImage(const std::string& url, const core::CancelToken& token) const {
+    // a download's picture: read from the downloads folder only
+    if (url.rfind("file://", 0) == 0) {
+        const auto folder = core::dataPath("downloads");
+        const std::string path = url.substr(7);
+        if (!folder || path.rfind(*folder + "/", 0) != 0 || path.find("..") != std::string::npos) {
+            return core::makeError(core::ErrorKind::BadResponse, "not a download's picture");
+        }
+        std::string bytes;
+        if (core::readSmallFile(path, 8 * 1024 * 1024, bytes) != core::ReadStatus::Ok) {
+            return core::makeError(core::ErrorKind::NotFound, "no picture");
+        }
+        return bytes;
+    }
     const auto current = client();
     if (!current) {
         return core::makeError(core::ErrorKind::Unauthorized, "no server");

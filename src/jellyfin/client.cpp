@@ -420,6 +420,30 @@ std::string Client::userImageUrl(const std::string& userId, const std::string& t
     return session_.baseUrl + "/Users/" + net::urlEncode(userId) + "/Images/Primary" + query.str();
 }
 
+core::Result<core::Unit> Client::downloadItem(const std::string& itemId, net::HttpClient::Sink sink,
+                                              net::HttpClient::Progress progress, const core::CancelToken& token) const {
+    net::HttpRequest req;
+    req.url = session_.baseUrl + "/Items/" + net::urlEncode(itemId) + "/Download";
+    req.connectTimeoutMs = session_.connectTimeoutMs;
+    req.timeoutMs = 0;  // a film takes long: the low-speed limit stops a stalled transfer
+    req.headers = {{"Authorization", authorizationHeader(session_)}};
+    const bool secure = session_.baseUrl.rfind("https://", 0) == 0;
+    auto response = http_.download(req, std::move(sink), std::move(progress), secure ? session_.pin : std::string(),
+                                   token);
+    if (!response.ok()) {
+        return response.error();
+    }
+    const long status = response.value().status;
+    if (status == 401 || status == 403) {
+        return core::makeError(core::ErrorKind::Unauthorized, "downloading is not allowed", static_cast<int>(status));
+    }
+    if (status < 200 || status >= 300) {
+        return core::makeError(status == 404 ? core::ErrorKind::NotFound : core::ErrorKind::Server,
+                               "HTTP " + std::to_string(status), static_cast<int>(status));
+    }
+    return core::Unit{};
+}
+
 core::Result<std::string> Client::fetch(const std::string& url, const core::CancelToken& token) const {
     const std::string prefix = session_.baseUrl + "/";
     if (url.compare(0, prefix.size(), prefix) != 0) {

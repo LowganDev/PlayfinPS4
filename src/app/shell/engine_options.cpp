@@ -4,6 +4,21 @@
 
 namespace playfin::app {
 
+player::EngineOptions engineOptionsLocal(bool synchronous) {
+    const std::string resources = platform::resourceDir();
+    player::EngineOptions options;
+#ifdef PLAYFIN_PS4
+    options.audioOutput = "sdl";
+    options.decoderThreads = 4;
+#endif
+    if (synchronous) {
+        options.audioOutput = "null";
+    }
+    options.fontsDir = resources + "/fonts";
+    options.caFile = resources + "/certs/cacert.pem";
+    return options;
+}
+
 player::EngineOptions engineOptionsFor(const jellyfin::Client& client, bool synchronous) {
     const std::string resources = platform::resourceDir();
     player::EngineOptions options;

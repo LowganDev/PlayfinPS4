@@ -18,6 +18,7 @@
 namespace playfin::app {
 
 class MusicPlayer;
+class Downloads;
 
 // What the shell screens share: the HTTP client, servers.json, settings.json and the client of the current
 // server/user.
@@ -32,6 +33,8 @@ public:
 
     // The music queue (created on first use). Stopped when the server or the user changes.
     MusicPlayer& music();
+    // Films and episodes kept on the console (created on first use, its list read then).
+    Downloads& downloads();
     // Every frame: updates the music when there is some; true when what it shows changed.
     bool updateMusic();
     // Work for the worker pool that nothing waits for (reports, closing a live stream); inline in test mode.
@@ -93,6 +96,7 @@ private:
     std::string storePath_;
     std::string settingsPath_;
     std::unique_ptr<MusicPlayer> music_;
+    std::unique_ptr<Downloads> downloads_;
     Settings settings_;
     jellyfin::ServerStore store_;
     bool storeUsable_ = false;  // loaded from a readable file: saving may replace it

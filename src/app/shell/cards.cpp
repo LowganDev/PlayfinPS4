@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "app/shell/downloads.hpp"
 #include "app/shell/format.hpp"
 #include "ui/animation.hpp"
 #include "ui/context.hpp"
@@ -282,10 +283,13 @@ void ItemsSource::bind(ui::View& view, int index) {
     const jellyfin::Item& item = items_[static_cast<std::size_t>(index)];
     const ui::Size size = cardImageSize(shape_);
     const auto client = session_.client();
-    card.show(item, client ? imageUrlFor(*client, item, shape_ == CardShape::Wide, static_cast<int>(size.width),
-                                         static_cast<int>(size.height))
-                           : std::string(),
-              session_.utcOffsetMinutes(item.startUtc));
+    std::string url = client ? imageUrlFor(*client, item, shape_ == CardShape::Wide, static_cast<int>(size.width),
+                                           static_cast<int>(size.height))
+                             : std::string();
+    if (url.empty()) {  // a download's own picture (kept with it)
+        url = session_.downloads().localImageUrl(item.id);
+    }
+    card.show(item, url, session_.utcOffsetMinutes(item.startUtc));
     card.onPress = [this, index] {
         if (onPress_ && index < count()) {
             onPress_(items_[static_cast<std::size_t>(index)]);

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "app/shell/cards.hpp"
+#include "app/shell/downloads.hpp"
 #include "app/shell/music_player.hpp"
 #include "player/queue.hpp"
 #include "app/shell/nav_bar.hpp"
@@ -2011,4 +2012,58 @@ TEST_CASE("Live TV: a channel made a favourite with \\u25b3, the favourites and 
     REQUIRE_FALSE(tv.shell.session.settings().recentChannels.empty());
     CHECK(tv.shell.session.settings().recentChannels.front() == "b70fcc93046e175d801feabfe8d97acd");
     tv.shell.press(Action::Back);
+}
+
+TEST_CASE("downloads: a film downloaded from its page, listed, played from the console, deleted") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    jellyfin::Item movie;
+    movie.id = "m-1";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makeDetails(p.shell.session, movie));
+    p.frames(10);
+    pressAnywhere(p.shell, "Download");
+    p.frames(5);
+    const auto* entry = p.shell.session.downloads().find("m-1");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Done);
+    CHECK(shows(*p.shell.application, "\xE2\x9C\x93 Downloaded"));
+    const auto file = p.shell.session.downloads().localFile("m-1");
+    REQUIRE(file.has_value());
+    CHECK(std::filesystem::file_size(*file) == std::filesystem::file_size(test::fixturePath("media/clip.mp4")));
+    CHECK(file->find(p.shell.dir.path + "/downloads/") == 0);  // inside the data folder, nowhere else
+    // played from the console: no PlaybackInfo asked for
+    const int asked = p.server.count("/Items/m-1/PlaybackInfo");
+    p.shell.application->push(app::makeDownloads(p.shell.session));
+    p.frames(5);
+    CHECK(showsSomewhere(*p.shell.application, "Downloaded \xC2\xB7"));
+    p.shell.press(Action::Confirm);
+    p.frames(10);
+    CHECK(p.shell.application->videoSource() != nullptr);
+    CHECK(p.server.count("/Items/m-1/PlaybackInfo") == asked);
+    p.shell.press(Action::Back);
+    p.frames(5);
+    p.shell.press(Action::Options);  // delete
+    p.frames(3);
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "Delete");
+    p.frames(3);
+    CHECK(p.shell.session.downloads().find("m-1") == nullptr);
+    CHECK_FALSE(std::filesystem::exists(*file));
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: a user without the download right gets a failed download that says why") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    jellyfin::Item movie;
+    movie.id = "m-transcode";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    p.frames(3);
+    const auto* entry = p.shell.session.downloads().find("m-transcode");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Failed);
+    CHECK(entry->error == "the server does not let this account download");
+    core::setDataRoot({});
 }

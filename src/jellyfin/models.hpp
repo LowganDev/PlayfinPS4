@@ -89,6 +89,7 @@ struct MediaSource {
     int defaultAudioIndex = -1;
     int defaultSubtitleIndex = -1;
     std::int64_t runTimeTicks = 0;
+    std::int64_t size = 0;  // bytes of the file, when the server knows it
     std::vector<MediaStream> streams;
 };
 

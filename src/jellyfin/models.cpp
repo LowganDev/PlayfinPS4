@@ -399,6 +399,7 @@ MediaSource parseSource(yyjson_val* value) {
     source.defaultAudioIndex = toInt(json::integer(value, "DefaultAudioStreamIndex", -1));
     source.defaultSubtitleIndex = toInt(json::integer(value, "DefaultSubtitleStreamIndex", -1));
     source.runTimeTicks = json::integer(value, "RunTimeTicks");
+    source.size = json::integer(value, "Size");
     if (yyjson_val* streams = json::array(value, "MediaStreams")) {
         yyjson_arr_iter iter = yyjson_arr_iter_with(streams);
         yyjson_val* entry = nullptr;

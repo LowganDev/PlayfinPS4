@@ -1,5 +1,6 @@
 #include "app/shell/cards.hpp"
 #include "app/shell/chrome.hpp"
+#include "app/shell/downloads.hpp"
 #include "app/shell/format.hpp"
 #include "app/shell/library_query.hpp"
 #include "app/shell/music_player.hpp"
@@ -157,6 +158,11 @@ private:
             auto* retry = column_->add<ui::Button>(ui::tr("shell.retry"), [this] {
                 ui::Application::current()->replace(makeHome(session_));
             });
+            if (!session_.downloads().entries().empty()) {  // offline: what is on the console still plays
+                column_->add<ui::Button>(ui::tr("downloads.title"), [this] {
+                    ui::Application::current()->push(makeDownloads(session_));
+                });
+            }
             focusContent(retry, navBar_->currentTab());
             return;
         }
@@ -177,6 +183,23 @@ private:
         }
         if (!data.libraries.value().items.empty()) {
             addItemRow(*column_, ui::tr("shell.home.libraries"), session_, data.libraries.value().items, true, open);
+            any = true;
+        }
+        // what is on the console, ready to play without the server
+        std::vector<jellyfin::Item> downloaded;
+        for (const auto& entry : session_.downloads().entries()) {
+            if (entry.state == Downloads::State::Done) {
+                downloaded.push_back(entry.item);
+            }
+        }
+        if (!downloaded.empty()) {
+            AppSession* session = &session_;
+            addItemRow(*column_, ui::tr("downloads.title"), session_, std::move(downloaded), true,
+                       [session](const jellyfin::Item& item) {
+                           const Downloads::Entry* entry = session->downloads().find(item.id);
+                           ui::Application::current()->push(
+                               makePlayer(*session, item, entry != nullptr ? entry->positionTicks : 0));
+                       });
             any = true;
         }
         for (auto& entry : data.latest) {
@@ -524,6 +547,8 @@ public:
         fromStart_ = actions_->add<ui::Button>(ui::tr("player.from_start"), [this] { playFrom(0); });
         version_ = actions_->add<ui::Button>("", [this] { later([this] { chooseVersion(); }); });
         version_->visible = false;
+        download_ = actions_->add<ui::Button>("", [this] { pressDownload(); });
+        download_->visible = false;
         favorite_ = actions_->add<ui::Button>("", [this] { toggleFavorite(); });
         watched_ = actions_->add<ui::Button>("", [this] { toggleWatched(); });
         previous_ = actions_->add<ui::Button>(ui::tr("shell.details.previous_episode"), [this] { openSibling(-1); });
@@ -532,7 +557,9 @@ public:
         next_->visible = false;
         refreshActions();
         scroll_->setContent(std::move(content));
+        session_.downloads().listen(this, [this] { refreshDownload(); });
     }
+    ~DetailsScreen() override { session_.downloads().unlisten(this); }
     void onShow() override {
         if (!loaded_) {
             loaded_ = true;
@@ -623,6 +650,53 @@ private:
 
     void playFrom(std::int64_t ticks) {
         ui::Application::current()->push(makePlayer(session_, item_, ticks, sourceId_));
+    }
+
+    // ---- downloads: a film or an episode, or the season shown of a series
+
+    void refreshDownload() {
+        const bool single = item_.type == jellyfin::ItemType::Movie || item_.type == jellyfin::ItemType::Episode;
+        const bool season = item_.type == jellyfin::ItemType::Series && episodesRow_ != nullptr;
+        download_->visible = single || season;
+        if (season) {
+            download_->setText(ui::tr("downloads.season"));
+            return;
+        }
+        const Downloads::Entry* entry = session_.downloads().find(item_.id);
+        if (entry == nullptr) {
+            download_->setText(ui::tr("downloads.download"));
+        } else if (entry->state == Downloads::State::Done) {
+            download_->setText(ui::tr("downloads.downloaded"));
+        } else if (entry->state == Downloads::State::Running && entry->size > 0) {
+            download_->setText(ui::tr("downloads.progress", {std::to_string(entry->received * 100 / entry->size)}));
+        } else if (entry->state == Downloads::State::Failed) {
+            download_->setText(ui::tr("downloads.retry"));
+        } else {
+            download_->setText(ui::tr("downloads.queued"));
+        }
+    }
+
+    void pressDownload() {
+        Downloads& downloads = session_.downloads();
+        if (item_.type == jellyfin::ItemType::Series) {
+            if (episodesRow_ == nullptr) {
+                return;
+            }
+            for (const jellyfin::Item& episode : static_cast<ItemsSource*>(episodesRow_->source())->items()) {
+                downloads.add(episode);
+            }
+            ui::Application::current()->toast(ui::tr("downloads.season_added"));
+            return;
+        }
+        const Downloads::Entry* entry = downloads.find(item_.id);
+        if (entry == nullptr) {
+            downloads.add(item_);
+        } else if (entry->state == Downloads::State::Failed) {
+            downloads.retry(item_.id);
+        } else {
+            ui::Application::current()->push(makeDownloads(session_));
+        }
+        refreshDownload();
     }
 
     const jellyfin::MediaSource* chosenSource() const {
@@ -770,6 +844,7 @@ private:
         setLine(overview_, item_.overview);
         column_->markDirty();
         refreshQuality();
+        refreshDownload();
         refreshActions();
     }
 
@@ -805,6 +880,7 @@ private:
                                       });
             episodesTitle_ = dynamic_cast<ui::Label*>(episodesRow_->parent()->children().front().get());
         }
+        refreshDownload();
         ui::revealChildren(*column_, firstRow);
         focusIfEmpty();
     }
@@ -844,6 +920,7 @@ private:
     ui::Box* chips_ = nullptr;
     ui::Label* directors_ = nullptr;
     ui::Button* version_ = nullptr;
+    ui::Button* download_ = nullptr;
     ui::HList* castRow_ = nullptr;
     std::string sourceId_;  // the version chosen (empty: the server's first)
     ui::ImageView* backdrop_ = nullptr;

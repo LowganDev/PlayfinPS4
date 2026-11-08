@@ -78,6 +78,10 @@ public:
         quality_ = column->add<ui::ValueRow>(ui::tr("settings.quality"), bitrateName(session_.settings().maxBitrate),
                                              [this] { chooseQuality(); });
 
+        column->add<ui::ValueRow>(ui::tr("downloads.title"), "", [this] {
+            ui::Application::current()->push(makeDownloads(session_));
+        });
+
         addHeading(*column, ui::tr("settings.account"));
         std::string serverName;
         std::string userName;

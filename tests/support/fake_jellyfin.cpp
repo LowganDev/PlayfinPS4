@@ -335,6 +335,15 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         static const std::string clip = readFixture("media/clip.mp4");
         res.set_content(clip, "video/mp4");
     }));
+    // downloads: the test clip; "m-transcode" is not allowed (a user without the download right)
+    http.Get(R"(/Items/([^/]+)/Download)", guarded([](const httplib::Request& req, httplib::Response& res) {
+        if (req.matches[1] == "m-transcode") {
+            res.status = 403;
+            return;
+        }
+        static const std::string clip = readFixture("media/clip.mp4");
+        res.set_content(clip, "video/mp4");
+    }));
     // every item streams the test clip (httplib answers Range requests from the content)
     http.Get(R"(/Videos/([^/]+)/stream)", guarded([](const httplib::Request&, httplib::Response& res) {
         static const std::string clip = readFixture("media/clip.mp4");
