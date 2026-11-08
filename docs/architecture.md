@@ -204,6 +204,11 @@ The screens of the app.
   CMakeLists.txt); `scripts/check-ps4-imports.sh` runs after every PS4 build and fails on any path.
 - `playfin.log` is opened as soon as the data folder exists (inside `platform::init`, before the window), so a
   window or GL failure at startup is written to `/data/Playfin/playfin.log`.
+- Free space on PS4: the OpenOrbis musl `statvfs` is a stub (it calls `statfs` into a buffer of its own and
+  never fills the caller's), so it always reads 0. Its `statfs` is `open` + the system library's `fstatfs` and
+  fills FreeBSD's `struct statfs` (`f_bavail` blocks of `f_bsize` bytes): `Downloads::freeBytes` uses that on PS4.
+  It returns the descriptor it opened (15 on the console), not 0: only a negative value is a failure. The first
+  call is logged (`downloads: statfs ...`); measured on the test console: 4096-byte blocks, 389 GB free of 444.
 - curl on PS4 is the static `libcurl.a` of `scripts/ps4` (no pkg-config file): linked by name with mbed TLS, zlib
   and SceNet (`cmake/dependencies.cmake`). IPv4 only, no TCP keepalive, DNS-only share between handles.
 - The OpenOrbis `sys/socket.h` has FreeBSD values for socket-level options (`SOL_SOCKET` 0xffff, `SO_BROADCAST`

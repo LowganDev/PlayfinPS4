@@ -1,10 +1,15 @@
 #include "app/shell/downloads.hpp"
 
 #include <dirent.h>
+#ifdef PLAYFIN_PS4
+#include <sys/statfs.h>
+#else
 #include <sys/statvfs.h>
+#endif
 #include <unistd.h>
 
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 
 #include "app/shell/format.hpp"
@@ -309,11 +314,34 @@ void Downloads::notify() {
 
 std::int64_t Downloads::freeBytes() {
     const auto dir = folder();
+    if (!dir) {
+        return 0;
+    }
+#ifdef PLAYFIN_PS4
+    // OpenOrbis' statvfs is a stub that never fills its result; its statfs opens the folder and asks the system
+    // library's fstatfs, which fills FreeBSD's struct statfs (free blocks of f_bsize bytes), but it returns the
+    // descriptor it opened rather than 0: only a negative value is a failure
+    struct statfs info {};
+    const int status = ::statfs(dir->c_str(), &info);
+    static bool logged = false;
+    if (!logged) {  // once: what the console answers (the free space shown and checked depends on it)
+        logged = true;
+        PF_LOG_INFO("downloads: statfs %d (errno %d), %lld blocks of %llu bytes free of %llu, %s", status,
+                    status < 0 ? errno : 0, static_cast<long long>(info.f_bavail),
+                    static_cast<unsigned long long>(info.f_bsize), static_cast<unsigned long long>(info.f_blocks),
+                    info.f_fstypename);
+    }
+    if (status < 0 || info.f_bsize == 0 || info.f_blocks == 0 || info.f_bavail <= 0) {
+        return 0;
+    }
+    return static_cast<std::int64_t>(info.f_bavail) * static_cast<std::int64_t>(info.f_bsize);
+#else
     struct statvfs info {};
-    if (!dir || ::statvfs(dir->c_str(), &info) != 0) {
+    if (::statvfs(dir->c_str(), &info) != 0) {
         return 0;
     }
     return static_cast<std::int64_t>(info.f_bavail) * static_cast<std::int64_t>(info.f_frsize);
+#endif
 }
 
 void Downloads::startNext() {
