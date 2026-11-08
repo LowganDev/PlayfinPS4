@@ -15,7 +15,12 @@ namespace playfin::app {
 class ShellScreen : public ui::Screen {
 public:
     explicit ShellScreen(AppSession& session) : session_(session) {}
-    ~ShellScreen() override { token_.cancel(); }
+    ~ShellScreen() override {
+        token_.cancel();
+        if (ui::Application* app = ui::Application::current()) {
+            app->cancelTimers(this);
+        }
+    }
 
     AppSession& session() { return session_; }
     const AppSession& session() const { return session_; }

@@ -2284,3 +2284,35 @@ TEST_CASE("screensaver: the server's films with their backdrop, title, synopsis 
     CHECK_FALSE(p.shell.application->hasModal());
     CHECK_FALSE(app::Screensaver::shown());
 }
+
+TEST_CASE("search: the on-screen keyboard searches while typing, a pause after the last letter") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->push(app::makeSearch(shell.session));
+    shell.frames(5);
+    const auto searched = [&server] {
+        int count = 0;
+        for (const auto& request : server.requests()) {
+            count += request.target.find("searchTerm=") != std::string::npos ? 1 : 0;
+        }
+        return count;
+    };
+    pressAnywhere(shell, "P");
+    pressAnywhere(shell, "I");
+    shell.frames(2);
+    CHECK(searched() == 0);  // still typing
+    pressAnywhere(shell, "L");
+    shell.frames(40);
+    CHECK(searched() > 0);
+    CHECK(lastItemsTarget(server).find("searchTerm=pil") != std::string::npos);
+    CHECK(shows(*shell.application, "Test Show"));
+    CHECK(shell.session.settings().recentSearches.empty());  // kept only when a result is opened
+    shell.press(Action::Context);  // □ deletes the last letter
+    shell.frames(40);
+    CHECK(lastItemsTarget(server).find("searchTerm=pi") != std::string::npos);
+    CHECK(lastItemsTarget(server).find("searchTerm=pil") == std::string::npos);
+    pressAnywhere(shell, "Clear");
+    shell.frames(40);
+    CHECK_FALSE(shows(*shell.application, "Test Show"));
+}

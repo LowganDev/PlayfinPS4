@@ -264,5 +264,8 @@
   "player.hold.next_episode": "Episódio seguinte",
   "player.hold.previous_episode": "Episódio anterior",
   "player.hold.next_channel": "Canal seguinte",
-  "player.hold.previous_channel": "Canal anterior"
+  "player.hold.previous_channel": "Canal anterior",
+  "shell.search.space": "Espaço",
+  "shell.search.delete": "Apagar",
+  "shell.search.clear": "Apagar tudo"
 }

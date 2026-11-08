@@ -18,7 +18,9 @@
   a dot on the settings tab when one is out.
 - Home: the date and time in the header, the order of the libraries chosen in the settings, the touchpad
   refreshes it; the downloads in a row.
-- Search: people, music and channels too; L2 / R2 narrow the results to one kind.
+- Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the
+  system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
+  one kind. A search typed key by key is kept in the recent ones once a result is opened.
 - Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume.
 - Live TV: favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
   news, kids, radios), a channel search.

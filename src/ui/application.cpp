@@ -314,6 +314,22 @@ void Application::update(float dtMs) {
         redraw_ = true;  // includes the tick that ends an animation
     }
     animator_.tick(dtMs);
+    if (!timers_.empty()) {
+        std::vector<std::function<void()>> due;
+        for (auto it = timers_.begin(); it != timers_.end();) {
+            it->leftMs -= dtMs;
+            if (it->leftMs <= 0) {
+                due.push_back(std::move(it->action));
+                it = timers_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        for (auto& action : due) {  // may add or cancel timers
+            action();
+            redraw_ = true;
+        }
+    }
     if (services_.images != nullptr && services_.images->uploadPending() > 0) {
         redraw_ = true;
     }
@@ -402,6 +418,15 @@ void Application::draw(NVGcontext* vg) const {
         drawHints(vg, hintItems(focus_.actionChain(), navigable(scope), !modals_.empty() || screens_.size() > 1),
                   screen_.width, screen_.height);
     }
+}
+
+void Application::after(float delayMs, const void* owner, std::function<void()> action) {
+    timers_.push_back({delayMs, owner, std::move(action)});
+}
+
+void Application::cancelTimers(const void* owner) {
+    timers_.erase(std::remove_if(timers_.begin(), timers_.end(), [owner](const Timer& t) { return t.owner == owner; }),
+                  timers_.end());
 }
 
 }  // namespace playfin::ui

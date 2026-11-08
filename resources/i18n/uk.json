@@ -268,5 +268,8 @@
   "player.hold.next_episode": "Наступна серія",
   "player.hold.previous_episode": "Попередня серія",
   "player.hold.next_channel": "Наступний канал",
-  "player.hold.previous_channel": "Попередній канал"
+  "player.hold.previous_channel": "Попередній канал",
+  "shell.search.space": "Пробіл",
+  "shell.search.delete": "Видалити",
+  "shell.search.clear": "Очистити"
 }

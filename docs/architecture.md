@@ -141,6 +141,10 @@ The screens of the app.
   episode (`Extras::previous` / `next`, from `jellyfin::adjacentEpisodes` over every season's episodes:
   `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with
   `down <Action>` / `up <Action>`.
+- Live search (`search_screen.cpp`): a key grid (letters, digits, ' - ., space, delete, clear; □ deletes) types
+  into the field; `Application::after` (frame-time timers, cancelled by their owner, ShellScreen cancels its own
+  when it goes) starts the search 0.4 s after the last key. The field's ✕ still opens the system keyboard.
+  Typed searches join the recent ones when a result is opened; confirmed ones at once.
 
 - Details (`browse_screens.cpp`): `Item::people` and `Item::mediaSources` come with a single item
   (`/Items/{id}` answers every field); `qualityChips` (resolution, `VideoRangeType`, codec, channels),

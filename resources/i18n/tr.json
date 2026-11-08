@@ -264,5 +264,8 @@
   "player.hold.next_episode": "Sonraki bölüm",
   "player.hold.previous_episode": "Önceki bölüm",
   "player.hold.next_channel": "Sonraki kanal",
-  "player.hold.previous_channel": "Önceki kanal"
+  "player.hold.previous_channel": "Önceki kanal",
+  "shell.search.space": "Boşluk",
+  "shell.search.delete": "Sil",
+  "shell.search.clear": "Temizle"
 }

@@ -264,5 +264,8 @@
   "player.hold.next_episode": "次のエピソード",
   "player.hold.previous_episode": "前のエピソード",
   "player.hold.next_channel": "次のチャンネル",
-  "player.hold.previous_channel": "前のチャンネル"
+  "player.hold.previous_channel": "前のチャンネル",
+  "shell.search.space": "スペース",
+  "shell.search.delete": "削除",
+  "shell.search.clear": "すべて削除"
 }

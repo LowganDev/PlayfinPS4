@@ -48,7 +48,8 @@ The films in the screenshots are the Blender Foundation's open films; their artw
   and repeat.
 - **Live TV:** channels on now with favourites, categories and a search, a programme guide, recordings
   (scheduling and cancelling), channel change.
-- **Search:** films, series, episodes, people, music and channels, narrowed to one kind with L2 / R2.
+- **Search:** results while you type on the on-screen keyboard; films, series, episodes, people, music and
+  channels, narrowed to one kind with L2 / R2.
 - **And:** 14 languages, an accent colour of your choice, a screensaver, updates from the settings.
 
 ### Controls

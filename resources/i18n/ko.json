@@ -264,5 +264,8 @@
   "player.hold.next_episode": "다음 에피소드",
   "player.hold.previous_episode": "이전 에피소드",
   "player.hold.next_channel": "다음 채널",
-  "player.hold.previous_channel": "이전 채널"
+  "player.hold.previous_channel": "이전 채널",
+  "shell.search.space": "공백",
+  "shell.search.delete": "지우기",
+  "shell.search.clear": "모두 지우기"
 }

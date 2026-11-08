@@ -62,6 +62,9 @@ public:
     bool hasModal() const { return !modals_.empty(); }
 
     void toast(std::string text, float durationMs = 3000);
+    // `action` on the main thread after `delayMs` of frame time; `owner` cancels its own (cancelTimers).
+    void after(float delayMs, const void* owner, std::function<void()> action);
+    void cancelTimers(const void* owner);
     // A button down and not released yet (the player's shoulder buttons repeat and hold through it).
     bool held(platform::Action action) const { return held_[static_cast<int>(action)]; }
     // The toast shown, empty when none.
@@ -117,6 +120,12 @@ private:
 
     static inline const std::string kNoToast;
     bool held_[platform::kActionCount] = {};
+    struct Timer {
+        float leftMs;
+        const void* owner;
+        std::function<void()> action;
+    };
+    std::vector<Timer> timers_;
     std::string toastText_;
     float toastLeftMs_ = 0;
 

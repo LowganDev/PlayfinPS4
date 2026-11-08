@@ -264,5 +264,8 @@
   "player.hold.next_episode": "Tập tiếp theo",
   "player.hold.previous_episode": "Tập trước",
   "player.hold.next_channel": "Kênh tiếp theo",
-  "player.hold.previous_channel": "Kênh trước"
+  "player.hold.previous_channel": "Kênh trước",
+  "shell.search.space": "Dấu cách",
+  "shell.search.delete": "Xóa",
+  "shell.search.clear": "Xóa hết"
 }

@@ -266,5 +266,8 @@
   "player.hold.next_episode": "Další díl",
   "player.hold.previous_episode": "Předchozí díl",
   "player.hold.next_channel": "Další kanál",
-  "player.hold.previous_channel": "Předchozí kanál"
+  "player.hold.previous_channel": "Předchozí kanál",
+  "shell.search.space": "Mezera",
+  "shell.search.delete": "Smazat",
+  "shell.search.clear": "Smazat vše"
 }

@@ -74,6 +74,8 @@ press Right
 press Confirm
 wait 30
 screenshot search
+press Up
+wait 5
 press Confirm
 wait 5
 type movie 1

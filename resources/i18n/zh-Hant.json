@@ -264,5 +264,8 @@
   "player.hold.next_episode": "下一集",
   "player.hold.previous_episode": "上一集",
   "player.hold.next_channel": "下一個頻道",
-  "player.hold.previous_channel": "上一個頻道"
+  "player.hold.previous_channel": "上一個頻道",
+  "shell.search.space": "空格",
+  "shell.search.delete": "刪除",
+  "shell.search.clear": "清除"
 }
