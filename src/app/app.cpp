@@ -60,8 +60,9 @@ double millisecondsSince(std::chrono::steady_clock::time_point start) {
 // CPU drawing and the presentation took.
 class FrameStats {
 public:
-    void add(bool drawn, double rasterMs, double presentMs) {
+    void add(bool drawn, double rasterMs, double presentMs, double updateMs) {
         ++frames_;
+        update_.push_back(updateMs);
         const auto now = std::chrono::steady_clock::now();
         if (drawn) {
             raster_.push_back(rasterMs);
@@ -82,10 +83,11 @@ public:
             return static_cast<int>(std::count_if(gaps_.begin(), gaps_.end(),
                                                   [from, to](double gap) { return gap >= from && gap < to; }));
         };
-        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms; between drawn "
-                    "frames median %.1f ms (one slot %d, two %d, three or more %d)",
+        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms, update max %.1f "
+                    "ms; between drawn frames median %.1f ms (one slot %d, two %d, three or more %d)",
                     label, static_cast<int>(raster_.size()), frames_, median(raster_), maximum(raster_),
-                    median(present_), median(gaps_), slots(0, 25), slots(25, 42), slots(42, 1e9));
+                    median(present_), maximum(update_), median(gaps_), slots(0, 25), slots(25, 42), slots(42, 1e9));
+        update_.clear();
         frames_ = 0;
         raster_.clear();
         present_.clear();
@@ -104,6 +106,7 @@ private:
     std::vector<double> raster_;
     std::vector<double> present_;
     std::vector<double> gaps_;
+    std::vector<double> update_;
     std::optional<std::chrono::steady_clock::time_point> lastDrawn_;
 };
 #ifdef PLAYFIN_TESTING
@@ -346,6 +349,7 @@ int run(const Options& options) {
         std::uint32_t last = platform::ticksMs();
         while (running) {
             const std::uint32_t now = platform::ticksMs();
+            const auto updateStart = std::chrono::steady_clock::now();
             float dt = std::clamp(static_cast<float>(now - last), 0.0f, 100.0f);
             last = now;
             std::vector<platform::Event> events;
@@ -384,6 +388,10 @@ int run(const Options& options) {
             }
             ClockLabel::tick(session);  // the header's time, once a minute
             application.update(dt);
+            const double updateMs = millisecondsSince(updateStart);
+            if (updateMs > kSlowFrameMs && options.benchFrames == 0 && !testMode) {
+                PF_LOG_INFO("slow update: %.1f ms (events, layout, animations)", updateMs);
+            }
 
             // test mode too: a frame that should have changed but was not redrawn fails the screenshot comparison
             const bool redraw = !software || options.benchFrames > 0 ||
@@ -468,7 +476,7 @@ int run(const Options& options) {
             } else {
                 platform::swap();
             }
-            stats.add(redraw, rasterMs, millisecondsSince(presentStart));
+            stats.add(redraw, rasterMs, millisecondsSince(presentStart), updateMs);
             if (stats.due() && options.benchFrames == 0) {
                 stats.log("frames");
             }
