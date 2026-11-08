@@ -581,11 +581,15 @@ TEST_CASE("a card steps forward when focused and back when the focus leaves") {
     CHECK(screen->second->focusProgress() == doctest::Approx(1));
 }
 
-TEST_CASE("cards have the identity's sizes") {
-    CHECK(app::cardImageSize(true).width == doctest::Approx(400));
-    CHECK(app::cardImageSize(true).height == doctest::Approx(225));
-    CHECK(app::cardImageSize(false).width == doctest::Approx(260));
-    CHECK(app::cardImageSize(false).height == doctest::Approx(390));
+TEST_CASE("cards: 3.5 wide ones to a row, posters fill a grid of five") {
+    const float page = 1920 - 2 * 96;
+    const float gap = ui::theme().cardGap;
+    const ui::Size wide = app::cardImageSize(true);
+    CHECK(3.5f * wide.width + 3 * gap == doctest::Approx(page).epsilon(0.005));
+    CHECK(wide.height == doctest::Approx(wide.width * 9 / 16).epsilon(0.01));
+    const ui::Size poster = app::cardImageSize(false);
+    CHECK(app::kGridColumns * poster.width + (app::kGridColumns - 1) * gap == doctest::Approx(page).epsilon(0.005));
+    CHECK(poster.height == doctest::Approx(poster.width * 1.5f).epsilon(0.01));
 }
 
 namespace {
@@ -1160,6 +1164,26 @@ std::string focusedText(ui::Application& app) {
 }
 }  // namespace
 
+TEST_CASE("the search page keeps its field and tabs on screen while a key has the focus") {
+    HomeShell h;
+    for (int i = 0; i < 8; ++i) {
+        h.shell.session.settings().recentSearches.push_back("search " + std::to_string(i));  // a long page
+    }
+    h.shell.press(Action::Up);
+    h.shell.press(Action::Right);
+    h.shell.press(Action::Confirm);
+    h.shell.frames(5);
+    REQUIRE(focusedText(*h.shell.application) == "A");
+    bool found = false;
+    for (ui::View* view = h.shell.application->focus().focused(); view != nullptr; view = view->parent()) {
+        if (const auto* scroll = dynamic_cast<ui::VScroll*>(view)) {
+            found = true;
+            CHECK(scroll->scrollOffset() == doctest::Approx(0));  // seen cut on the console
+        }
+    }
+    CHECK(found);
+}
+
 TEST_CASE("a tab replaces the screen, and back on a tab screen does nothing") {
     HomeShell h;
     h.shell.press(Action::Up);
@@ -1479,6 +1503,9 @@ TEST_CASE("now playing skips, goes back, pauses and jumps in the queue") {
     CHECK(shows(*shell.application, "Repeat: all"));
     ui::View* upcoming = named(*shell.application->top(), "Rétroviseur");
     REQUIRE(upcoming != nullptr);
+    REQUIRE(shell.application->focus().focus(upcoming));
+    shell.press(Action::Left);  // back to the controls from any track of the list (seen stuck on the console)
+    CHECK(focusedText(*shell.application).rfind("Volume", 0) == 0);
     REQUIRE(shell.application->focus().focus(upcoming));
     shell.press(Action::Confirm);
     untilPlaying(shell);

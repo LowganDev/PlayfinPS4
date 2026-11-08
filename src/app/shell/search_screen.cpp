@@ -66,13 +66,17 @@ public:
         platform::TextInputRequest request;
         request.title = ui::tr("shell.search.title");
         request.maxLength = 100;
+        // the field, the filter and the keys are one row of the page: focusing a key keeps the field on screen
+        // (as separate rows, the keys came to the top and pushed the field and the bar off it)
+        auto* top = column_->add<ui::Box>(ui::Axis::Column);
+        top->gap = ui::theme().spacingL;
         // ✕ on the field: the system keyboard (accents, long text); the keys below search while typing
-        field_ = column_->add<ui::TextField>(ui::tr("shell.search.field"), request,
+        field_ = top->add<ui::TextField>(ui::tr("shell.search.field"), request,
                                              [this](const std::string& term) { search(term, true); });
         field_->width = ui::SizeSpec::fixed(900);
-        filter_ = column_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
+        filter_ = top->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
         refreshFilter();
-        buildKeyboard();
+        buildKeyboard(*top);
         remembered = firstKey_;  // the keys first, not the bar above them
         bind(platform::Action::L2, "", [this] { return stepFilter(-1); });
         bind(platform::Action::R2, ui::tr("shell.search.filter_hint"), [this] { return stepFilter(1); });
@@ -91,8 +95,8 @@ public:
 private:
     // ---- the on-screen keyboard: letters, digits, space, delete, clear; results 0.4 s after the last key
 
-    void buildKeyboard() {
-        auto* keys = column_->add<ui::Box>(ui::Axis::Column);
+    void buildKeyboard(ui::Box& parent) {
+        auto* keys = parent.add<ui::Box>(ui::Axis::Column);
         keys->gap = ui::theme().spacingS;
         for (const char* row : {"abcdefghijklm", "nopqrstuvwxyz", "1234567890'-."}) {
             auto* line = keys->add<ui::Box>(ui::Axis::Row);

@@ -16,7 +16,9 @@
 - Downloads: films, episodes and whole seasons kept on the console and played without the server.
 - Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
   a dot on the settings tab when one is out.
-- Home: the date and time in the header, the order of the libraries chosen in the settings, the touchpad
+- Home: laid out as in Jellyfin (the libraries first, then Resume, Next up, what is on TV, the downloads, the latest
+  additions) on larger cards: 3.5 wide cards to a row, 5 posters to a row in the libraries. The date and time in
+  the header, the order of the libraries chosen in the settings, the touchpad
   refreshes it; the downloads in a row.
 - Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the
   system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
@@ -32,6 +34,8 @@
 - Fixed: Live TV and other HLS streams (the server's relay of a channel, a transcode) did not play on the console
   since 1.0.0 ("This video cannot be played"): the player refused to follow the playlist to its segments.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.
+- Smoother: the interface draws 30 frames a second, evenly (12-15 before on the home screen and details pages,
+  whose fades are now drawn from pictures), and every screen keeps that pace on the console.
 - The controller's buttons and what they do now, at the bottom left of every screen: navigate, select, the
   screen's own actions (A–Z, quick look, filters, tabs, refresh), back; in the player with its bar (pause, 10 s,
   1 min, 5 min, options, stop; volume and channel on Live TV).

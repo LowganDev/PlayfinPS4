@@ -169,6 +169,11 @@ private:
         auto open = [this](const jellyfin::Item& item) { openItem(session_, item); };
         const std::size_t firstRow = column_->children().size();
         bool any = false;
+        // in Jellyfin's order: the libraries, Resume, Next up, what is on TV, the downloads, the latest additions
+        if (!data.libraries.value().items.empty()) {
+            addItemRow(*column_, ui::tr("shell.home.libraries"), session_, data.libraries.value().items, true, open);
+            any = true;
+        }
         if (data.resume.ok() && !data.resume.value().items.empty()) {
             resumeRow_ = addItemRow(*column_, ui::tr("shell.home.resume"), session_, data.resume.value().items, true, open);
             any = true;
@@ -179,10 +184,6 @@ private:
         }
         if (data.airing.ok() && !data.airing.value().items.empty()) {
             addItemRow(*column_, ui::tr("livetv.home_row"), session_, data.airing.value().items, true, open);
-            any = true;
-        }
-        if (!data.libraries.value().items.empty()) {
-            addItemRow(*column_, ui::tr("shell.home.libraries"), session_, data.libraries.value().items, true, open);
             any = true;
         }
         // what is on the console, ready to play without the server
@@ -263,7 +264,7 @@ public:
             change(next);
         });
         // six posters per row; room around them for the grown focused card, taken from the margins
-        grid_ = column->add<ui::Grid>(cardSize(false), ui::theme().cardGap, 6);
+        grid_ = column->add<ui::Grid>(cardSize(false), ui::theme().cardGap, kGridColumns);
         grid_->padding = ui::Insets::all(40);
         grid_->margin = {0, -40, 0, -40};
         auto source = std::make_unique<ItemsSource>(session_, std::vector<jellyfin::Item>{}, false,
@@ -508,12 +509,15 @@ class DetailsScreen : public ShellScreen {
 public:
     DetailsScreen(AppSession& session, jellyfin::Item item) : ShellScreen(session), item_(std::move(item)) {
         enterRise = 40;
+        // the shade under the picture: the picture has it baked in and covers it once there
+        auto* shade = add<BackdropShade>();
         backdrop_ = add<ui::ImageView>();
         backdrop_->width = ui::SizeSpec::fill();
         backdrop_->height = ui::SizeSpec::fill();
         backdrop_->cornerRadius = 0;
         backdrop_->placeholder = ui::Color{0, 0, 0, 0};
-        add<BackdropShade>();
+        backdrop_->backdrop = true;
+        shade->setPicture(backdrop_);
         scroll_ = add<ui::VScroll>();
         auto content = std::make_unique<ui::Box>(ui::Axis::Column);
         content->padding = pagePadding();

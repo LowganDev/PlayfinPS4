@@ -31,6 +31,7 @@
 #include "render/nvg_sw.hpp"
 #include "render/raster.hpp"
 #include "ui/application.hpp"
+#include "ui/frame_pacer.hpp"
 #include "ui/halo.hpp"
 #include "ui/i18n.hpp"
 #include "ui/images.hpp"
@@ -49,7 +50,7 @@ namespace playfin::app {
 namespace {
 
 constexpr float kLogicalWidth = 1920.0f;
-constexpr double kSlowFrameMs = 20.0;  // software frames slower than this are logged with their raster counts
+constexpr double kSlowFrameMs = 28.0;  // software frames slower than this miss the 30 fps slot: logged with counts
 
 double millisecondsSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
@@ -59,20 +60,38 @@ double millisecondsSince(std::chrono::steady_clock::time_point start) {
 // CPU drawing and the presentation took.
 class FrameStats {
 public:
-    void add(bool drawn, double rasterMs, double presentMs) {
+    void add(bool drawn, double rasterMs, double presentMs, double updateMs) {
         ++frames_;
+        update_.push_back(updateMs);
+        const auto now = std::chrono::steady_clock::now();
         if (drawn) {
             raster_.push_back(rasterMs);
+            // the time between two drawn frames of one stretch of drawing (a pause of the UI is not counted)
+            if (lastDrawn_) {
+                const double gap = std::chrono::duration<double, std::milli>(now - *lastDrawn_).count();
+                if (gap < 200) {
+                    gaps_.push_back(gap);
+                }
+            }
+            lastDrawn_ = now;
         }
         present_.push_back(presentMs);
     }
     bool due() const { return frames_ >= 300; }
     void log(const char* label) {
-        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms", label,
-                    static_cast<int>(raster_.size()), frames_, median(raster_), maximum(raster_), median(present_));
+        const auto slots = [this](double from, double to) {
+            return static_cast<int>(std::count_if(gaps_.begin(), gaps_.end(),
+                                                  [from, to](double gap) { return gap >= from && gap < to; }));
+        };
+        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms, update max %.1f "
+                    "ms; between drawn frames median %.1f ms (one slot %d, two %d, three or more %d)",
+                    label, static_cast<int>(raster_.size()), frames_, median(raster_), maximum(raster_),
+                    median(present_), maximum(update_), median(gaps_), slots(0, 25), slots(25, 42), slots(42, 1e9));
+        update_.clear();
         frames_ = 0;
         raster_.clear();
         present_.clear();
+        gaps_.clear();
     }
 
 private:
@@ -86,6 +105,9 @@ private:
     int frames_ = 0;
     std::vector<double> raster_;
     std::vector<double> present_;
+    std::vector<double> gaps_;
+    std::vector<double> update_;
+    std::optional<std::chrono::steady_clock::time_point> lastDrawn_;
 };
 #ifdef PLAYFIN_TESTING
 constexpr float kFrameMs = 1000.0f / 60.0f;  // fixed clock of test mode
@@ -324,10 +346,13 @@ int run(const Options& options) {
         bool running = exitCode == 0;
         float idleMs = 0;
         FrameStats stats;
+        ui::FramePacer pacer;  // 30 frames a second, evenly (not in test mode nor when benchmarking)
+        const bool paced = !testMode && options.benchFrames == 0;
         int frame = 0;
         std::uint32_t last = platform::ticksMs();
         while (running) {
             const std::uint32_t now = platform::ticksMs();
+            const auto updateStart = std::chrono::steady_clock::now();
             float dt = std::clamp(static_cast<float>(now - last), 0.0f, 100.0f);
             last = now;
             std::vector<platform::Event> events;
@@ -366,9 +391,17 @@ int run(const Options& options) {
             }
             ClockLabel::tick(session);  // the header's time, once a minute
             application.update(dt);
+            const double updateMs = millisecondsSince(updateStart);
+            if (updateMs > kSlowFrameMs && options.benchFrames == 0 && !testMode) {
+                PF_LOG_INFO("slow update: %.1f ms (events, layout, animations)", updateMs);
+            }
 
             // test mode too: a frame that should have changed but was not redrawn fails the screenshot comparison
-            const bool redraw = !software || options.benchFrames > 0 || application.needsDraw();
+            const bool redraw = !software || options.benchFrames > 0 ||
+                                (application.needsDraw() && (!paced || pacer.due(now)));
+            if (software && redraw && paced) {
+                pacer.drew(now);
+            }
             // a video under the UI (player): a new picture when mpv has one, the UI drawn on transparency
             ui::VideoSource* videoSource = software ? application.videoSource() : nullptr;
             const bool newPicture = videoSource != nullptr && videoSource->renderVideo();
@@ -446,7 +479,7 @@ int run(const Options& options) {
             } else {
                 platform::swap();
             }
-            stats.add(redraw, rasterMs, millisecondsSince(presentStart));
+            stats.add(redraw, rasterMs, millisecondsSince(presentStart), updateMs);
             if (stats.due() && options.benchFrames == 0) {
                 stats.log("frames");
             }

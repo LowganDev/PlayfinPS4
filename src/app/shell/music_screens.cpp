@@ -83,7 +83,7 @@ public:
             session_.libraryChoices[library_.id] = choice_;
             show(Mode::Albums);
         });
-        grid_ = column->add<ui::Grid>(cardSize(CardShape::Square), ui::theme().cardGap, 6);
+        grid_ = column->add<ui::Grid>(cardSize(CardShape::Square), ui::theme().cardGap, kGridColumns);
         grid_->padding = ui::Insets::all(40);
         grid_->margin = {0, -40, 0, -40};
         auto source = std::make_unique<ItemsSource>(session_, std::vector<jellyfin::Item>{}, CardShape::Square,
@@ -650,6 +650,8 @@ public:
         upNext_ = side->add<ui::Box>(ui::Axis::Column);
         upNext_->width = ui::SizeSpec::fill();
         upNext_->gap = 4;
+        // ← from any track of the list back to the controls (a track above them has nothing on its left)
+        upNext_->setNextFocus(ui::Direction::Left, volume_);
         bind(platform::Action::L1, ui::tr("music.previous"), [this] {
             music_.previous();
             return true;

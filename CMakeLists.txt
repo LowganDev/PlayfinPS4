@@ -127,6 +127,7 @@ playfin_set_warnings(playfin_platform)
 add_library(playfin_ui STATIC
     src/ui/theme.cpp
     src/ui/halo.cpp
+    src/ui/sprites.cpp
     src/ui/animation.cpp
     src/ui/text.cpp
     src/ui/i18n.cpp

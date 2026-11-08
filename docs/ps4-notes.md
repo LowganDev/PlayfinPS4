@@ -68,3 +68,6 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
   FFmpeg's HLS demuxer reopens the playlist and its segments as nested inputs. Seen on the console on 2026-11-08
   (Live TV, relayed or direct, failed since the 1.0.0 hardening); the player now allows references for HLS over
   http(s) only (`player::followsReferences`).
+- UI pace: the loop presents every display slot (vsync, 16.6 ms); a software frame of up to about 30 ms still makes
+  every other slot, hence a steady 30 frames a second (`ui::FramePacer`). Gradients are the renderer's slowest
+  paint: the hints' 1920x104 fade alone cost 12 M cycles a frame (60 cycles a pixel), a backdrop shade 87 M.

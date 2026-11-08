@@ -30,7 +30,9 @@ void ImageView::layout(TextMetrics& metrics) {
     (void)metrics;
     const int w = static_cast<int>(frame.width);
     const int h = static_cast<int>(frame.height);
-    const std::string key = url_ + "|" + std::to_string(w) + "x" + std::to_string(h) + (fit == Fit::Cover ? "c" : "");
+    const ImageShape shape = backdrop ? ImageShape::Backdrop : fit == Fit::Cover ? ImageShape::Crop : ImageShape::Whole;
+    const std::string key = url_ + "|" + std::to_string(w) + "x" + std::to_string(h) + "/" +
+                            std::to_string(static_cast<int>(shape));
     if (url_.empty() || w <= 0 || h <= 0 || key == requested_ || context().images == nullptr) {
         return;
     }
@@ -45,12 +47,14 @@ void ImageView::layout(TextMetrics& metrics) {
         } else {
             alpha_ = 1;
         }
-    }, fit == Fit::Cover ? ImageShape::Crop : ImageShape::Whole);
+    }, shape);
 }
+
+bool ImageView::coversFrame() const { return texture_ && texture_->opaque && fit == Fit::Cover && alpha_ >= 1; }
 
 void ImageView::draw(NVGcontext* vg) const {
     // an opaque picture covering the frame hides the placeholder entirely: not drawing it saves a full fill
-    const bool covered = texture_ && texture_->opaque && fit == Fit::Cover && alpha_ >= 1;
+    const bool covered = coversFrame();
     if (!covered) {
         nvgBeginPath(vg);
         nvgRoundedRect(vg, 0, 0, frame.width, frame.height, cornerRadius);

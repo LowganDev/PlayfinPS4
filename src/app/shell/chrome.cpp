@@ -2,9 +2,13 @@
 
 #include <nanovg.h>
 
+#include <cmath>
+
 #include "ui/box.hpp"
 #include "ui/draw.hpp"
+#include "ui/images.hpp"
 #include "ui/label.hpp"
+#include "ui/sprites.hpp"
 #include "ui/theme.hpp"
 
 namespace playfin::app {
@@ -94,12 +98,14 @@ BackdropShade::BackdropShade() {
 }
 
 void BackdropShade::draw(NVGcontext* vg) const {
+    if (picture_ != nullptr && picture_->coversFrame()) {
+        return;
+    }
     const ui::Color bg = ui::theme().background;
-    const float split = frame.height * 0.7f;
-    nvgBeginPath(vg);
-    nvgRect(vg, 0, 0, frame.width, split);
-    nvgFillPaint(vg, nvgLinearGradient(vg, 0, 0, 0, split, nvgRGBA(bg.r, bg.g, bg.b, 143), nvgRGBA(bg.r, bg.g, bg.b, 255)));
-    nvgFill(vg);
+    const float split = static_cast<float>(ui::backdropSplit(static_cast<int>(std::round(frame.height))));
+    // a sprite: as a gradient over 70 % of the screen it cost more than all the rest of a details frame
+    ui::drawVerticalFade(vg, 0, 0, static_cast<int>(std::round(frame.width)), static_cast<int>(split),
+                         static_cast<int>(split), bg, ui::kBackdropTopAlpha, 255);
     nvgBeginPath(vg);
     nvgRect(vg, 0, split, frame.width, frame.height - split);
     nvgFillColor(vg, nvgRGBA(bg.r, bg.g, bg.b, 255));

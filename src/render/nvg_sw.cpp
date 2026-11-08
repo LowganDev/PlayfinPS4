@@ -127,6 +127,10 @@ private:
 struct Backend {
     Surface* surface = nullptr;
     std::vector<std::unique_ptr<Band>> bands;
+    // what each band cost last frame (cycles), and the order the threads take them: the dearest first, so that
+    // none is left alone with a heavy band at the end (frames change little from one to the next)
+    std::vector<std::uint64_t> bandCycles;
+    std::vector<std::size_t> bandOrder;
     std::unique_ptr<Workers> workers;
     std::size_t threads = 1;
     std::map<int, TextureEntry> textures;  // stable addresses: paints point at them until the flush
@@ -453,7 +457,8 @@ int callKind(const Call& call) {
     return 4;
 }
 
-void replay(Backend& b, Band& band) {
+std::uint64_t replay(Backend& b, Band& band) {
+    const std::uint64_t bandStart = __builtin_ia32_rdtsc();
     std::uint64_t cycles[kCallKinds] = {};
     for (const Call& call : b.calls) {
         const std::uint64_t start = __builtin_ia32_rdtsc();
@@ -477,6 +482,7 @@ void replay(Backend& b, Band& band) {
     for (int k = 0; k < kCallKinds; ++k) {
         gKindCycles[k].fetch_add(cycles[k], std::memory_order_relaxed);
     }
+    return __builtin_ia32_rdtsc() - bandStart;
 }
 
 std::mutex gTimesMutex;
@@ -494,10 +500,13 @@ void renderFlush(void* user) {
         times.threads = static_cast<int>(std::min<std::size_t>(b.workers ? b.threads : 1, 8));
         if (b.workers) {
             // each thread takes the next band not yet drawn: busy rows (posters, text) do not hold the others up
+            std::stable_sort(b.bandOrder.begin(), b.bandOrder.end(),
+                             [&b](std::size_t x, std::size_t y) { return b.bandCycles[x] > b.bandCycles[y]; });
             std::atomic<std::size_t> next{0};
             b.workers->run(b.threads, [&b, &times, &next, start](std::size_t i) {
                 for (std::size_t k = next.fetch_add(1); k < b.bands.size(); k = next.fetch_add(1)) {
-                    replay(b, *b.bands[k]);
+                    const std::size_t band = b.bandOrder[k];
+                    b.bandCycles[band] = replay(b, *b.bands[band]);  // one thread per band: no race
                 }
                 if (i < 8) {
                     times.busyMs[i] = millisecondsSince(start);
@@ -550,7 +559,9 @@ NVGcontext* createSoftwareCanvas(Surface& surface, int threadCount) {
     backend->threads = static_cast<std::size_t>(threads);
     for (int i = 0; i < count; ++i) {
         backend->bands.push_back(std::make_unique<Band>(surface.height * i / count, surface.height * (i + 1) / count));
+        backend->bandOrder.push_back(static_cast<std::size_t>(i));
     }
+    backend->bandCycles.assign(backend->bands.size(), 0);
     if (threads > 1) {
         backend->workers = std::make_unique<Workers>(static_cast<std::size_t>(threads - 1));
     }
