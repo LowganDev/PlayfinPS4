@@ -133,7 +133,9 @@ The screens of the app.
   closed. A binding's optional `shown` predicate hides its label (the player's labels show with its bar, Pause or
   Play by state); a second binding of the same button with a `shown` and a handler that returns false gives that
   button another label. `View::hidesHints` on the scope hides the bar (screensaver). Entries with the same label
-  merge (← → and L1 R1 in the player).
+  merge (← → and L1 R1 in the player). A `VScroll` in the Nearest policy keeps a focused row `nearestBottomMargin`
+  (136) above the bottom, clear of the hints (seen on the console: the settings' last row half under them);
+  dialogs set it to their own spacing.
 - Player buttons: `Application::held(action)` follows ActionDown / ActionUp (the platform repeats directions only);
   `Application::repeating()` tells such a repeat from a press. ← / → and L1 / R1 seek alike: the platform's
   repeats are ignored and `player::ButtonRepeat` (400 ms, then every 200 ms, on time: a late tick catches up, at

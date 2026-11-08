@@ -224,6 +224,7 @@ std::unique_ptr<View> makeChoiceDialog(std::string title, std::vector<std::strin
     auto* scroll = card->add<VScroll>();
     scroll->policy = VScroll::Policy::Nearest;
     scroll->nearestMargin = theme().spacingM;
+    scroll->nearestBottomMargin = theme().spacingM;  // inside a dialog's card, away from the hints
     scroll->clip = true;
     auto list = std::make_unique<Box>(Axis::Column);
     list->width = SizeSpec::fill();
