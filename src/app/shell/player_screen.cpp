@@ -572,6 +572,10 @@ private:
     void tick(bool freshPicture) {
         const std::int64_t t = now();
         const player::Engine::State state = engine_->state();
+        if (state.duration > 0) {
+            lastPosition_ = state.position;
+            lastDuration_ = state.duration;
+        }
         if (const auto target = seek_.due(t)) {
             engine_->seekTo(*target);
             reporter_.onSeek(t, playbackState());
@@ -628,6 +632,8 @@ private:
     }
 
     void ended() {
+        // where the file really ended against the length announced (the next card counts down to that length)
+        PF_LOG_INFO("player: end of file at %.1f s of %.1f s", lastPosition_, lastDuration_);
         if (nextCardState_.playsNextAtEnd(next_.has_value())) {
             playNext();
             return;
@@ -657,6 +663,7 @@ private:
             nextImage_->setUrl(imageUrlFor(*client, *next_, true, 320, 180));
         }
         nextTitle_->setText(cardSubtitle(*next_));
+        PF_LOG_INFO("player: next card at %.1f s of %.1f s", position, state.duration);
         nextCard_->visible = true;
         hideSkip();
         markDirty();
@@ -1009,7 +1016,9 @@ private:
     std::int64_t barUntil_ = 0;
     bool leaving_ = false;  // the next episode takes this screen's place
     bool local_ = false;    // a download, played from the console
-    bool volumeUnsaved_ = false;  // stepped by ↑/↓: saved when the player closes
+    bool volumeUnsaved_ = false;
+    double lastPosition_ = 0;  // the last known position and length, for the end-of-file log line
+    double lastDuration_ = 0;  // stepped by ↑/↓: saved when the player closes
     std::int64_t lastSeekPressMs_ = 0;
     std::int64_t holdStartMs_ = 0;
     int lastDirection_ = 0;

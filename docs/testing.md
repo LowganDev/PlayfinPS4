@@ -63,6 +63,10 @@
   stdio, no buffering) from a constructor that runs before main ("loaded"), then "main", "data folder ok",
   the log file open result (errno on failure; append mode falls back to "w") and the first 200 log lines. It is
   rewritten on every launch. On PS4 log timestamps are UTC (no time zone files).
+- Timing on the console is read from the log, not from Remote Play pictures: over Wi-Fi the Remote Play video can
+  lag several seconds behind the console, and its first input after a pause is often lost (check every step with
+  a screenshot). The player logs `player: next card at <s> of <s>` and `player: end of file at <s> of <s>`
+  (measured in 2.0 on a real episode: the card 10.2 s before the end of the file, the next one 0.6 s after it).
 - Rendering: `raster_test` (exact pixels for the fill rule, culling, stencil, paints, scissor, edge alpha, a random
   coverage check against the pixel-centre rule, the constant-colour fast path compared byte for byte with the
   general path, the integer image path within 2 per channel, convex polygons identical to their fans) and
