@@ -98,7 +98,7 @@ BackdropShade::BackdropShade() {
 
 void BackdropShade::draw(NVGcontext* vg) const {
     const ui::Color bg = ui::theme().background;
-    const float split = std::round(frame.height * 0.7f);
+    const float split = static_cast<float>(std::round(frame.height * 0.7f));
     // a sprite: as a gradient over 70 % of the screen it cost more than all the rest of a details frame
     ui::drawVerticalFade(vg, 0, 0, static_cast<int>(std::round(frame.width)), static_cast<int>(split),
                          static_cast<int>(split), bg, 143, 255);

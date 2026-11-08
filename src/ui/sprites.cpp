@@ -70,8 +70,8 @@ void drawVerticalFade(NVGcontext* vg, float x, float y, int width, int height, i
     if (image <= 0) {
         return;
     }
-    const float left = std::round(x);
-    const float top = std::round(y);
+    const float left = static_cast<float>(std::round(x));
+    const float top = static_cast<float>(std::round(y));
     nvgBeginPath(vg);
     nvgRect(vg, left, top, static_cast<float>(width), static_cast<float>(height));
     nvgFillPaint(vg, nvgImagePattern(vg, left, top, static_cast<float>(width), static_cast<float>(height), 0, image, 1));

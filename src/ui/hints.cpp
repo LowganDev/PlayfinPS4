@@ -253,7 +253,7 @@ void drawHints(NVGcontext* vg, const std::vector<HintItem>& items, float width, 
     // a fade into the background under the bar: readable over posters and lists, no band. A sprite: as a gradient
     // it took half of a frame's time on the PS4 (the renderer's general shader)
     const int fade = 104;  // above the player's bar (its bottom at 100)
-    drawVerticalFade(vg, 0, std::floor(height) - fade, static_cast<int>(width), fade, fade - 66, theme().background,
+    drawVerticalFade(vg, 0, static_cast<float>(std::floor(height)) - static_cast<float>(fade), static_cast<int>(width), fade, fade - 66, theme().background,
                      0, 0xF2);
     const float cy = height - 44;
     float x = theme().marginSide;
