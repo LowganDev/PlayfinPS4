@@ -222,6 +222,32 @@ TEST_CASE("a vertical scroll brings the focused row to the top") {
     CHECK(scroll->scrollOffset() == doctest::Approx(0));
 }
 
+TEST_CASE("a row focused at the bottom of a Nearest scroll stays clear of the button hints") {
+    Fixture f;
+    VScroll* scroll = f.root.add<VScroll>();
+    scroll->policy = VScroll::Policy::Nearest;
+    scroll->height = SizeSpec::fixed(500);
+    scroll->width = SizeSpec::fill();
+    auto column = std::make_unique<Box>(Axis::Column);
+    column->gap = 20;
+    column->padding = {0, 0, 200, 0};
+    std::vector<HList*> rows;
+    for (int i = 0; i < 8; ++i) {
+        rows.push_back(addRow(*column, 20));
+    }
+    scroll->setContent(std::move(column));
+    f.settle();
+    f.focus.focus(rows[0]);
+    for (int i = 0; i < 7; ++i) {
+        f.focus.move(Direction::Down);
+        f.settle();
+    }
+    REQUIRE(rows[7]->focusedIndex() == 0);
+    const float bottomOnScreen = rows[7]->frame.y + rows[7]->frame.height - scroll->scrollOffset();
+    CHECK(bottomOnScreen == doctest::Approx(500 - scroll->nearestBottomMargin));
+    CHECK(scroll->nearestBottomMargin > 104);  // the hints' fade
+}
+
 TEST_CASE("destroying a list while one of its items is focused clears the focus") {
     Fixture f;
     HList* row = addRow(f.root, 100);

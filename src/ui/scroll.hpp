@@ -17,6 +17,8 @@ public:
     Policy policy = Policy::Leading;
     float leadingInset = 0;
     float nearestMargin = 48;
+    // below a row focused by Nearest: clear of the button hints at the bottom of the screen (their fade: 104)
+    float nearestBottomMargin = 136;
     // > 0 with a Fit height: as tall as its content up to this height
     float maxHeight = 0;
 

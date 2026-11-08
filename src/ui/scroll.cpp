@@ -94,8 +94,8 @@ void VScroll::onDescendantFocused(View* view) {
     const float viewport = frame.height - padding.vertical();
     if (top - nearestMargin < offset_) {
         scrollTo(top - nearestMargin);
-    } else if (bottom + nearestMargin > offset_ + viewport) {
-        scrollTo(bottom + nearestMargin - viewport);
+    } else if (bottom + nearestBottomMargin > offset_ + viewport) {
+        scrollTo(bottom + nearestBottomMargin - viewport);
     }
 }
 
