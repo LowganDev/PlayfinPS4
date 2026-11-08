@@ -24,7 +24,8 @@
 - Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume.
 - Live TV: a channel from an M3U tuner plays straight from its source (without the server, without the Jellyfin
   token), through the server when its source cannot be reached; a channel whose picture stops is opened again by
-  itself; favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
+  itself; a TV guide read on the console from an XMLTV address (Settings › Guide TV; plain or gzip, at start and
+  when the address changes) for the channels the server has no guide for; favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
   news, kids, radios), a channel search.
 - Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.

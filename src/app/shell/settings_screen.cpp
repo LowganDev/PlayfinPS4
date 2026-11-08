@@ -1,5 +1,6 @@
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -10,9 +11,11 @@
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "core/data_dir.hpp"
 #include "core/file_io.hpp"
 #include "core/log.hpp"
+#include "core/strings.hpp"
 #include "core/version.hpp"
 #include "ui/i18n.hpp"
 #include "ui/scroll.hpp"
@@ -81,6 +84,10 @@ public:
         column->add<ui::ValueRow>(ui::tr("downloads.title"), "", [this] {
             ui::Application::current()->push(makeDownloads(session_));
         });
+        // an XMLTV address for servers without a guide (Live TV)
+        guide_ = column->add<ui::ValueRow>(ui::tr("settings.tv_guide"), "", [this] { pressGuide(); });
+        session_.tvGuide().listen(this, [this] { refreshGuide(); });
+        refreshGuide();
 
         addHeading(*column, ui::tr("settings.account"));
         std::string serverName;
@@ -117,6 +124,8 @@ public:
         });
         scroll->setContent(std::move(content));
     }
+    ~SettingsScreen() override { session_.tvGuide().unlisten(this); }
+
     void onShow() override {
         if (!loaded_) {
             loaded_ = true;
@@ -125,6 +134,49 @@ public:
     }
 
 private:
+    // ---- the TV guide read on the console
+
+    void refreshGuide() {
+        const TvGuide& guide = session_.tvGuide();
+        switch (guide.state()) {
+        case TvGuide::State::Off:
+            guide_->setValue(ui::tr("settings.tv_guide.off"));
+            break;
+        case TvGuide::State::Loading:
+            guide_->setValue(ui::tr("settings.tv_guide.loading"));
+            break;
+        case TvGuide::State::Ready:
+            guide_->setValue(ui::tr("settings.tv_guide.ready", {std::to_string(guide.channelCount())}));
+            break;
+        case TvGuide::State::Failed:
+            guide_->setValue(ui::tr("settings.tv_guide.failed"));
+            break;
+        }
+    }
+
+    // the address on the keyboard; empty: the server's guide only
+    void pressGuide() {
+        platform::TextInputRequest request;
+        request.title = ui::tr("settings.tv_guide");
+        request.initial = session_.settings().xmltvUrl;
+        request.kind = platform::TextInputRequest::Kind::Url;
+        request.maxLength = 2048;
+        const core::CancelToken token = token_;
+        ui::Application::current()->requestText(request, [this, token](std::optional<std::string> text) {
+            if (!text || token.cancelled()) {
+                return;
+            }
+            const std::string url(core::trimmed(*text));
+            if (!url.empty() && !validGuideUrl(url)) {
+                ui::Application::current()->toast(ui::tr("settings.tv_guide.invalid"));
+                return;
+            }
+            session_.settings().xmltvUrl = url;
+            session_.saveSettings();
+            session_.tvGuide().refresh();
+        });
+    }
+
     // ---- software update
 
     void refreshUpdate() {
@@ -294,6 +346,7 @@ private:
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
     ui::ValueRow* update_ = nullptr;
+    ui::ValueRow* guide_ = nullptr;
     ui::ValueRow* share_ = nullptr;
     bool downloading_ = false;
     ui::ValueRow* server_;

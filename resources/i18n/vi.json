@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "Kênh trước",
   "shell.search.space": "Dấu cách",
   "shell.search.delete": "Xóa",
-  "shell.search.clear": "Xóa hết"
+  "shell.search.clear": "Xóa hết",
+  "settings.tv_guide": "Lịch TV (XMLTV)",
+  "settings.tv_guide.off": "Của máy chủ",
+  "settings.tv_guide.loading": "Đang tải…",
+  "settings.tv_guide.ready": "{0} kênh",
+  "settings.tv_guide.failed": "Không đọc được, hãy thử lại",
+  "settings.tv_guide.invalid": "Địa chỉ phải bắt đầu bằng http:// hoặc https://."
 }

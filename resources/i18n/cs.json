@@ -269,5 +269,11 @@
   "player.hold.previous_channel": "Předchozí kanál",
   "shell.search.space": "Mezera",
   "shell.search.delete": "Smazat",
-  "shell.search.clear": "Smazat vše"
+  "shell.search.clear": "Smazat vše",
+  "settings.tv_guide": "TV program (XMLTV)",
+  "settings.tv_guide.off": "Ze serveru",
+  "settings.tv_guide.loading": "Načítání…",
+  "settings.tv_guide.ready": "Kanálů: {0}",
+  "settings.tv_guide.failed": "Nenačteno, zkuste znovu",
+  "settings.tv_guide.invalid": "Adresa musí začínat http:// nebo https://."
 }

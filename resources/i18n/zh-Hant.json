@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "上一個頻道",
   "shell.search.space": "空格",
   "shell.search.delete": "刪除",
-  "shell.search.clear": "清除"
+  "shell.search.clear": "清除",
+  "settings.tv_guide": "電視節目表 (XMLTV)",
+  "settings.tv_guide.off": "伺服器的",
+  "settings.tv_guide.loading": "載入中…",
+  "settings.tv_guide.ready": "{0} 個頻道",
+  "settings.tv_guide.failed": "無法讀取，請再試一次",
+  "settings.tv_guide.invalid": "位址必須以 http:// 或 https:// 開頭。"
 }

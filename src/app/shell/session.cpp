@@ -5,6 +5,7 @@
 
 #include "app/shell/downloads.hpp"
 #include "app/shell/music_player.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "core/data_dir.hpp"
 #include "core/file_io.hpp"
 #include "core/log.hpp"
@@ -32,9 +33,19 @@ core::WorkerPool& AppSession::transfers() {
     return *transfers_;
 }
 
+TvGuide& AppSession::tvGuide() {
+    if (!tvGuide_) {
+        tvGuide_ = std::make_unique<TvGuide>(*this);
+    }
+    return *tvGuide_;
+}
+
 void AppSession::stopTransfers() {
     if (downloads_) {
         downloads_->stop();
+    }
+    if (tvGuide_) {
+        tvGuide_->stop();
     }
     if (!transfers_) {
         return;

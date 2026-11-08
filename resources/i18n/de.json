@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "Vorheriger Sender",
   "shell.search.space": "Leerzeichen",
   "shell.search.delete": "Löschen",
-  "shell.search.clear": "Alles löschen"
+  "shell.search.clear": "Alles löschen",
+  "settings.tv_guide": "TV-Programm (XMLTV)",
+  "settings.tv_guide.off": "Das des Servers",
+  "settings.tv_guide.loading": "Wird geladen…",
+  "settings.tv_guide.ready": "{0} Sender",
+  "settings.tv_guide.failed": "Nicht gelesen, erneut versuchen",
+  "settings.tv_guide.invalid": "Die Adresse muss mit http:// oder https:// beginnen."
 }

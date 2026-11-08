@@ -146,6 +146,12 @@ The screens of the app.
   header, FFmpeg reconnect options), falls back to the server's relay on an engine error or with no picture after
   8 s, and opens a live stream again after 15 s without a new picture (`watchLive`). The live stream PlaybackInfo
   opened is closed as before.
+- XMLTV guide on the console: `jellyfin::XmltvReader` (streaming, plain or gzip told by the first bytes, keeps
+  the programmes of [now - 6 h, now + 4 days]) and `app::TvGuide` (owned by AppSession: downloads
+  `Settings::xmltvUrl` on the transfer thread at start and when the address changes; matches a server channel to
+  a guide channel by `channelKey` of its name, then by number; `fill` gives channels without a programme on now
+  the guide's, the Live TV guide list takes the guide's programmes when the server has none). Programmes from it
+  have no id: no recording is offered for them.
 - Live search (`search_screen.cpp`): a key grid (letters, digits, ' - ., space, delete, clear; □ deletes) types
   into the field; `Application::after` (frame-time timers, cancelled by their owner, ShellScreen cancels its own
   when it goes) starts the search 0.4 s after the last key. The field's ✕ still opens the system keyboard.

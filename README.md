@@ -47,7 +47,9 @@ The films in the screenshots are the Blender Foundation's open films; their artw
 - **Music:** albums, artists, playlists, genres and songs; a queue that keeps playing while you browse, shuffle
   and repeat.
 - **Live TV:** channels on now with favourites, categories and a search, a programme guide, recordings
-  (scheduling and cancelling), channel change.
+  (scheduling and cancelling), channel change. M3U channels play straight from their source (the server as the
+  fallback) and reopen by themselves when the picture stops; an XMLTV guide can be read on the console for
+  servers without one.
 - **Search:** results while you type on the on-screen keyboard; films, series, episodes, people, music and
   channels, narrowed to one kind with L2 / R2.
 - **And:** 14 languages, an accent colour of your choice, a screensaver, updates from the settings.

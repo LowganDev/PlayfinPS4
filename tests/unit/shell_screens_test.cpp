@@ -21,6 +21,7 @@
 #include "app/shell/screens.hpp"
 #include "app/shell/screensaver.hpp"
 #include "app/shell/session.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "app/settings.hpp"
 #include "core/data_dir.hpp"
 #include "core/task.hpp"
@@ -2363,4 +2364,42 @@ TEST_CASE("search: the on-screen keyboard searches while typing, a pause after t
     pressAnywhere(shell, "Clear");
     shell.frames(40);
     CHECK_FALSE(shows(*shell.application, "Test Show"));
+}
+
+TEST_CASE("TV guide: an XMLTV address entered in the settings is downloaded and read") {
+    SettingsShell s;
+    s.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    pressAnywhere(s.shell, "TV guide (XMLTV)");
+    Event text;
+    text.type = Event::Type::Text;
+    text.text = s.server.baseUrl() + "/xmltv/guide.xml";
+    s.shell.application->handle(text);
+    s.shell.press(Action::Confirm);
+    s.shell.frames(5);
+    CHECK(s.shell.session.settings().xmltvUrl == s.server.baseUrl() + "/xmltv/guide.xml");
+    CHECK(shows(*s.shell.application, "3 channels"));
+    for (const auto& seen : s.server.requests()) {
+        if (seen.path == "/xmltv/guide.xml") {
+            CHECK(seen.authorization.empty());  // another host: no token
+        }
+    }
+    jellyfin::Item info;
+    info.id = "ch-info";
+    info.name = "Playfin Info";
+    const auto now = s.shell.session.tvGuide().current(info, s.shell.session.now());
+    REQUIRE(static_cast<bool>(now));
+    CHECK(now->name == "Guide du console");
+}
+
+TEST_CASE("TV guide: an address that is not one is refused, the guide stays off") {
+    SettingsShell s;
+    pressAnywhere(s.shell, "TV guide (XMLTV)");
+    Event text;
+    text.type = Event::Type::Text;
+    text.text = "ftp://guide.example/epg.xml";
+    s.shell.application->handle(text);
+    s.shell.press(Action::Confirm);
+    s.shell.frames(3);
+    CHECK(s.shell.session.settings().xmltvUrl.empty());
+    CHECK(s.shell.application->toastText() == ui::tr("settings.tv_guide.invalid"));
 }

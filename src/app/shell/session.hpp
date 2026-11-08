@@ -20,6 +20,7 @@ namespace playfin::app {
 
 class MusicPlayer;
 class Downloads;
+class TvGuide;
 class AppSession;
 enum class StartTarget;
 StartTarget startTarget(AppSession& session);
@@ -39,6 +40,8 @@ public:
     MusicPlayer& music();
     // Films and episodes kept on the console (created on first use, its list read then).
     Downloads& downloads();
+    // The TV guide read on the console (created on first use).
+    TvGuide& tvGuide();
     // Every frame: updates the music when there is some; true when what it shows changed.
     bool updateMusic();
     // Work for the worker pool that nothing waits for (reports, closing a live stream); inline in test mode.
@@ -116,6 +119,7 @@ private:
     std::string settingsPath_;
     std::unique_ptr<MusicPlayer> music_;
     std::unique_ptr<Downloads> downloads_;
+    std::unique_ptr<TvGuide> tvGuide_;
     std::unique_ptr<core::WorkerPool> transfers_;  // after downloads_: joined before it goes
     Settings settings_;
     jellyfin::ServerStore store_;

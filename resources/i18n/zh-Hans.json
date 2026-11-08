@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "上一个频道",
   "shell.search.space": "空格",
   "shell.search.delete": "删除",
-  "shell.search.clear": "清空"
+  "shell.search.clear": "清空",
+  "settings.tv_guide": "电视节目指南 (XMLTV)",
+  "settings.tv_guide.off": "服务器的",
+  "settings.tv_guide.loading": "正在加载…",
+  "settings.tv_guide.ready": "{0} 个频道",
+  "settings.tv_guide.failed": "未能读取，请重试",
+  "settings.tv_guide.invalid": "地址必须以 http:// 或 https:// 开头。"
 }

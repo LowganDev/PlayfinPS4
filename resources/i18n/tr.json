@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "Önceki kanal",
   "shell.search.space": "Boşluk",
   "shell.search.delete": "Sil",
-  "shell.search.clear": "Temizle"
+  "shell.search.clear": "Temizle",
+  "settings.tv_guide": "TV rehberi (XMLTV)",
+  "settings.tv_guide.off": "Sunucununki",
+  "settings.tv_guide.loading": "Yükleniyor…",
+  "settings.tv_guide.ready": "{0} kanal",
+  "settings.tv_guide.failed": "Okunamadı, yeniden deneyin",
+  "settings.tv_guide.invalid": "Adres http:// veya https:// ile başlamalı."
 }

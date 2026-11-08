@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "app/shell/downloads.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "app/shell/engine_options.hpp"
 #include "app/shell/format.hpp"
 #include "app/shell/guide.hpp"
@@ -536,6 +537,7 @@ private:
                     previous_ = std::move(extras.previous);
                     next_ = std::move(extras.next);
                     channels_ = std::move(extras.channels);
+                    session().tvGuide().fill(channels_, session().now());
                     for (const auto& channel : channels_) {
                         if (channel.id == item_.id) {  // opened from a programme card: the channel as listed
                             item_.name = channel.name;

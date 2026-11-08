@@ -15,6 +15,7 @@
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screens.hpp"
 #include "app/shell/screensaver.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "app/shell/music_player.hpp"
 #include "app/shell/session.hpp"
 #include "jellyfin/models.hpp"
@@ -316,6 +317,7 @@ int run(const Options& options) {
             session.updateUrl.clear();  // script tests never ask GitHub
         } else if (options.screen != "gallery") {
             session.checkForUpdate();  // the settings tab gets a dot when a newer Playfin is published
+            session.tvGuide().refresh();  // the XMLTV guide of the settings, if any
         }
         PF_LOG_INFO("startup: first frame");
 

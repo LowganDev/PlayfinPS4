@@ -11,6 +11,7 @@
 #include "app/shell/guide.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
+#include "app/shell/tv_guide.hpp"
 #include "ui/draw.hpp"
 #include "ui/i18n.hpp"
 #include "ui/image_view.hpp"
@@ -131,6 +132,14 @@ public:
         filterLine_ = page->add<ui::Label>("", bodyStrong());
         filterLine_->color = ui::theme().textSecondary;
         // L2 / R2: the channels shown (all, favourites, recent, a kind of programme, radios)
+        // the console's guide arrives (at start, or changed in the settings): the channels' programmes again
+        session_.tvGuide().listen(this, [this] {
+            if (!channels_.empty() && session_.tvGuide().state() == TvGuide::State::Ready) {
+                session_.tvGuide().fill(channels_, session_.now());
+                guide_.clear();
+                show(mode_);
+            }
+        });
         bind(platform::Action::L2, "", [this] { return stepFilter(-1); });
         bind(platform::Action::R2, ui::tr("shell.search.filter_hint"), [this] { return stepFilter(1); },
              [this] { return mode_ != Mode::Recordings; });
@@ -145,7 +154,10 @@ public:
         area_->height = ui::SizeSpec::fill();
         refreshBar();
     }
-    ~LiveTvScreen() override { selection_.cancel(); }
+    ~LiveTvScreen() override {
+        selection_.cancel();
+        session_.tvGuide().unlisten(this);
+    }
     void onShow() override {
         if (!loaded_) {
             loaded_ = true;
@@ -250,6 +262,8 @@ private:
                                                       return;
                                                   }
                                                   channels_ = page.value().items;
+                                                  // the console's XMLTV guide for what the server has not
+                                                  session_.tvGuide().fill(channels_, session_.now());
                                                   show(mode_);
                                               });
     }
@@ -417,6 +431,14 @@ private:
                     return;
                 }
                 guide_[channelId] = page.value().items;
+                if (guide_[channelId].empty()) {  // the server has no guide for it: the console's, if any
+                    for (const auto& channel : channels_) {
+                        if (channel.id == channelId) {
+                            const std::int64_t now = session_.now();
+                            guide_[channelId] = session_.tvGuide().programs(channel, now, now + kGuideSeconds);
+                        }
+                    }
+                }
                 if (channelId == guideChannel_) {
                     showPrograms(guide_[channelId]);
                 }
@@ -483,7 +505,9 @@ private:
             message += "\n" + program.overview;
         }
         std::vector<std::pair<std::string, std::function<void()>>> buttons;
-        if (program.timerId.empty()) {
+        if (program.id.empty()) {
+            // from the console's XMLTV guide: the server does not know it, nothing to record
+        } else if (program.timerId.empty()) {
             const std::string programId = program.id;
             buttons.emplace_back(ui::tr("livetv.record"), [this, programId] { schedule(programId); });
         } else {

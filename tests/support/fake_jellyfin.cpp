@@ -474,6 +474,10 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         }
         res.set_content(body, "application/json");
     }));
+    // an XMLTV guide, as an IPTV provider publishes it (no Jellyfin header expected)
+    http.Get("/xmltv/guide.xml", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content(readFixture("xmltv/guide.xml"), "application/xml");
+    });
     // a channel's own stream, as an M3U tuner gives it (the player must reach it without the Jellyfin header)
     http.Get(R"(/iptv/([^/]+))", [](const httplib::Request&, httplib::Response& res) {
         static const std::string clip = readFixture("media/clip.mp4");

@@ -19,6 +19,7 @@ struct Settings {
     std::string pictureFit = "fit";       // "fit", "fill" or "stretch"
     int pictureSize = 100;                // percent of the screen the picture may take, 80 to 100
     std::vector<std::string> recentChannels;  // Live TV channel ids, last watched first, at most 8
+    std::string xmltvUrl;  // a TV guide read on the console (http or https), "" = the server's only
     std::vector<std::string> libraryOrder;  // library ids in the order the user chose ("Mes médias", latest rows)
 };
 
@@ -28,6 +29,9 @@ bool saveSettings(const std::string& path, const Settings& settings);
 
 // Trimmed; empty terms are ignored; a term already listed moves to the front; at most 8 are kept.
 void addRecentSearch(Settings& settings, std::string term);
+
+// An XMLTV address the settings keep: http or https, no spaces, at most 2048 bytes.
+bool validGuideUrl(const std::string& url);
 
 // The palette entry with this id, else the default (PlayStation blue).
 const ui::AccentChoice& accentById(const std::string& id);

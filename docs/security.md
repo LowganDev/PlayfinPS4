@@ -34,6 +34,9 @@
 - A live channel's own stream (an M3U tuner's `Path`, http or https only, `player::directSourceUrl`) is played by an
   engine without the Authorization header (`engineOptionsDirect`: the token never reaches the tuner's host) and with
   TLS verification against the bundled CA list; anything else goes through the server.
+- The XMLTV guide (Settings › Guide TV) is downloaded with no Jellyfin header, TLS checked against the bundled CA
+  list, and read by a bounded streaming parser (`jellyfin::XmltvReader`: texts, tags and counts capped, 1 GB of
+  XML at most, gzip through zlib; fuzzed by `fuzz_xmltv`). Only http and https addresses are kept.
 - The update check asks GitHub's API with a generic User-Agent (`Playfin/<version>`) and no personal detail.
 
 ## Logs

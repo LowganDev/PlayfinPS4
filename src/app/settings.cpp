@@ -23,6 +23,13 @@ bool knownAccent(const std::string& id) {
 
 }  // namespace
 
+bool validGuideUrl(const std::string& url) {
+    if (url.size() > 2048 || url.find_first_of(" \t\r\n") != std::string::npos) {
+        return false;
+    }
+    return (url.rfind("http://", 0) == 0 && url.size() > 7) || (url.rfind("https://", 0) == 0 && url.size() > 8);
+}
+
 Settings loadSettings(const std::string& path) {
     Settings settings;
     std::string text;
@@ -67,6 +74,10 @@ Settings loadSettings(const std::string& path) {
             settings.libraryOrder.push_back(id);
         }
     }
+    const std::string xmltv = jellyfin::json::string(root, "xmltvUrl");
+    if (validGuideUrl(xmltv)) {
+        settings.xmltvUrl = xmltv;
+    }
     const std::int64_t size = jellyfin::json::integer(root, "pictureSize", 100);
     settings.pictureSize = size >= 80 && size <= 100 ? static_cast<int>(size) : 100;
     for (const std::string& term : jellyfin::json::strings(root, "recentSearches")) {
@@ -87,6 +98,7 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     writer.key("volume").value(settings.volume);
     writer.key("pictureFit").value(settings.pictureFit);
     writer.key("pictureSize").value(settings.pictureSize);
+    writer.key("xmltvUrl").value(settings.xmltvUrl);
     writer.key("recentChannels").array();
     for (const std::string& id : settings.recentChannels) {
         writer.value(id);

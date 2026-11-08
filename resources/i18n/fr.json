@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "Chaîne précédente",
   "shell.search.space": "Espace",
   "shell.search.delete": "Effacer",
-  "shell.search.clear": "Tout effacer"
+  "shell.search.clear": "Tout effacer",
+  "settings.tv_guide": "Guide TV (XMLTV)",
+  "settings.tv_guide.off": "Celui du serveur",
+  "settings.tv_guide.loading": "Chargement…",
+  "settings.tv_guide.ready": "{0} chaînes",
+  "settings.tv_guide.failed": "Non lu, réessayez",
+  "settings.tv_guide.invalid": "L'adresse doit commencer par http:// ou https://."
 }

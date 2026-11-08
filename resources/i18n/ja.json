@@ -267,5 +267,11 @@
   "player.hold.previous_channel": "前のチャンネル",
   "shell.search.space": "スペース",
   "shell.search.delete": "削除",
-  "shell.search.clear": "すべて削除"
+  "shell.search.clear": "すべて削除",
+  "settings.tv_guide": "番組表 (XMLTV)",
+  "settings.tv_guide.off": "サーバーのもの",
+  "settings.tv_guide.loading": "読み込み中…",
+  "settings.tv_guide.ready": "{0} チャンネル",
+  "settings.tv_guide.failed": "読み込めません。再試行してください",
+  "settings.tv_guide.invalid": "アドレスは http:// または https:// で始めてください。"
 }

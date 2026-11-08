@@ -271,5 +271,11 @@
   "player.hold.previous_channel": "Предыдущий канал",
   "shell.search.space": "Пробел",
   "shell.search.delete": "Удалить",
-  "shell.search.clear": "Очистить"
+  "shell.search.clear": "Очистить",
+  "settings.tv_guide": "Телепрограмма (XMLTV)",
+  "settings.tv_guide.off": "С сервера",
+  "settings.tv_guide.loading": "Загрузка…",
+  "settings.tv_guide.ready": "Каналов: {0}",
+  "settings.tv_guide.failed": "Не загружено, повторите",
+  "settings.tv_guide.invalid": "Адрес должен начинаться с http:// или https://."
 }

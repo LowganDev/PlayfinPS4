@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="info.test"><display-name>Playfin Info</display-name><display-name>1</display-name></channel>
+  <channel id="sport.test"><display-name>Playfin Sport HD</display-name></channel>
+  <channel id="other.test"><display-name>Elsewhere</display-name></channel>
+  <programme start="20261016190000 +0000" stop="20261016210000 +0000" channel="info.test">
+    <title>Guide du console</title><desc>Read from the XMLTV file.</desc>
+  </programme>
+</tv>
