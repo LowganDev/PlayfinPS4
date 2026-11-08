@@ -199,6 +199,7 @@
   "settings.update.ready": "Sẵn sàng cài đặt",
   "settings.update.install": "{0} nằm trong /data/pkg. Cài đặt từ GoldHEN › Debug Settings › Package Installer rồi mở lại Playfin. Máy chủ và cài đặt của bạn được giữ nguyên.",
   "settings.update.failed": "Tải xuống chưa hoàn tất. Hãy thử lại sau.",
+  "settings.update.unreachable": "GitHub không phản hồi. Hãy kiểm tra kết nối Internet của máy rồi thử lại.",
   "settings.library_order": "Thứ tự thư viện",
   "settings.library_order.hint": "Chọn một thư viện, di chuyển bằng ↑ và ↓, rồi chọn lại để đặt xuống. Trang chủ theo thứ tự này.",
   "shell.search.people": "Người",

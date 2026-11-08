@@ -203,6 +203,7 @@
   "settings.update.ready": "Готово до встановлення",
   "settings.update.install": "{0} у /data/pkg. Встановіть його через GoldHEN › Debug Settings › Package Installer і знову запустіть Playfin. Сервери та налаштування збережуться.",
   "settings.update.failed": "Завантаження не завершилося. Спробуйте пізніше.",
+  "settings.update.unreachable": "GitHub не відповідає. Перевірте підключення консолі до Інтернету та спробуйте ще раз.",
   "settings.library_order": "Порядок медіатек",
   "settings.library_order.hint": "Виберіть медіатеку, переміщуйте її за допомогою ↑ і ↓, потім виберіть її знову, щоб залишити. Головна дотримується цього порядку.",
   "shell.search.people": "Люди",

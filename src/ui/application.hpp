@@ -62,6 +62,8 @@ public:
     bool hasModal() const { return !modals_.empty(); }
 
     void toast(std::string text, float durationMs = 3000);
+    // The toast shown, empty when none.
+    const std::string& toastText() const { return toastLeftMs_ > 0 ? toastText_ : kNoToast; }
     void requestText(const platform::TextInputRequest& request, std::function<void(std::optional<std::string>)> done);
 
     void handle(const platform::Event& event);
@@ -111,6 +113,7 @@ private:
     };
     std::vector<OpenModal> modals_;
 
+    static inline const std::string kNoToast;
     std::string toastText_;
     float toastLeftMs_ = 0;
 

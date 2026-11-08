@@ -199,6 +199,7 @@
   "settings.update.ready": "Ready to install",
   "settings.update.install": "{0} is in /data/pkg. Install it from GoldHEN › Debug Settings › Package Installer, then start Playfin again. Your servers and settings are kept.",
   "settings.update.failed": "The download did not complete. Try again later.",
+  "settings.update.unreachable": "GitHub did not answer. Check the console's Internet connection, then try again.",
   "settings.library_order": "Order of the libraries",
   "settings.library_order.hint": "Select a library, move it with ↑ and ↓, then select it again to put it down. Home follows this order.",
   "shell.search.people": "People",

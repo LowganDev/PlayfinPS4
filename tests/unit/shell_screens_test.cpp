@@ -1889,6 +1889,18 @@ TEST_CASE("software update: nothing newer, the settings say Playfin is up to dat
     CHECK(shows(*s.shell.application, "Playfin is up to date"));
 }
 
+TEST_CASE("software update: GitHub out of reach, pressing the row says so") {
+    SettingsShell s;
+    s.shell.session.updateUrl = "https://127.0.0.1:9/github/latest";  // nothing listens there
+    s.shell.application->replace(app::makeSettings(s.shell.session));
+    s.shell.frames(5);
+    pressAnywhere(s.shell, "Software update");
+    s.shell.frames(3);
+    CHECK_FALSE(s.shell.session.update.has_value());
+    CHECK(s.shell.application->toastText() == ui::tr("settings.update.unreachable"));
+    CHECK(shows(*s.shell.application, "Check now"));  // may be asked again
+}
+
 TEST_CASE("home: the header shows the date and time; the libraries follow the order chosen in the settings") {
     SettingsShell s;
     s.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");

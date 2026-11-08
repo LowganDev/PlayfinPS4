@@ -148,8 +148,12 @@ private:
             session_.updateChecked = false;  // asked again
             update_->setValue(ui::tr("settings.update.checking"));
             session_.checkForUpdate([this, token = token_] {
-                if (!token.cancelled()) {
-                    refreshUpdate();
+                if (token.cancelled()) {
+                    return;
+                }
+                refreshUpdate();
+                if (!session_.updateChecked) {  // asked by the user, so the failure is told
+                    ui::Application::current()->toast(ui::tr("settings.update.unreachable"));
                 }
             });
             return;
