@@ -65,9 +65,10 @@ struct Extras {
 
 class PlayerScreen : public ShellScreen, public ui::VideoSource {
 public:
-    PlayerScreen(AppSession& session, jellyfin::Item item, std::int64_t startTicks)
+    PlayerScreen(AppSession& session, jellyfin::Item item, std::int64_t startTicks, std::string mediaSourceId)
         : ShellScreen(session),
           item_(std::move(item)),
+          mediaSourceId_(std::move(mediaSourceId)),
           live_(item_.type == jellyfin::ItemType::TvChannel),
           startTicks_(startTicks),
           reporter_([this](player::ReportKind kind, const jellyfin::PlaybackState& state) { send(kind, state); }) {
@@ -355,6 +356,7 @@ private:
         const jellyfin::Item item = item_;
         jellyfin::PlaybackRequest request;
         request.startTicks = startTicks;
+        request.mediaSourceId = mediaSourceId_;
         request.audioIndex = audioIndex_;
         request.subtitleIndex = subtitleIndex_;
         request.maxBitrate = session().settings().maxBitrate;
@@ -903,6 +905,7 @@ private:
     }
 
     jellyfin::Item item_;
+    std::string mediaSourceId_;
     bool live_;  // a Live TV channel
     bool liveClosed_ = false;
     std::shared_ptr<LiveHandOff> handOff_ = std::make_shared<LiveHandOff>();
@@ -949,8 +952,9 @@ private:
 
 }  // namespace
 
-std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks) {
-    return std::make_unique<PlayerScreen>(session, std::move(item), startTicks);
+std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks,
+                                       std::string mediaSourceId) {
+    return std::make_unique<PlayerScreen>(session, std::move(item), startTicks, std::move(mediaSourceId));
 }
 
 }  // namespace playfin::app

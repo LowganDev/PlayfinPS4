@@ -273,6 +273,15 @@ core::Result<ItemPage> Client::items(const ItemQuery& itemQuery, const core::Can
     if (!itemQuery.albumArtistId.empty()) {
         query.add("albumArtistIds", itemQuery.albumArtistId);
     }
+    if (!itemQuery.personId.empty()) {
+        query.add("personIds", itemQuery.personId);
+    }
+    if (!itemQuery.genreId.empty()) {
+        query.add("genreIds", itemQuery.genreId);
+    }
+    if (!itemQuery.nameLessThan.empty()) {
+        query.add("nameLessThan", itemQuery.nameLessThan);
+    }
     query.add("startIndex", itemQuery.startIndex)
         .add("limit", itemQuery.limit)
         .add("recursive", itemQuery.recursive ? "true" : "false")

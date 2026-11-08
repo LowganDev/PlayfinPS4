@@ -1,5 +1,6 @@
 #include "app/shell/format.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <vector>
 
@@ -87,6 +88,9 @@ std::string cardSubtitle(const jellyfin::Item& item, int utcOffsetMinutes) {
     if (item.type == jellyfin::ItemType::Program && item.startUtc > 0) {
         return timeRange(item, utcOffsetMinutes);
     }
+    if (item.type == jellyfin::ItemType::Person) {
+        return item.role;
+    }
     if (item.type == jellyfin::ItemType::Playlist && item.childCount > 0) {
         return ui::translator().plural("music.track_count", item.childCount);
     }
@@ -140,6 +144,74 @@ std::string clockText(double seconds) {
         std::snprintf(text, sizeof(text), "%ld:%02ld", minutes, rest);
     }
     return text;
+}
+
+std::vector<std::string> qualityChips(const jellyfin::MediaSource& source) {
+    std::vector<std::string> chips;
+    const jellyfin::MediaStream* video = nullptr;
+    const jellyfin::MediaStream* audio = nullptr;
+    for (const jellyfin::MediaStream& stream : source.streams) {
+        if (stream.type == jellyfin::StreamType::Video && video == nullptr) {
+            video = &stream;
+        } else if (stream.type == jellyfin::StreamType::Audio && (audio == nullptr || stream.isDefault)) {
+            audio = audio != nullptr && audio->isDefault ? audio : &stream;
+        }
+    }
+    if (video != nullptr) {
+        const int w = video->width;
+        const int h = video->height;
+        if (w >= 3200 || h >= 2000) {
+            chips.emplace_back("4K");
+        } else if (w >= 1800 || h >= 1000) {
+            chips.emplace_back("1080p");
+        } else if (w >= 1200 || h >= 700) {
+            chips.emplace_back("720p");
+        } else if (w > 0 || h > 0) {
+            chips.emplace_back("SD");
+        }
+        const std::string& range = video->videoRangeType;
+        if (range.rfind("DOVI", 0) == 0) {
+            chips.emplace_back("Dolby Vision");
+        } else if (range == "HDR10Plus") {
+            chips.emplace_back("HDR10+");
+        } else if (!range.empty() && range != "SDR" && range != "Unknown") {
+            chips.push_back(range);
+        }
+        static const std::pair<const char*, const char*> kCodecs[] = {
+            {"hevc", "HEVC"}, {"h265", "HEVC"}, {"av1", "AV1"}, {"vp9", "VP9"}, {"h264", "H.264"}};
+        for (const auto& codec : kCodecs) {
+            if (video->codec == codec.first) {
+                chips.emplace_back(codec.second);
+                break;
+            }
+        }
+    }
+    if (audio != nullptr && audio->channels > 0) {
+        chips.push_back(audio->channels >= 8   ? "7.1"
+                        : audio->channels >= 6 ? "5.1"
+                        : audio->channels == 1 ? ui::tr("shell.details.mono")
+                                               : ui::tr("shell.details.stereo"));
+    }
+    return chips;
+}
+
+std::string directorsLine(const jellyfin::Item& item) {
+    std::string names;
+    for (const jellyfin::Person& person : item.people) {
+        if (person.type == "Director") {
+            names += (names.empty() ? "" : ", ") + person.name;
+        }
+    }
+    return names.empty() ? std::string() : ui::tr("shell.details.directed_by", {names});
+}
+
+std::string endsAtText(const jellyfin::Item& item, std::int64_t now, int utcOffsetMinutes) {
+    if (item.runTimeTicks <= 0) {
+        return {};
+    }
+    const std::int64_t left = (item.runTimeTicks - std::max<std::int64_t>(0, item.userData.positionTicks)) / 10000000;
+    const std::int64_t end = now + std::max<std::int64_t>(0, left);
+    return ui::tr("player.ends_at", {clock24(end, utcOffsetMinutes)});
 }
 
 }  // namespace playfin::app

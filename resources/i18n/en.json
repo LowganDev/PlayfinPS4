@@ -175,5 +175,12 @@
   "player.picture": "Picture",
   "player.picture.fit": "Whole picture",
   "player.picture.fill": "Fill the screen",
-  "player.picture.stretch": "Stretched"
+  "player.picture.stretch": "Stretched",
+  "shell.details.stereo": "Stereo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Directed by {0}",
+  "shell.details.cast": "Cast and crew",
+  "shell.details.version": "Version: {0}",
+  "shell.person.filmography": "Filmography",
+  "shell.person.empty": "Nothing with this person on this server."
 }

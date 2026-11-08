@@ -179,5 +179,12 @@
   "player.picture": "Изображение",
   "player.picture.fit": "Целиком",
   "player.picture.fill": "Заполнить экран",
-  "player.picture.stretch": "Растянуть"
+  "player.picture.stretch": "Растянуть",
+  "shell.details.stereo": "Стерео",
+  "shell.details.mono": "Моно",
+  "shell.details.directed_by": "Режиссёр: {0}",
+  "shell.details.cast": "В ролях и съёмочная группа",
+  "shell.details.version": "Версия: {0}",
+  "shell.person.filmography": "Фильмография",
+  "shell.person.empty": "На этом сервере нет ничего с этим человеком."
 }

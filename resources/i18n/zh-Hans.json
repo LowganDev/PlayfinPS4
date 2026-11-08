@@ -175,5 +175,12 @@
   "player.picture": "画面",
   "player.picture.fit": "完整画面",
   "player.picture.fill": "填满屏幕",
-  "player.picture.stretch": "拉伸"
+  "player.picture.stretch": "拉伸",
+  "shell.details.stereo": "立体声",
+  "shell.details.mono": "单声道",
+  "shell.details.directed_by": "导演：{0}",
+  "shell.details.cast": "演职人员",
+  "shell.details.version": "版本：{0}",
+  "shell.person.filmography": "作品",
+  "shell.person.empty": "此服务器上没有此人的作品。"
 }

@@ -175,5 +175,12 @@
   "player.picture": "画面",
   "player.picture.fit": "全体を表示",
   "player.picture.fill": "画面いっぱい",
-  "player.picture.stretch": "引き伸ばし"
+  "player.picture.stretch": "引き伸ばし",
+  "shell.details.stereo": "ステレオ",
+  "shell.details.mono": "モノラル",
+  "shell.details.directed_by": "監督: {0}",
+  "shell.details.cast": "キャストとスタッフ",
+  "shell.details.version": "バージョン: {0}",
+  "shell.person.filmography": "出演作品",
+  "shell.person.empty": "このサーバーにはこの人物の作品がありません。"
 }

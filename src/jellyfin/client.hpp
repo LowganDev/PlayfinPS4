@@ -38,6 +38,9 @@ struct ItemQuery {
     std::vector<std::string> filters;
     std::string searchTerm;
     std::string albumArtistId;  // albums of an artist
+    std::string personId;       // the films and series a person is in
+    std::string genreId;        // of one genre
+    std::string nameLessThan;   // sorting names before this one (an A–Z jump counts the items before a letter)
     int startIndex = 0;
     int limit = 100;
     bool recursive = true;

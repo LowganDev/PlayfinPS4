@@ -175,5 +175,12 @@
   "player.picture": "화면",
   "player.picture.fit": "전체 화면 맞춤",
   "player.picture.fill": "화면 채우기",
-  "player.picture.stretch": "늘이기"
+  "player.picture.stretch": "늘이기",
+  "shell.details.stereo": "스테레오",
+  "shell.details.mono": "모노",
+  "shell.details.directed_by": "감독: {0}",
+  "shell.details.cast": "출연진 및 제작진",
+  "shell.details.version": "버전: {0}",
+  "shell.person.filmography": "필모그래피",
+  "shell.person.empty": "이 서버에 이 사람의 작품이 없습니다."
 }

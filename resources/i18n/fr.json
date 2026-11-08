@@ -175,5 +175,12 @@
   "player.picture": "Image",
   "player.picture.fit": "Entière",
   "player.picture.fill": "Remplir l'écran",
-  "player.picture.stretch": "Étirée"
+  "player.picture.stretch": "Étirée",
+  "shell.details.stereo": "Stéréo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Réalisation : {0}",
+  "shell.details.cast": "Distribution",
+  "shell.details.version": "Version : {0}",
+  "shell.person.filmography": "Filmographie",
+  "shell.person.empty": "Rien de cette personne sur ce serveur."
 }

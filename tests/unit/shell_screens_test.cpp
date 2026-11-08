@@ -1721,3 +1721,68 @@ TEST_CASE("player menu: the volume and the picture, kept for the next videos; th
     CHECK(saved.pictureFit == "fill");
     p.shell.press(Action::Back);
 }
+
+TEST_CASE("details: the version's quality, when it ends, the director, another version, the cast") {
+    Playing p;
+    jellyfin::Item movie;
+    movie.id = "m-1";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    p.shell.session.fixedUtcOffset = 120;
+    p.shell.application->push(app::makeDetails(p.shell.session, movie));
+    p.frames(10);
+    CHECK(shows(*p.shell.application, "4K"));
+    CHECK(shows(*p.shell.application, "HDR10"));
+    CHECK(shows(*p.shell.application, "5.1"));
+    CHECK(shows(*p.shell.application, "Ends at 21:52"));
+    CHECK(shows(*p.shell.application, "Directed by Sacha Goedegebure"));
+    CHECK(shows(*p.shell.application, "Cast and crew"));
+    CHECK(shows(*p.shell.application, "Frank Bunny"));
+    CHECK(shows(*p.shell.application, "Big Buck Bunny"));  // the role under the actor
+    pressAnywhere(p.shell, "Version: Big Buck Bunny 4K");
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "Big Buck Bunny 1080p");
+    p.frames(2);
+    CHECK(shows(*p.shell.application, "1080p"));
+    CHECK_FALSE(shows(*p.shell.application, "4K"));
+    pressAnywhere(p.shell, "Resume (2:00)");
+    p.frames(10);
+    CHECK(p.server.playbackInfoBody().find(R"("MediaSourceId":"ms-2")") != std::string::npos);
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("a person from the cast: their films and series on the server") {
+    Playing p;
+    jellyfin::Item movie;
+    movie.id = "m-1";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makeDetails(p.shell.session, movie));
+    p.frames(10);
+    ui::View* card = nullptr;
+    std::function<void(ui::View&)> find = [&](ui::View& view) {
+        if (auto* c = dynamic_cast<app::ItemCard*>(&view); c != nullptr && card == nullptr) {
+            std::vector<std::string> labels;
+            texts(view, labels);
+            if (!labels.empty() && labels.front() == "Frank Bunny") {
+                card = c;
+            }
+        }
+        for (const auto& child : view.children()) {
+            find(*child);
+        }
+    };
+    find(*p.shell.application->top());
+    REQUIRE(card != nullptr);
+    REQUIRE(p.shell.application->focus().focus(card));
+    p.shell.press(Action::Confirm);
+    p.frames(10);
+    CHECK(p.shell.application->depth() == 3);
+    CHECK(shows(*p.shell.application, "Movies"));
+    CHECK(shows(*p.shell.application, "Series"));
+    CHECK(shows(*p.shell.application, "Test Show"));
+    bool asked = false;
+    for (const auto& request : p.server.requests()) {
+        asked = asked || request.target.find("personIds=p-1") != std::string::npos;
+    }
+    CHECK(asked);
+}

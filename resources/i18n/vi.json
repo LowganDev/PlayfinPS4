@@ -175,5 +175,12 @@
   "player.picture": "Hình ảnh",
   "player.picture.fit": "Toàn bộ hình",
   "player.picture.fill": "Lấp đầy màn hình",
-  "player.picture.stretch": "Kéo giãn"
+  "player.picture.stretch": "Kéo giãn",
+  "shell.details.stereo": "Âm thanh nổi",
+  "shell.details.mono": "Đơn âm",
+  "shell.details.directed_by": "Đạo diễn: {0}",
+  "shell.details.cast": "Diễn viên và đoàn làm phim",
+  "shell.details.version": "Phiên bản: {0}",
+  "shell.person.filmography": "Danh sách phim",
+  "shell.person.empty": "Máy chủ này không có nội dung nào của người này."
 }

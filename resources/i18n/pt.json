@@ -175,5 +175,12 @@
   "player.picture": "Imagem",
   "player.picture.fit": "Imagem inteira",
   "player.picture.fill": "Preencher a tela",
-  "player.picture.stretch": "Esticada"
+  "player.picture.stretch": "Esticada",
+  "shell.details.stereo": "Estéreo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Direção: {0}",
+  "shell.details.cast": "Elenco e equipe",
+  "shell.details.version": "Versão: {0}",
+  "shell.person.filmography": "Filmografia",
+  "shell.person.empty": "Nada com esta pessoa neste servidor."
 }

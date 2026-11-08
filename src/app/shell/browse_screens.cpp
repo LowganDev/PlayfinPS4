@@ -399,6 +399,13 @@ public:
         meta_->color = ui::theme().textSecondary;
         genres_ = column_->add<ui::Label>(joined(item_.genres), ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         genres_->color = ui::theme().textSecondary;
+        // the version's quality, when it ends, who directed it
+        chips_ = column_->add<ui::Box>(ui::Axis::Row);
+        chips_->gap = ui::theme().spacingS;
+        chips_->crossAlign = ui::CrossAlign::Center;
+        directors_ = column_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
+        directors_->color = ui::theme().textSecondary;
+        directors_->visible = false;
         overview_ = column_->add<ui::Label>(item_.overview, ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         overview_->width = ui::SizeSpec::fixed(1100);
         overview_->maxLines = 6;
@@ -410,6 +417,8 @@ public:
         play_ = actions_->add<ui::Button>(ui::tr("shell.details.play"), [this] { playFrom(0); });
         resume_ = actions_->add<ui::Button>("", [this] { playFrom(item_.userData.positionTicks); });
         fromStart_ = actions_->add<ui::Button>(ui::tr("player.from_start"), [this] { playFrom(0); });
+        version_ = actions_->add<ui::Button>("", [this] { later([this] { chooseVersion(); }); });
+        version_->visible = false;
         favorite_ = actions_->add<ui::Button>("", [this] { toggleFavorite(); });
         watched_ = actions_->add<ui::Button>("", [this] { toggleWatched(); });
         previous_ = actions_->add<ui::Button>(ui::tr("shell.details.previous_episode"), [this] { openSibling(-1); });
@@ -508,7 +517,99 @@ private:
     }
 
     void playFrom(std::int64_t ticks) {
-        ui::Application::current()->push(makePlayer(session_, item_, ticks));
+        ui::Application::current()->push(makePlayer(session_, item_, ticks, sourceId_));
+    }
+
+    const jellyfin::MediaSource* chosenSource() const {
+        for (const jellyfin::MediaSource& source : item_.mediaSources) {
+            if (source.id == sourceId_) {
+                return &source;
+            }
+        }
+        return item_.mediaSources.empty() ? nullptr : &item_.mediaSources.front();
+    }
+
+    // the chips of the version chosen and "Se termine à …"
+    void refreshQuality() {
+        chips_->clearChildren();
+        std::vector<std::string> chips;
+        if (const jellyfin::MediaSource* source = chosenSource()) {
+            chips = qualityChips(*source);
+        }
+        if (playable(item_) && item_.type != jellyfin::ItemType::Series) {
+            const std::int64_t at = session_.now();
+            const std::string ends = endsAtText(item_, at, session_.utcOffsetMinutes(at));
+            if (!ends.empty()) {
+                chips.push_back(ends);
+            }
+        }
+        for (std::size_t i = 0; i < chips.size(); ++i) {
+            const bool last = i + 1 == chips.size() && chips[i].find(' ') != std::string::npos;
+            auto* chip = chips_->add<ui::Label>(chips[i], ui::FontStyle{ui::theme().fontSmall, ui::FontWeight::SemiBold});
+            chip->padding = ui::Insets::symmetric(4, 12);
+            chip->cornerRadius = 6;
+            chip->background = last ? ui::Color{0, 0, 0, 0} : ui::withAlpha(ui::theme().text, 0x24);
+            chip->color = last ? ui::theme().textSecondary : ui::theme().text;
+        }
+        chips_->visible = !chips.empty();
+        setLine(directors_, directorsLine(item_));
+        if (item_.mediaSources.size() > 1) {
+            const jellyfin::MediaSource* source = chosenSource();
+            version_->setText(ui::tr("shell.details.version", {source != nullptr ? source->name : std::string()}));
+            version_->visible = true;
+        }
+        column_->markDirty();
+    }
+
+    void chooseVersion() {
+        std::vector<std::string> names;
+        int selected = 0;
+        for (std::size_t i = 0; i < item_.mediaSources.size(); ++i) {
+            const jellyfin::MediaSource& source = item_.mediaSources[i];
+            names.push_back(source.name.empty() ? std::to_string(i + 1) : source.name);
+            selected = &source == chosenSource() ? static_cast<int>(i) : selected;
+        }
+        ui::Application::current()->showModal(
+            ui::makeChoiceDialog(ui::tr("shell.details.version", {""}), names, selected, [this](int index) {
+                sourceId_ = item_.mediaSources[static_cast<std::size_t>(index)].id;
+                refreshQuality();
+            }));
+    }
+
+    // the cast and crew: a portrait each (actors first, as the server lists them); one opens the person
+    void showPeople() {
+        if (item_.people.empty() || castRow_ != nullptr) {
+            return;
+        }
+        std::vector<jellyfin::Item> people;
+        for (const jellyfin::Person& person : item_.people) {
+            if (person.id.empty()) {
+                continue;
+            }
+            jellyfin::Item card;
+            card.id = person.id;
+            card.name = person.name;
+            card.type = jellyfin::ItemType::Person;
+            card.role = !person.role.empty() ? person.role : person.type == "Director" ? directorWord() : "";
+            card.images.primary = person.imageTag;
+            people.push_back(std::move(card));
+        }
+        if (people.empty()) {
+            return;
+        }
+        AppSession* session = &session_;
+        castRow_ = addItemRow(*column_, ui::tr("shell.details.cast"), session_, std::move(people), CardShape::Poster,
+                              [session](const jellyfin::Item& person) {
+                                  ui::Application::current()->push(makePerson(*session, person));
+                              });
+    }
+
+    static std::string directorWord() {
+        std::string line = ui::tr("shell.details.directed_by", {""});
+        while (!line.empty() && (line.back() == ' ' || line.back() == ':')) {
+            line.pop_back();
+        }
+        return line;
     }
 
     void toggleFavorite() {
@@ -563,6 +664,7 @@ private:
         setLine(genres_, joined(item_.genres));
         setLine(overview_, item_.overview);
         column_->markDirty();
+        refreshQuality();
         refreshActions();
     }
 
@@ -579,6 +681,7 @@ private:
             refreshActions();
         }
         const std::size_t firstRow = column_->children().size();
+        showPeople();
         if (item_.type == jellyfin::ItemType::Series && data.seasons.ok() && !data.seasons.value().items.empty()) {
             const auto& seasons = data.seasons.value().items;
             std::string seasonName = seasons.front().name;
@@ -633,6 +736,11 @@ private:
     ui::Label* meta_;
     ui::Label* genres_;
     ui::Label* overview_;
+    ui::Box* chips_ = nullptr;
+    ui::Label* directors_ = nullptr;
+    ui::Button* version_ = nullptr;
+    ui::HList* castRow_ = nullptr;
+    std::string sourceId_;  // the version chosen (empty: the server's first)
     ui::ImageView* backdrop_ = nullptr;
     ui::Box* actions_ = nullptr;
     ui::Button* play_ = nullptr;
@@ -677,6 +785,9 @@ void openItem(AppSession& session, const jellyfin::Item& item) {
     case jellyfin::ItemType::MusicAlbum:
     case jellyfin::ItemType::MusicArtist:
         app->push(makeMusicItem(session, item));
+        break;
+    case jellyfin::ItemType::Person:
+        app->push(makePerson(session, item));
         break;
     case jellyfin::ItemType::Audio:
         session.music().play({item}, 0, false);

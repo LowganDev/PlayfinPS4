@@ -175,5 +175,12 @@
   "player.picture": "Görüntü",
   "player.picture.fit": "Tam görüntü",
   "player.picture.fill": "Ekranı doldur",
-  "player.picture.stretch": "Uzatılmış"
+  "player.picture.stretch": "Uzatılmış",
+  "shell.details.stereo": "Stereo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Yönetmen: {0}",
+  "shell.details.cast": "Oyuncular ve ekip",
+  "shell.details.version": "Sürüm: {0}",
+  "shell.person.filmography": "Filmografi",
+  "shell.person.empty": "Bu sunucuda bu kişiyle ilgili bir şey yok."
 }

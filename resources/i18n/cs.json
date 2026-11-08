@@ -177,5 +177,12 @@
   "player.picture": "Obraz",
   "player.picture.fit": "Celý obraz",
   "player.picture.fill": "Vyplnit obrazovku",
-  "player.picture.stretch": "Roztažený"
+  "player.picture.stretch": "Roztažený",
+  "shell.details.stereo": "Stereo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Režie: {0}",
+  "shell.details.cast": "Herci a štáb",
+  "shell.details.version": "Verze: {0}",
+  "shell.person.filmography": "Filmografie",
+  "shell.person.empty": "Na tomto serveru není nic s touto osobou."
 }

@@ -28,6 +28,18 @@ std::string firstId(yyjson_val* value, const char* key) {
     return list != nullptr ? json::string(yyjson_arr_get_first(list), "Id") : std::string();
 }
 
+MediaSource parseSource(yyjson_val* value);
+
+Person parsePerson(yyjson_val* value) {
+    Person person;
+    person.id = json::string(value, "Id");
+    person.name = json::string(value, "Name");
+    person.role = json::string(value, "Role");
+    person.type = json::string(value, "Type");
+    person.imageTag = json::string(value, "PrimaryImageTag");
+    return person;
+}
+
 Item parseItemValue(yyjson_val* value, int depth = 0) {
     Item item;
     item.id = json::string(value, "Id");
@@ -91,6 +103,24 @@ Item parseItemValue(yyjson_val* value, int depth = 0) {
     if (current != nullptr && depth == 0) {
         item.currentProgram = std::make_shared<const Item>(parseItemValue(current, depth + 1));
     }
+    if (yyjson_val* people = json::array(value, "People")) {
+        yyjson_arr_iter iter = yyjson_arr_iter_with(people);
+        yyjson_val* entry = nullptr;
+        while ((entry = yyjson_arr_iter_next(&iter)) != nullptr && item.people.size() < kMaxPeople) {
+            if (yyjson_is_obj(entry) && !json::string(entry, "Name").empty()) {
+                item.people.push_back(parsePerson(entry));
+            }
+        }
+    }
+    if (yyjson_val* sources = json::array(value, "MediaSources")) {
+        yyjson_arr_iter iter = yyjson_arr_iter_with(sources);
+        yyjson_val* entry = nullptr;
+        while ((entry = yyjson_arr_iter_next(&iter)) != nullptr && item.mediaSources.size() < kMaxMediaSources) {
+            if (yyjson_is_obj(entry)) {
+                item.mediaSources.push_back(parseSource(entry));
+            }
+        }
+    }
     return item;
 }
 
@@ -120,6 +150,7 @@ ItemType itemTypeFromName(std::string_view name) {
         {"Playlist", ItemType::Playlist},
         {"TvChannel", ItemType::TvChannel},
         {"Program", ItemType::Program},
+        {"Person", ItemType::Person},
         {"Video", ItemType::Video},
     };
     for (const auto& entry : kTypes) {
@@ -341,12 +372,17 @@ MediaStream parseStream(yyjson_val* value) {
     stream.width = toInt(json::integer(value, "Width"));
     stream.height = toInt(json::integer(value, "Height"));
     stream.channels = toInt(json::integer(value, "Channels"));
+    stream.videoRangeType = json::string(value, "VideoRangeType");
+    if (stream.videoRangeType.empty()) {
+        stream.videoRangeType = json::string(value, "VideoRange");
+    }
     return stream;
 }
 
 MediaSource parseSource(yyjson_val* value) {
     MediaSource source;
     source.id = json::string(value, "Id");
+    source.name = json::string(value, "Name");
     source.container = json::string(value, "Container");
     source.transcodingUrl = json::string(value, "TranscodingUrl");
     source.liveStreamId = json::string(value, "LiveStreamId");

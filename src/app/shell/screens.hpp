@@ -41,6 +41,10 @@ std::unique_ptr<ui::Screen> makeLicenses(AppSession& session);
 void signOut(AppSession& session);
 std::unique_ptr<ui::Screen> makeDetails(AppSession& session, jellyfin::Item item);
 // Plays an item full screen from `startTicks` (video under the UI); ○ goes back.
-std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks);
+// `mediaSourceId`: the version chosen on the details page (empty: the server's first).
+std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks,
+                                       std::string mediaSourceId = {});
+// A person: their picture and biography, then the films and series they are in (pushed).
+std::unique_ptr<ui::Screen> makePerson(AppSession& session, jellyfin::Item person);
 
 }  // namespace playfin::app

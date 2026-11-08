@@ -72,6 +72,27 @@ TEST_CASE("item texts") {
     CHECK(app::cardSubtitle(program, 120) == "21:30 \xE2\x80\x93 22:30");  // the app's clock (Paris), not the machine's
 }
 
+TEST_CASE("details: quality chips of a version, the directors, when it ends") {
+    English english;
+    const auto movie = fixtureItem("jellyfin/item_movie.json");
+    CHECK(app::qualityChips(movie.mediaSources[0]) == std::vector<std::string>{"4K", "HDR10", "HEVC", "5.1"});
+    CHECK(app::qualityChips(movie.mediaSources[1]) == std::vector<std::string>{"1080p", "H.264", "Stereo"});
+    jellyfin::MediaSource sd;
+    sd.streams.push_back({});
+    sd.streams[0].type = jellyfin::StreamType::Video;
+    sd.streams[0].width = 720;
+    sd.streams[0].height = 576;
+    sd.streams[0].videoRangeType = "DOVIWithHDR10";
+    CHECK(app::qualityChips(sd) == std::vector<std::string>{"SD", "Dolby Vision"});
+    CHECK(app::directorsLine(movie) == "Directed by Sacha Goedegebure");
+    jellyfin::Item none;
+    CHECK(app::directorsLine(none).empty());
+    // 19:45 UTC in Paris (UTC+2); 9 min 56 s long, resumed at 2:00: 7 min 56 s left
+    CHECK(app::endsAtText(movie, jellyfin::parseUtc("2026-10-16T19:45:00Z"), 120) == "Ends at 21:52");
+    jellyfin::Item film;
+    CHECK(app::endsAtText(film, 0, 0).empty());
+}
+
 TEST_CASE("image choices: thumbnails for wide cards, series posters for episodes") {
     jellyfin::Session session;
     session.baseUrl = "http://s";

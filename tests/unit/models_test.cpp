@@ -94,6 +94,18 @@ TEST_CASE("movie item") {
     CHECK_FALSE(m.userData.played);
     CHECK(m.userData.positionTicks == 1200000000LL);
     CHECK(m.userData.playedPercentage == doctest::Approx(20.1));
+    REQUIRE(m.people.size() == 4);
+    CHECK(m.people[0].name == "Sacha Goedegebure");
+    CHECK(m.people[0].type == "Director");
+    CHECK(m.people[1].id == "p-1");
+    CHECK(m.people[1].role == "Big Buck Bunny");
+    CHECK(m.people[1].imageTag == "t-p1");
+    CHECK(m.people[2].imageTag.empty());
+    REQUIRE(m.mediaSources.size() == 2);
+    CHECK(m.mediaSources[0].name == "Big Buck Bunny 4K");
+    REQUIRE(m.mediaSources[0].streams.size() == 3);
+    CHECK(m.mediaSources[0].streams[0].videoRangeType == "HDR10");
+    CHECK(m.mediaSources[0].streams[1].channels == 6);
 }
 
 TEST_CASE("episode item with series images") {

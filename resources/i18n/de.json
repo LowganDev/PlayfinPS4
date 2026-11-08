@@ -175,5 +175,12 @@
   "player.picture": "Bild",
   "player.picture.fit": "Ganzes Bild",
   "player.picture.fill": "Bildschirm füllen",
-  "player.picture.stretch": "Gestreckt"
+  "player.picture.stretch": "Gestreckt",
+  "shell.details.stereo": "Stereo",
+  "shell.details.mono": "Mono",
+  "shell.details.directed_by": "Regie: {0}",
+  "shell.details.cast": "Besetzung und Team",
+  "shell.details.version": "Version: {0}",
+  "shell.person.filmography": "Filmografie",
+  "shell.person.empty": "Nichts mit dieser Person auf diesem Server."
 }
