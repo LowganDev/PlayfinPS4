@@ -57,12 +57,6 @@ void NavTab::refresh() {
 
 void NavTab::draw(NVGcontext* vg) const {
     ui::Box::draw(vg);
-    if (badge && badge()) {
-        nvgBeginPath(vg);
-        nvgCircle(vg, frame.width - 8, 8, 6);
-        nvgFillColor(vg, ui::nvgColor(focused_ ? ui::theme().onAccent : ui::theme().accent));
-        nvgFill(vg);
-    }
     if (current_ && !focused_) {
         const float inset = ui::theme().spacingL;
         nvgBeginPath(vg);
@@ -89,9 +83,6 @@ NavBar::NavBar(AppSession& session, Tab current) : ui::Box(ui::Axis::Row) {
             press = [shared, which] { openTab(*shared, which); };
         }
         auto* view = add<NavTab>(ui::tr(tab.second), which == current, std::move(press));
-        if (which == Tab::Settings) {
-            view->badge = [shared] { return shared->update.has_value(); };
-        }
         if (which == current) {
             current_ = view;
         }

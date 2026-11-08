@@ -338,39 +338,4 @@ StartTarget startTarget(AppSession& session) {
     return StartTarget::Servers;
 }
 
-void AppSession::checkForUpdate(std::function<void()> done) {
-    if (updateChecked || updateUrl.empty()) {
-        if (done) {
-            done();
-        }
-        return;
-    }
-    updateChecked = true;
-    const net::HttpClient* http = &http_;
-    const std::string url = updateUrl;
-    const auto apply = [this, done](core::Result<Release> release) {
-        if (release.ok() && newerVersion(release.value().version, core::version())) {
-            PF_LOG_INFO("update: %s is available", release.value().version.c_str());
-            update = release.value();
-        } else if (!release.ok()) {
-            PF_LOG_INFO("update: not checked: %s", release.error().message.c_str());
-            updateChecked = false;  // asked again from the settings
-        }
-        if (ui::Application* current = ui::Application::current()) {
-            current->requestRedraw();  // the settings tab's dot
-        }
-        if (done) {
-            done();
-        }
-    };
-    ui::Application* app = ui::Application::current();
-    if (synchronous || app == nullptr) {
-        apply(fetchLatestRelease(*http, url));
-        return;
-    }
-    core::runAsync<core::Result<Release>>(app->pool(), app->mainQueue(),
-                                          [http, url] { return fetchLatestRelease(*http, url); }, apply,
-                                          core::CancelToken{});
-}
-
 }  // namespace playfin::app

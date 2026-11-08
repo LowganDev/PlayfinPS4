@@ -23,9 +23,6 @@ public:
     void showMediaViews() { mediaViews_ = true; }
     // Where the live channels' tuner streams from (their PlaybackInfo's Path): this server's /iptv/ch1 unless set.
     void setLiveSource(std::string url) { liveSource_ = std::move(url); }
-    // GitHub's latest release at /github/latest: `version`, its package (`package`, digest included) at
-    // /github/Playfin.pkg; an empty version answers 404.
-    void publishRelease(std::string version, std::string package);
     // The README's screenshots: a "Films" library of the Blender Foundation's open films, their posters and
     // backdrops read from `dir` (<id>-primary.jpg, <id>-backdrop.jpg; scripts/readme-shots.sh fetches them).
     void showcase(std::string dir);
@@ -61,8 +58,6 @@ private:
     std::string playbackInfoBody_;
     std::string timerBody_;
     std::string showcaseDir_;
-    std::string releaseVersion_;
-    std::string releasePackage_;
 };
 
 }  // namespace playfin::test

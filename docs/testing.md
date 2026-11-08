@@ -32,7 +32,7 @@
   answers per season (se-2 has e-3); `/Users/{id}/Images/Primary` serves a picture. `requests()`, `count(path)` and
   `playbackInfoBody()` let tests check what was asked. Added in 2.0: `/Items/{id}/Download` (the test clip; 403
   for `m-transcode`), `/MusicGenres`, people (`includeItemTypes=Person`), `sortBy=Random` (Big Buck Bunny, with a
-  backdrop), `nameLessThan`, GitHub's latest release (`publishRelease`, `/github/latest`), and the showcase.
+  backdrop), `nameLessThan`, and the showcase.
 - In the Linux UI editor (no system keyboard) the text starts from the field's value: a test that searches twice
   clears the field first.
 - `tests/fixtures/` and the fake server are shared by the unit and end-to-end tests: adding image tags or fields

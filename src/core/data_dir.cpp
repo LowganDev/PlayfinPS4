@@ -52,26 +52,6 @@ const std::string& dataRoot() { return gDataRoot; }
 
 std::optional<std::string> dataPath(std::string_view relative) { return resolveInside(gDataRoot, relative); }
 
-std::optional<std::string> packagePath(std::string_view name) {
-    if (name.find('/') != std::string_view::npos) {
-        return std::nullopt;
-    }
-#ifdef PLAYFIN_PS4
-    // GoldHEN's folder: created when missing (one level, under /data), never changed (no chmod as for our own)
-    const std::string folder = "/data/pkg";
-    if (!isDirectory(folder) && ::mkdir(folder.c_str(), 0777) != 0 && !isDirectory(folder)) {
-        return std::nullopt;
-    }
-#else
-    const auto inside = dataPath("pkg");
-    if (!inside || !makeDirs(*inside)) {
-        return std::nullopt;
-    }
-    const std::string folder = *inside;
-#endif
-    return resolveInside(folder, name);
-}
-
 bool makeDirs(const std::string& path) {
 #ifdef PLAYFIN_PS4
     // a folder created under /data may not end up owned by the app's user: 0755 then forbids creating files in it

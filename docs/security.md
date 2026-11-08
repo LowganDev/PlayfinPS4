@@ -24,10 +24,8 @@
 - Without a data folder, or when `servers.json` cannot be read, the app runs without saving and never
   overwrites the file.
 - The app writes only inside its data folder (`/data/Playfin` on PS4); every path goes through
-  `core::dataPath()`. One exception, approved by the user: the software update writes its package, and only
-  that file (`Playfin-<version>.pkg`), to `/data/pkg` (`core::packagePath`), where GoldHEN's Package Installer
-  lists packages. The package is kept only when its size and SHA-256 match the digest GitHub publishes for the
-  release asset; it is never installed by the app.
+  `core::dataPath()`. (The software update, which writes its package to `/data/pkg` by an exception the user
+  approved, is kept for 2.1 on branch `2.1`; 2.0 does not have it.)
 - Downloads go to the data folder's `downloads/` only, under names made from the item id (letters, digits,
   dashes); `downloads.json` is read with a size limit and file names with a `/` are ignored. Download pictures
   (`file://` URLs) are read from that folder only.
@@ -37,7 +35,6 @@
 - The XMLTV guide (Settings › Guide TV) is downloaded with no Jellyfin header, TLS checked against the bundled CA
   list, and read by a bounded streaming parser (`jellyfin::XmltvReader`: texts, tags and counts capped, 1 GB of
   XML at most, gzip through zlib; fuzzed by `fuzz_xmltv`). Only http and https addresses are kept.
-- The update check asks GitHub's API with a generic User-Agent (`Playfin/<version>`) and no personal detail.
 
 ## Logs
 - Every log line is redacted (`core::redact`): API keys, tokens, `Authorization` headers, password fields and the
