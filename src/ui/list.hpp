@@ -33,6 +33,8 @@ public:
 
     int focusedIndex() const { return focused_; }
     View* viewAt(int index) const;
+    // the view of an item, made if needed (to focus an item far away: an A–Z jump)
+    View* itemView(int index) { return index >= 0 && index < count() ? materialize(index) : nullptr; }
     int materializedCount() const { return static_cast<int>(visible_.size()); }
     float scrollOffset() const { return scroll_; }
 

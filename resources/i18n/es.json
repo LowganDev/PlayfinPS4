@@ -182,5 +182,9 @@
   "shell.details.cast": "Reparto y equipo",
   "shell.details.version": "Versión: {0}",
   "shell.person.filmography": "Filmografía",
-  "shell.person.empty": "Nada de esta persona en este servidor."
+  "shell.person.empty": "Nada de esta persona en este servidor.",
+  "shell.peek.hint": "Vista rápida",
+  "shell.peek.open": "Abrir",
+  "shell.peek.with": "Con {0}",
+  "shell.library.jump": "Ir a la letra"
 }

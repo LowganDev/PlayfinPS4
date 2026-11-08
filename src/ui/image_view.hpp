@@ -8,8 +8,8 @@
 
 namespace playfin::ui {
 
-// Image from a URL, requested at the view's size once laid out, faded in; the placeholder color shows meanwhile
-// (and on failure).
+// Image from a URL, requested at the view's size once laid out, faded in; the placeholder color shows meanwhile,
+// shimmering while the picture is on its way, plain on failure.
 class ImageView : public View {
 public:
     enum class Fit { Cover, Contain };
@@ -32,6 +32,7 @@ private:
     std::unique_ptr<ImageRequest> request_;
     TextureRef texture_;
     float alpha_ = 0;
+    bool failed_ = false;
 };
 
 }  // namespace playfin::ui

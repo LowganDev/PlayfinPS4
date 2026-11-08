@@ -119,6 +119,10 @@ void items(const httplib::Request& req, httplib::Response& res) {
             (filters.find("IsUnplayed") != std::string::npos && i % 2 == 0)) {
             continue;
         }
+        const std::string lessThan = req.get_param_value("nameLessThan");
+        if (!lessThan.empty() && !(movieName(i) < lessThan)) {
+            continue;
+        }
         if (term.empty() || lower(movieName(i)).find(term) != std::string::npos) {
             matches.push_back(i);
         }

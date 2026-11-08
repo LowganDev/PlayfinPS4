@@ -186,5 +186,9 @@
   "shell.details.cast": "Актори та знімальна група",
   "shell.details.version": "Версія: {0}",
   "shell.person.filmography": "Фільмографія",
-  "shell.person.empty": "На цьому сервері немає нічого з цією людиною."
+  "shell.person.empty": "На цьому сервері немає нічого з цією людиною.",
+  "shell.peek.hint": "Коротко",
+  "shell.peek.open": "Відкрити",
+  "shell.peek.with": "У ролях: {0}",
+  "shell.library.jump": "Перейти до літери"
 }

@@ -167,6 +167,7 @@ add_library(playfin_core STATIC
     src/app/settings.cpp
     src/app/shell/browse_screens.cpp
     src/app/shell/person_screen.cpp
+    src/app/shell/peek.cpp
     src/app/shell/cards.cpp
     src/app/shell/chrome.cpp
     src/app/shell/connect_screens.cpp

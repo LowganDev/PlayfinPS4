@@ -22,6 +22,7 @@ void ImageView::setUrl(std::string url) {
     request_.reset();
     texture_.reset();
     alpha_ = 0;
+    failed_ = false;
     markDirty();
 }
 
@@ -36,6 +37,7 @@ void ImageView::layout(TextMetrics& metrics) {
     requested_ = key;
     request_ = context().images->request(url_, w, h, [this](TextureRef texture) {
         texture_ = std::move(texture);
+        failed_ = !texture_;
         if (texture_ && context().animator != nullptr) {
             alpha_ = 0;
             context().animator->animate(&alpha_, 1, theme().fadeMs, Easing::Linear, this);
@@ -51,7 +53,18 @@ void ImageView::draw(NVGcontext* vg) const {
     if (!covered) {
         nvgBeginPath(vg);
         nvgRoundedRect(vg, 0, 0, frame.width, frame.height, cornerRadius);
-        nvgFillColor(vg, nvgColor(placeholder));
+        Color fill = placeholder;
+        if (!texture_ && !failed_ && request_ && placeholder.a == 255) {
+            // on its way: the placeholder breathes towards the raised surface (1.2 s), cheap: one plain fill
+            const double phase = std::fmod(static_cast<double>(context().timeMs), 1200.0) / 1200.0;
+            const float t = static_cast<float>(0.5 - 0.5 * std::cos(phase * 6.283185307179586)) * 0.6f;
+            const Color to = theme().surfaceRaised;
+            fill = Color{static_cast<std::uint8_t>(fill.r + (to.r - fill.r) * t),
+                         static_cast<std::uint8_t>(fill.g + (to.g - fill.g) * t),
+                         static_cast<std::uint8_t>(fill.b + (to.b - fill.b) * t), 255};
+            context().redrawNextFrame = true;
+        }
+        nvgFillColor(vg, nvgColor(fill));
         nvgFill(vg);
     }
     if (texture_ && alpha_ > 0) {

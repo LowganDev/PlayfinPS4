@@ -40,6 +40,10 @@ std::unique_ptr<ui::Screen> makeLicenses(AppSession& session);
 // Signs out on the server (in the background), forgets the token and shows the users of the server.
 void signOut(AppSession& session);
 std::unique_ptr<ui::Screen> makeDetails(AppSession& session, jellyfin::Item item);
+// △ on a card: a quick look at an item over the screen (poster, quality, synopsis, cast) with "Voir la fiche";
+// its details come from the server meanwhile. `screen` runs the request (dropped if it goes).
+class ShellScreen;
+void openPeek(ShellScreen& screen, const jellyfin::Item& item);
 // Plays an item full screen from `startTicks` (video under the UI); ○ goes back.
 // `mediaSourceId`: the version chosen on the details page (empty: the server's first).
 std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks,

@@ -182,5 +182,9 @@
   "shell.details.cast": "演职人员",
   "shell.details.version": "版本：{0}",
   "shell.person.filmography": "作品",
-  "shell.person.empty": "此服务器上没有此人的作品。"
+  "shell.person.empty": "此服务器上没有此人的作品。",
+  "shell.peek.hint": "速览",
+  "shell.peek.open": "打开",
+  "shell.peek.with": "主演：{0}",
+  "shell.library.jump": "跳到字母"
 }

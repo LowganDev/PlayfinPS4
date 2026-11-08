@@ -240,6 +240,21 @@ public:
         source_ = source.get();
         grid_->setSource(std::move(source));
         grid_->onNearEnd(14, [this] { loadMore(); });
+        // ← in the first column: the A–Z jump (names in order); △: a quick look at the item
+        grid_->bind(platform::Action::Left, "", [this] {
+            if (grid_->focusedIndex() % grid_->columns != 0 || !jumpable()) {
+                return false;
+            }
+            openJump();
+            return true;
+        });
+        grid_->bind(platform::Action::Options, ui::tr("shell.peek.hint"), [this] {
+            const int index = grid_->focusedIndex();
+            if (index >= 0 && index < static_cast<int>(source_->items().size())) {
+                openPeek(*this, source_->items()[static_cast<std::size_t>(index)]);
+            }
+            return true;
+        });
         refreshBar();
     }
     void onShow() override {
@@ -282,6 +297,85 @@ private:
         return {};
     }
 
+    bool jumpable() const { return choice_.sort == LibrarySort::Name && !choice_.descending && total_ > 0; }
+
+    // "#" and A to Z, nine to a row
+    void openJump() {
+        auto overlay = std::make_unique<ui::Stack>();
+        overlay->background = ui::theme().scrim;
+        overlay->horizontal = ui::CrossAlign::Center;
+        overlay->vertical = ui::CrossAlign::Center;
+        auto* card = overlay->add<ui::Box>(ui::Axis::Column);
+        card->padding = ui::Insets::all(ui::theme().spacingXl);
+        card->gap = ui::theme().spacingM;
+        card->background = ui::theme().surfaceRaised;
+        card->cornerRadius = ui::theme().radius;
+        card->add<ui::Label>(ui::tr("shell.library.jump"), ui::FontStyle{ui::theme().fontHeading, ui::FontWeight::SemiBold});
+        const std::string letters = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        ui::Box* row = nullptr;
+        for (std::size_t i = 0; i < letters.size(); ++i) {
+            if (i % 9 == 0) {
+                row = card->add<ui::Box>(ui::Axis::Row);
+                row->gap = ui::theme().spacingS;
+            }
+            const char letter = letters[i];
+            auto* button = row->add<ui::Button>(std::string(1, letter), [this, letter] {
+                ui::Application::current()->closeModal();
+                jumpTo(letter);
+            });
+            button->width = ui::SizeSpec::fixed(84);
+            if (i == 0) {
+                overlay->remembered = button;
+            }
+        }
+        overlay->bind(platform::Action::Back, ui::tr("ui.cancel"), [] {
+            ui::Application::current()->closeModal();
+            return true;
+        });
+        ui::Application::current()->showModal(std::move(overlay));
+    }
+
+    // how many names come before the letter tells its first item; the pages up to it are loaded, then focused
+    void jumpTo(char letter) {
+        if (letter == '#') {
+            focusIndex(0);
+            return;
+        }
+        jellyfin::ItemQuery query = libraryQuery(library_, choice_, 0);
+        query.nameLessThan = std::string(1, letter);
+        query.limit = 0;
+        const auto client = session_.client();
+        const core::CancelToken token = token_;
+        const int generation = generation_;
+        run<core::Result<jellyfin::ItemPage>>([client, query, token] { return client->items(query, token); },
+                                              [this, generation](core::Result<jellyfin::ItemPage> before) {
+                                                  if (generation != generation_ || !before.ok()) {
+                                                      return;
+                                                  }
+                                                  jumpTarget_ = std::min(before.value().total, total_ - 1);
+                                                  continueJump();
+                                              });
+    }
+
+    void continueJump() {
+        if (jumpTarget_ < 0) {
+            return;
+        }
+        if (jumpTarget_ < static_cast<int>(source_->items().size())) {
+            const int target = jumpTarget_;
+            jumpTarget_ = -1;
+            focusIndex(target);
+            return;
+        }
+        loadMore();  // its page calls continueJump again
+    }
+
+    void focusIndex(int index) {
+        if (ui::View* view = grid_->itemView(index)) {
+            ui::Application::current()->focus().focus(view);
+        }
+    }
+
     // a new listing: the pages of the previous one still on their way are dropped (generation)
     void change(const LibraryChoice& choice) {
         choice_ = choice;
@@ -289,6 +383,7 @@ private:
         refreshBar();
         ++generation_;
         loading_ = false;
+        jumpTarget_ = -1;
         total_ = -1;
         source_->items().clear();
         grid_->reload();
@@ -330,6 +425,7 @@ private:
                                                   } else {
                                                       focusIfEmpty(grid_);
                                                   }
+                                                  continueJump();
                                               });
     }
 
@@ -342,6 +438,7 @@ private:
     ui::Grid* grid_;
     ItemsSource* source_;
     int total_ = -1;
+    int jumpTarget_ = -1;  // an A–Z jump waiting for its page
     int generation_ = 0;
     bool loading_ = false;
     bool started_ = false;

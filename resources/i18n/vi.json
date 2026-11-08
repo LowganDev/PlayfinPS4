@@ -182,5 +182,9 @@
   "shell.details.cast": "Diễn viên và đoàn làm phim",
   "shell.details.version": "Phiên bản: {0}",
   "shell.person.filmography": "Danh sách phim",
-  "shell.person.empty": "Máy chủ này không có nội dung nào của người này."
+  "shell.person.empty": "Máy chủ này không có nội dung nào của người này.",
+  "shell.peek.hint": "Xem nhanh",
+  "shell.peek.open": "Mở",
+  "shell.peek.with": "Diễn viên: {0}",
+  "shell.library.jump": "Đến chữ cái"
 }

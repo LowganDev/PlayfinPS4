@@ -182,5 +182,9 @@
   "shell.details.cast": "Cast and crew",
   "shell.details.version": "Version: {0}",
   "shell.person.filmography": "Filmography",
-  "shell.person.empty": "Nothing with this person on this server."
+  "shell.person.empty": "Nothing with this person on this server.",
+  "shell.peek.hint": "Quick look",
+  "shell.peek.open": "Open",
+  "shell.peek.with": "With {0}",
+  "shell.library.jump": "Go to letter"
 }

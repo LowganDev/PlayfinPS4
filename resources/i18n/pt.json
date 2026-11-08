@@ -182,5 +182,9 @@
   "shell.details.cast": "Elenco e equipe",
   "shell.details.version": "Versão: {0}",
   "shell.person.filmography": "Filmografia",
-  "shell.person.empty": "Nada com esta pessoa neste servidor."
+  "shell.person.empty": "Nada com esta pessoa neste servidor.",
+  "shell.peek.hint": "Espiar",
+  "shell.peek.open": "Abrir",
+  "shell.peek.with": "Com {0}",
+  "shell.library.jump": "Ir para a letra"
 }

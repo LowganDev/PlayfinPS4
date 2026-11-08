@@ -182,5 +182,9 @@
   "shell.details.cast": "Oyuncular ve ekip",
   "shell.details.version": "Sürüm: {0}",
   "shell.person.filmography": "Filmografi",
-  "shell.person.empty": "Bu sunucuda bu kişiyle ilgili bir şey yok."
+  "shell.person.empty": "Bu sunucuda bu kişiyle ilgili bir şey yok.",
+  "shell.peek.hint": "Hızlı bakış",
+  "shell.peek.open": "Aç",
+  "shell.peek.with": "Oyuncular: {0}",
+  "shell.library.jump": "Harfe git"
 }

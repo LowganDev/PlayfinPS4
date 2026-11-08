@@ -182,5 +182,9 @@
   "shell.details.cast": "Distribution",
   "shell.details.version": "Version : {0}",
   "shell.person.filmography": "Filmographie",
-  "shell.person.empty": "Rien de cette personne sur ce serveur."
+  "shell.person.empty": "Rien de cette personne sur ce serveur.",
+  "shell.peek.hint": "Aperçu",
+  "shell.peek.open": "Voir la fiche",
+  "shell.peek.with": "Avec {0}",
+  "shell.library.jump": "Aller à la lettre"
 }

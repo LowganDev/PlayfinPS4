@@ -1786,3 +1786,47 @@ TEST_CASE("a person from the cast: their films and series on the server") {
     }
     CHECK(asked);
 }
+
+TEST_CASE("library: ← in the first column jumps to a letter, the pages up to it are loaded") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeLibrary(shell.session, moviesLibrary()));
+    shell.frames(10);
+    REQUIRE(dynamic_cast<const app::ItemCard*>(shell.application->focus().focused()) != nullptr);
+    shell.press(Action::Left);
+    REQUIRE(shell.application->hasModal());
+    CHECK(shows(*shell.application, "Go to letter"));
+    pressAnywhere(shell, "N");  // every name is "Movie …": all 250 come before N, the last one is focused
+    shell.frames(10);
+    CHECK_FALSE(shell.application->hasModal());
+    std::vector<std::string> labels;
+    texts(*shell.application->focus().focused(), labels);
+    REQUIRE_FALSE(labels.empty());
+    CHECK(labels.front() == "Movie 249");
+    bool counted = false;
+    for (const auto& request : server.requests()) {
+        counted = counted || (request.target.find("nameLessThan=N") != std::string::npos &&
+                              request.target.find("limit=0") != std::string::npos);
+    }
+    CHECK(counted);
+}
+
+TEST_CASE("library: \\u25b3 on a card opens a quick look; its details arrive; it opens the details") {
+    Playing p;
+    jellyfin::Item library;
+    library.id = "lib-movies";
+    library.name = "Movies";
+    library.type = jellyfin::ItemType::CollectionFolder;
+    library.collectionType = "movies";
+    p.shell.application->push(app::makeLibrary(p.shell.session, library));
+    p.frames(10);
+    REQUIRE(p.shell.application->focus().focused() != nullptr);
+    p.shell.press(Action::Options);
+    p.frames(3);
+    REQUIRE(p.shell.application->hasModal());
+    CHECK(shows(*p.shell.application, "Open"));
+    p.shell.press(Action::Back);
+    CHECK_FALSE(p.shell.application->hasModal());
+}
