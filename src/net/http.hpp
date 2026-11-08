@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +47,13 @@ public:
     core::Result<HttpResponse> send(const HttpRequest& request, const std::string& pin = {},
                                     const core::CancelToken& token = {}) const;
 
+    // A large file: the body goes to `sink` in pieces (false stops it: ErrorKind::Storage), `progress` gets the
+    // bytes received and the total (0 when unknown). No size limit; the request's timeout applies (0: none).
+    using Sink = std::function<bool(const char* data, std::size_t size)>;
+    using Progress = std::function<void(long long received, long long total)>;
+    core::Result<HttpResponse> download(const HttpRequest& request, Sink sink, Progress progress = {},
+                                        const std::string& pin = {}, const core::CancelToken& token = {}) const;
+
     // The certificate presented by the server of `url`, read without trusting it (trust on first use): a GET of
     // the server root without any header, response discarded.
     core::Result<core::CertificateInfo> fetchCertificate(const std::string& url,
@@ -53,6 +61,9 @@ public:
 
 
 private:
+    core::Result<HttpResponse> perform(const HttpRequest& request, const std::string& pin,
+                                       const core::CancelToken& token, const Sink* sink,
+                                       const Progress* progress) const;
     HttpConfig config_;
 };
 

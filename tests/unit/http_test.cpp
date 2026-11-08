@@ -255,3 +255,35 @@ TEST_CASE("a wrong pin is refused even for a server with a trusted chain") {
     REQUIRE_FALSE(result.ok());
     CHECK(result.error().kind == ErrorKind::Tls);
 }
+
+TEST_CASE("a download goes to a sink in pieces, with its progress, and stops when the sink refuses") {
+    FakeServer server;
+    const std::string big(300000, 'x');
+    server.http().Get("/file", [&big](const httplib::Request&, httplib::Response& res) {
+        res.set_content(big, "application/octet-stream");
+    });
+    server.start();
+    HttpClient client(testConfig());
+    std::string received;
+    long long lastNow = 0;
+    long long lastTotal = 0;
+    auto result = client.download(
+        get(server.baseUrl() + "/file"),
+        [&](const char* data, std::size_t size) {
+            received.append(data, size);
+            return true;
+        },
+        [&](long long now, long long total) {
+            lastNow = now;
+            lastTotal = total;
+        });
+    REQUIRE(result.ok());
+    CHECK(result.value().status == 200);
+    CHECK(result.value().body.empty());
+    CHECK(received == big);
+    CHECK(lastNow == 300000);
+    CHECK(lastTotal == 300000);
+    auto refused = client.download(get(server.baseUrl() + "/file"), [](const char*, std::size_t) { return false; });
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().kind == ErrorKind::Storage);
+}

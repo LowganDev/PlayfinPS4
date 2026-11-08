@@ -9,6 +9,7 @@
 #include <string>
 
 #include "app/settings.hpp"
+#include "app/update.hpp"
 #include "app/shell/library_query.hpp"
 #include "jellyfin/client.hpp"
 #include "jellyfin/store.hpp"
@@ -71,6 +72,13 @@ public:
     std::string languageAtStart;  // settings().language when the app started (the UI's language until a restart)
     std::string noticesFile;      // THIRD_PARTY_LICENSES: copyright lines, credits, where the sources are
     std::string licensesDir;      // resources/licenses: the manifest and the licence texts
+
+    // Software update: where the latest release is asked for, and the newer one found (checked at start).
+    std::string updateUrl = kLatestReleaseUrl;
+    std::optional<Release> update;
+    bool updateChecked = false;
+    // Asks once (on the worker pool) whether a newer Playfin is published; `done` on the main thread.
+    void checkForUpdate(std::function<void()> done = {});
 
     bool synchronous = false;     // test mode: network jobs run inline (deterministic screenshots)
     bool frozenPlayback = false;  // script tests: music pauses at its first moment (deterministic screenshots)

@@ -21,6 +21,9 @@ public:
     void approveQuickConnect() { approved_ = true; }
     // The user views of the test server (Live TV, music, playlists, recordings) instead of movies and shows.
     void showMediaViews() { mediaViews_ = true; }
+    // GitHub's latest release at /github/latest: `version`, its package (`package`, digest included) at
+    // /github/Playfin.pkg; an empty version answers 404.
+    void publishRelease(std::string version, std::string package);
 
     struct Seen {
         std::string method;
@@ -50,6 +53,8 @@ private:
     std::vector<Seen> requests_;
     std::string playbackInfoBody_;
     std::string timerBody_;
+    std::string releaseVersion_;
+    std::string releasePackage_;
 };
 
 }  // namespace playfin::test

@@ -34,4 +34,28 @@ std::optional<core::Sha256> spkiSha256FromPem(std::string_view pem) {
     return digest;
 }
 
+struct Sha256Stream::State {
+    mbedtls_sha256_context context;
+};
+
+Sha256Stream::Sha256Stream() : state_(new State) {
+    mbedtls_sha256_init(&state_->context);
+    mbedtls_sha256_starts(&state_->context, 0);
+}
+
+Sha256Stream::~Sha256Stream() {
+    mbedtls_sha256_free(&state_->context);
+    delete state_;
+}
+
+void Sha256Stream::update(const void* data, std::size_t size) {
+    mbedtls_sha256_update(&state_->context, static_cast<const unsigned char*>(data), size);
+}
+
+core::Sha256 Sha256Stream::finish() {
+    core::Sha256 digest{};
+    mbedtls_sha256_finish(&state_->context, digest.data());
+    return digest;
+}
+
 }  // namespace playfin::net

@@ -1,3 +1,5 @@
+#include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -8,7 +10,9 @@
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
+#include "core/data_dir.hpp"
 #include "core/file_io.hpp"
+#include "core/log.hpp"
 #include "core/version.hpp"
 #include "ui/i18n.hpp"
 #include "ui/scroll.hpp"
@@ -91,6 +95,8 @@ public:
 
         addHeading(*column, ui::tr("settings.about"));
         column->add<ui::ValueRow>(ui::tr("settings.version"), core::version(), nullptr);
+        update_ = column->add<ui::ValueRow>(ui::tr("settings.update"), "", [this] { pressUpdate(); });
+        refreshUpdate();
         server_ = column->add<ui::ValueRow>(ui::tr("settings.server"), serverName, nullptr);
         column->add<ui::ValueRow>(ui::tr("settings.licenses"), "", [shared] {
             ui::Application::current()->push(makeLicenses(*shared));
@@ -105,6 +111,89 @@ public:
     }
 
 private:
+    // ---- software update
+
+    void refreshUpdate() {
+        if (downloading_) {
+            return;  // the progress shows there
+        }
+        if (session_.update) {
+            update_->setValue(ui::tr("settings.update.available", {session_.update->version}));
+        } else if (session_.updateChecked) {
+            update_->setValue(ui::tr("settings.update.latest"));
+        } else {
+            update_->setValue(ui::tr("settings.update.check"));
+        }
+    }
+
+    void pressUpdate() {
+        if (downloading_) {
+            return;
+        }
+        if (!session_.update) {
+            session_.updateChecked = false;  // asked again
+            update_->setValue(ui::tr("settings.update.checking"));
+            session_.checkForUpdate([this, token = token_] {
+                if (!token.cancelled()) {
+                    refreshUpdate();
+                }
+            });
+            return;
+        }
+        const Release release = *session_.update;
+        const std::string megabytes = std::to_string((release.size + 999999) / 1000000);
+        ui::Application::current()->showModal(ui::makeDialog(
+            ui::tr("settings.update.title", {release.version}), ui::tr("settings.update.explain", {megabytes}),
+            {{ui::tr("settings.update.download"), [this, release] { later([this, release] { download(release); }); }},
+             {ui::tr("ui.cancel"), {}}}));
+    }
+
+    // the package to /data/pkg, its progress on the row; then how to install it
+    void download(const Release& release) {
+        const auto path = core::packagePath(packageFileName(release.version));
+        if (!path) {
+            ui::Application::current()->toast(ui::tr("settings.update.failed"));
+            return;
+        }
+        downloading_ = true;
+        update_->setValue(ui::tr("settings.update.progress", {"0"}));
+        const net::HttpClient* http = &session_.http();
+        const std::string target = *path;
+        const core::CancelToken token = token_;
+        ui::Application* app = ui::Application::current();
+        auto percent = std::make_shared<std::atomic<int>>(0);
+        run<core::Result<core::Unit>>(
+            [http, release, target, token, app, percent, this] {
+                return downloadPackage(
+                    *http, release, target,
+                    [app, percent, token, this](long long received, long long total) {
+                        const int now = total > 0 ? static_cast<int>(received * 100 / total) : 0;
+                        if (now != percent->exchange(now) && app != nullptr) {
+                            app->mainQueue().post([this, token, now] {
+                                if (!token.cancelled() && downloading_) {
+                                    update_->setValue(ui::tr("settings.update.progress", {std::to_string(now)}));
+                                }
+                            });
+                        }
+                    },
+                    token);
+            },
+            [this, release](core::Result<core::Unit> done) {
+                downloading_ = false;
+                if (!done.ok()) {
+                    PF_LOG_WARN("update: %s", done.error().message.c_str());
+                    refreshUpdate();
+                    ui::Application::current()->toast(ui::tr("settings.update.failed"));
+                    return;
+                }
+                update_->setValue(ui::tr("settings.update.ready"));
+                ui::Application::current()->showModal(
+                    ui::makeDialog(ui::tr("settings.update.title", {release.version}),
+                                   ui::tr("settings.update.install", {packageFileName(release.version)}),
+                                   {{ui::tr("ui.ok"), {}}}));
+            });
+    }
+
     void loadServer() {
         const auto client = session_.client();
         if (!client) {
@@ -186,6 +275,8 @@ private:
     ui::ValueRow* accent_;
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
+    ui::ValueRow* update_ = nullptr;
+    bool downloading_ = false;
     ui::ValueRow* server_;
     bool loaded_ = false;
 };

@@ -72,6 +72,9 @@ struct Transfer {
     bool tooBig;
     const core::CancelToken* token;
     std::string trace = {};  // curl's informational lines, logged when the request fails
+    const HttpClient::Sink* sink = nullptr;          // a download: the body goes there
+    const HttpClient::Progress* progress = nullptr;
+    bool sinkRefused = false;
 };
 
 // CURLOPT_DEBUGFUNCTION: keep curl's own text (resolve, connect, TLS steps), never the data or the headers
@@ -86,6 +89,13 @@ int onDebug(CURL*, curl_infotype type, char* data, std::size_t size, void* user)
 std::size_t onWrite(char* data, std::size_t size, std::size_t count, void* user) {
     auto* transfer = static_cast<Transfer*>(user);
     const std::size_t bytes = size * count;
+    if (transfer->sink != nullptr) {
+        if (!(*transfer->sink)(data, bytes)) {
+            transfer->sinkRefused = true;
+            return 0;
+        }
+        return bytes;
+    }
     if (transfer->body->size() + bytes > transfer->limit) {
         transfer->tooBig = true;
         return 0;
@@ -94,8 +104,12 @@ std::size_t onWrite(char* data, std::size_t size, std::size_t count, void* user)
     return bytes;
 }
 
-int onProgress(void* user, curl_off_t, curl_off_t, curl_off_t, curl_off_t) {
-    return static_cast<Transfer*>(user)->token->cancelled() ? 1 : 0;
+int onProgress(void* user, curl_off_t total, curl_off_t now, curl_off_t, curl_off_t) {
+    auto* transfer = static_cast<Transfer*>(user);
+    if (transfer->progress != nullptr && *transfer->progress) {
+        (*transfer->progress)(static_cast<long long>(now), static_cast<long long>(total));
+    }
+    return transfer->token->cancelled() ? 1 : 0;
 }
 
 void applyCommon(CURL* curl, const HttpConfig& config, const std::string& url, long timeoutMs,
@@ -161,6 +175,17 @@ HttpClient::HttpClient(HttpConfig config) : config_(std::move(config)) { globalI
 
 core::Result<HttpResponse> HttpClient::send(const HttpRequest& request, const std::string& pin,
                                             const core::CancelToken& token) const {
+    return perform(request, pin, token, nullptr, nullptr);
+}
+
+core::Result<HttpResponse> HttpClient::download(const HttpRequest& request, Sink sink, Progress progress,
+                                                const std::string& pin, const core::CancelToken& token) const {
+    return perform(request, pin, token, &sink, &progress);
+}
+
+core::Result<HttpResponse> HttpClient::perform(const HttpRequest& request, const std::string& pin,
+                                               const core::CancelToken& token, const Sink* sink,
+                                               const Progress* progress) const {
     Lease lease;
     CURL* curl = lease.get();
     if (curl == nullptr) {
@@ -170,6 +195,8 @@ core::Result<HttpResponse> HttpClient::send(const HttpRequest& request, const st
     HttpResponse response;
     const std::size_t limit = request.maxBodyBytes != 0 ? request.maxBodyBytes : config_.maxBodyBytes;
     Transfer transfer{&response.body, limit, false, &token};
+    transfer.sink = sink;
+    transfer.progress = progress;
     applyCommon(curl, config_, request.url, request.timeoutMs, request.connectTimeoutMs, transfer);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
@@ -223,6 +250,9 @@ core::Result<HttpResponse> HttpClient::send(const HttpRequest& request, const st
     }
     switch (code) {
     case CURLE_WRITE_ERROR:
+        if (transfer.sinkRefused) {
+            return core::makeError(core::ErrorKind::Storage, "the file could not be written");
+        }
         if (transfer.tooBig) {
             return core::makeError(core::ErrorKind::BadResponse, "the response is too large");
         }

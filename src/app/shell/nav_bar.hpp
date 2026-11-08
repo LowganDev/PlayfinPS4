@@ -16,6 +16,8 @@ enum class Tab { Home, Search, Settings };
 class NavTab : public ui::Box {
 public:
     NavTab(std::string text, bool current, std::function<void()> onPress);
+    // a dot of the accent at the top right while it answers true (Paramètres: an update is available)
+    std::function<bool()> badge;
     void onFocusChanged(bool focused) override;
     void onThemeChanged() override;
     void draw(NVGcontext* vg) const override;

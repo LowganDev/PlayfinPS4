@@ -18,6 +18,11 @@ const std::string& dataRoot();
 
 std::optional<std::string> dataPath(std::string_view relative);
 
+// Where a downloaded update package goes: /data/pkg/<name> on the PS4 (where GoldHEN's Package Installer lists
+// packages; the one write outside the data folder, approved for that file only), the data folder's pkg/ elsewhere.
+// The folder is made if needed; nullopt for a name that would leave it.
+std::optional<std::string> packagePath(std::string_view name);
+
 // mkdir -p; true when the directory exists afterwards.
 bool makeDirs(const std::string& path);
 // makeDirs with the mkdir call injected (tests); folders it creates get exactly `mode` (umask ignored).

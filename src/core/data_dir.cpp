@@ -52,6 +52,22 @@ const std::string& dataRoot() { return gDataRoot; }
 
 std::optional<std::string> dataPath(std::string_view relative) { return resolveInside(gDataRoot, relative); }
 
+std::optional<std::string> packagePath(std::string_view name) {
+#ifdef PLAYFIN_PS4
+    const std::string folder = "/data/pkg";
+#else
+    const auto inside = dataPath("pkg");
+    if (!inside) {
+        return std::nullopt;
+    }
+    const std::string folder = *inside;
+#endif
+    if (name.find('/') != std::string_view::npos || !makeDirs(folder)) {
+        return std::nullopt;
+    }
+    return resolveInside(folder, name);
+}
+
 bool makeDirs(const std::string& path) {
 #ifdef PLAYFIN_PS4
     // a folder created under /data may not end up owned by the app's user: 0755 then forbids creating files in it

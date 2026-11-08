@@ -186,5 +186,17 @@
   "shell.peek.hint": "Espiar",
   "shell.peek.open": "Abrir",
   "shell.peek.with": "Com {0}",
-  "shell.library.jump": "Ir para a letra"
+  "shell.library.jump": "Ir para a letra",
+  "settings.update": "Atualização",
+  "settings.update.check": "Verificar",
+  "settings.update.checking": "Verificando…",
+  "settings.update.latest": "O Playfin está atualizado",
+  "settings.update.available": "Versão {0} disponível",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "O pacote ({0} MB) será baixado em /data/pkg e verificado. Depois, instale-o em GoldHEN › Debug Settings › Package Installer e abra o Playfin de novo.",
+  "settings.update.download": "Baixar",
+  "settings.update.progress": "Baixando… {0}%",
+  "settings.update.ready": "Pronta para instalar",
+  "settings.update.install": "{0} está em /data/pkg. Instale-o em GoldHEN › Debug Settings › Package Installer e abra o Playfin de novo. Seus servidores e ajustes são mantidos.",
+  "settings.update.failed": "O download não foi concluído. Tente mais tarde."
 }

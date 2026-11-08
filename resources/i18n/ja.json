@@ -186,5 +186,17 @@
   "shell.peek.hint": "クイック表示",
   "shell.peek.open": "開く",
   "shell.peek.with": "出演: {0}",
-  "shell.library.jump": "文字へ移動"
+  "shell.library.jump": "文字へ移動",
+  "settings.update": "ソフトウェア更新",
+  "settings.update.check": "確認する",
+  "settings.update.checking": "確認中…",
+  "settings.update.latest": "Playfin は最新です",
+  "settings.update.available": "バージョン {0} があります",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "パッケージ（{0} MB）を /data/pkg にダウンロードして確認します。その後 GoldHEN › Debug Settings › Package Installer からインストールし、Playfin を再起動してください。",
+  "settings.update.download": "ダウンロード",
+  "settings.update.progress": "ダウンロード中… {0}%",
+  "settings.update.ready": "インストール準備完了",
+  "settings.update.install": "{0} は /data/pkg にあります。GoldHEN › Debug Settings › Package Installer からインストールし、Playfin を再起動してください。サーバーと設定はそのまま残ります。",
+  "settings.update.failed": "ダウンロードが完了しませんでした。後でもう一度お試しください。"
 }

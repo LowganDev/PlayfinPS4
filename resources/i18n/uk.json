@@ -190,5 +190,17 @@
   "shell.peek.hint": "Коротко",
   "shell.peek.open": "Відкрити",
   "shell.peek.with": "У ролях: {0}",
-  "shell.library.jump": "Перейти до літери"
+  "shell.library.jump": "Перейти до літери",
+  "settings.update": "Оновлення",
+  "settings.update.check": "Перевірити",
+  "settings.update.checking": "Перевірка…",
+  "settings.update.latest": "Встановлено останню версію",
+  "settings.update.available": "Доступна версія {0}",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "Пакет ({0} МБ) буде завантажено в /data/pkg і перевірено. Потім встановіть його через GoldHEN › Debug Settings › Package Installer і знову запустіть Playfin.",
+  "settings.update.download": "Завантажити",
+  "settings.update.progress": "Завантаження… {0} %",
+  "settings.update.ready": "Готово до встановлення",
+  "settings.update.install": "{0} у /data/pkg. Встановіть його через GoldHEN › Debug Settings › Package Installer і знову запустіть Playfin. Сервери та налаштування збережуться.",
+  "settings.update.failed": "Завантаження не завершилося. Спробуйте пізніше."
 }

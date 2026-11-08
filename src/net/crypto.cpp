@@ -40,6 +40,16 @@ std::string hexFingerprint(const core::Sha256& digest) {
     return out;
 }
 
+std::string hexLower(const core::Sha256& digest) {
+    static const char kDigits[] = "0123456789abcdef";
+    std::string out;
+    for (std::uint8_t byte : digest) {
+        out += kDigits[byte >> 4];
+        out += kDigits[byte & 15];
+    }
+    return out;
+}
+
 std::string curlPin(const core::Sha256& digest) { return "sha256//" + base64Encode(digest.data(), digest.size()); }
 
 }  // namespace playfin::net

@@ -186,5 +186,17 @@
   "shell.peek.hint": "Hızlı bakış",
   "shell.peek.open": "Aç",
   "shell.peek.with": "Oyuncular: {0}",
-  "shell.library.jump": "Harfe git"
+  "shell.library.jump": "Harfe git",
+  "settings.update": "Yazılım güncellemesi",
+  "settings.update.check": "Şimdi denetle",
+  "settings.update.checking": "Denetleniyor…",
+  "settings.update.latest": "Playfin güncel",
+  "settings.update.available": "{0} sürümü mevcut",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "Paket ({0} MB) /data/pkg klasörüne indirilip denetlenecek. Ardından GoldHEN › Debug Settings › Package Installer üzerinden kurun ve Playfin'i yeniden başlatın.",
+  "settings.update.download": "İndir",
+  "settings.update.progress": "İndiriliyor… %{0}",
+  "settings.update.ready": "Kuruluma hazır",
+  "settings.update.install": "{0} /data/pkg içinde. GoldHEN › Debug Settings › Package Installer üzerinden kurun, ardından Playfin'i yeniden başlatın. Sunucularınız ve ayarlarınız korunur.",
+  "settings.update.failed": "İndirme tamamlanamadı. Daha sonra yeniden deneyin."
 }

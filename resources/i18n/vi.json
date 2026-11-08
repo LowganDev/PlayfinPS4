@@ -186,5 +186,17 @@
   "shell.peek.hint": "Xem nhanh",
   "shell.peek.open": "Mở",
   "shell.peek.with": "Diễn viên: {0}",
-  "shell.library.jump": "Đến chữ cái"
+  "shell.library.jump": "Đến chữ cái",
+  "settings.update": "Cập nhật phần mềm",
+  "settings.update.check": "Kiểm tra",
+  "settings.update.checking": "Đang kiểm tra…",
+  "settings.update.latest": "Playfin đã là bản mới nhất",
+  "settings.update.available": "Có phiên bản {0}",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "Gói ({0} MB) sẽ được tải vào /data/pkg và kiểm tra. Sau đó cài đặt từ GoldHEN › Debug Settings › Package Installer rồi mở lại Playfin.",
+  "settings.update.download": "Tải xuống",
+  "settings.update.progress": "Đang tải… {0}%",
+  "settings.update.ready": "Sẵn sàng cài đặt",
+  "settings.update.install": "{0} nằm trong /data/pkg. Cài đặt từ GoldHEN › Debug Settings › Package Installer rồi mở lại Playfin. Máy chủ và cài đặt của bạn được giữ nguyên.",
+  "settings.update.failed": "Tải xuống chưa hoàn tất. Hãy thử lại sau."
 }

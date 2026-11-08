@@ -131,3 +131,27 @@ TEST_CASE("recent searches: trimmed, newest first, no duplicates, at most 8") {
     CHECK(settings.recentSearches.front() == "t9");
     CHECK(settings.recentSearches.back() == "t2");
 }
+
+TEST_CASE("a file written in pieces appears only once committed; an abandoned one leaves nothing") {
+    TempDir dir;
+    const std::string path = dir.path + "/big.bin";
+    {
+        core::FileSink sink(path);
+        REQUIRE(sink.ok());
+        CHECK(sink.write("abc", 3));
+        CHECK(sink.write("def", 3));
+        CHECK_FALSE(std::filesystem::exists(path));
+        CHECK(sink.commit());
+    }
+    std::string text;
+    CHECK(core::readSmallFile(path, 1024, text) == core::ReadStatus::Ok);
+    CHECK(text == "abcdef");
+    {
+        core::FileSink sink(dir.path + "/gone.bin");
+        CHECK(sink.write("x", 1));
+    }  // never committed
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/gone.bin"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/gone.bin.part"));
+    core::FileSink nowhere(dir.path + "/missing/dir/file.bin");
+    CHECK_FALSE(nowhere.ok());
+}

@@ -186,5 +186,17 @@
   "shell.peek.hint": "速覽",
   "shell.peek.open": "開啟",
   "shell.peek.with": "主演：{0}",
-  "shell.library.jump": "跳到字母"
+  "shell.library.jump": "跳到字母",
+  "settings.update": "軟體更新",
+  "settings.update.check": "立即檢查",
+  "settings.update.checking": "正在檢查…",
+  "settings.update.latest": "Playfin 已是最新版本",
+  "settings.update.available": "有 {0} 版可用",
+  "settings.update.title": "Playfin {0}",
+  "settings.update.explain": "安裝包（{0} MB）將下載到 /data/pkg 並驗證。之後請在 GoldHEN › Debug Settings › Package Installer 中安裝，然後重新啟動 Playfin。",
+  "settings.update.download": "下載",
+  "settings.update.progress": "正在下載… {0}%",
+  "settings.update.ready": "可以安裝",
+  "settings.update.install": "{0} 已在 /data/pkg 中。請在 GoldHEN › Debug Settings › Package Installer 中安裝，然後重新啟動 Playfin。伺服器和設定會保留。",
+  "settings.update.failed": "下載未完成，請稍後重試。"
 }

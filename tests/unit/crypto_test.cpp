@@ -43,3 +43,13 @@ TEST_CASE("invalid certificates give no hash") {
         CHECK_FALSE(playfin::net::spkiSha256FromPem(bad).has_value());
     }
 }
+
+TEST_CASE("SHA-256 in pieces matches the known digests") {
+    playfin::net::Sha256Stream empty;
+    CHECK(playfin::net::hexLower(empty.finish()) ==
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    playfin::net::Sha256Stream abc;
+    abc.update("a", 1);
+    abc.update("bc", 2);
+    CHECK(playfin::net::hexLower(abc.finish()) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+}
