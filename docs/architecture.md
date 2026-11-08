@@ -125,6 +125,15 @@ The screens of the app.
 
 ### Added in 2.0
 
+- Hints bar (`ui/hints.{hpp,cpp}`, drawn by `Application::draw` over a fade at the bottom left): `hintItems`
+  (pure, tested) turns the focus chain's labelled bindings into entries in a fixed order: "Navigate" (the d-pad)
+  when the focus scope has two focusable views and allows it (`View::navigationHint`), directions with a label of
+  their own (← A–Z, ↑↓ volume), ✕, △, □, the shoulder pairs (one entry for L2/R2 when one is labelled), OPTIONS,
+  touchpad, then ◯: the screen's own Back binding when it has one, else "Back" when a screen or a dialog can be
+  closed. A binding's optional `shown` predicate hides its label (the player's labels show with its bar, Pause or
+  Play by state); a second binding of the same button with a `shown` and a handler that returns false gives that
+  button another label. `View::hidesHints` on the scope hides the bar (screensaver).
+
 - Details (`browse_screens.cpp`): `Item::people` and `Item::mediaSources` come with a single item
   (`/Items/{id}` answers every field); `qualityChips` (resolution, `VideoRangeType`, codec, channels),
   `directorsLine`, `endsAtText`; a version chosen (`makePlayer(…, mediaSourceId)`); the cast as Poster cards of

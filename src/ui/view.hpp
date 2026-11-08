@@ -30,6 +30,7 @@ struct ActionBinding {
     platform::Action action;
     std::string label;  // shown in the hints bar when not empty
     std::function<bool()> handler;
+    std::function<bool()> shown;  // the hint shows only while this answers true (empty: always)
 };
 
 // Base of every widget: owns its children, lays them out, draws in local coordinates (0,0 = own top-left),
@@ -102,8 +103,13 @@ public:
     void setNextFocus(Direction direction, View* target) { overrides_[static_cast<int>(direction)] = target; }
     View* nextFocus(Direction direction) const { return overrides_[static_cast<int>(direction)]; }
 
-    // actions
-    void bind(platform::Action action, std::string label, std::function<bool()> handler);
+    // actions; `shown` limits when the label shows in the hints bar (the binding works either way)
+    void bind(platform::Action action, std::string label, std::function<bool()> handler,
+              std::function<bool()> shown = {});
+    // As the focus scope (a screen, a dialog): "Navigate" shows when two of its views can take the focus.
+    bool navigationHint = true;
+    // As the focus scope: no hints bar at all (the screensaver).
+    bool hidesHints = false;
     const std::vector<ActionBinding>& bindings() const { return bindings_; }
 
     void markDirty();

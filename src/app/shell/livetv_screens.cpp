@@ -132,8 +132,9 @@ public:
         filterLine_->color = ui::theme().textSecondary;
         // L2 / R2: the channels shown (all, favourites, recent, a kind of programme, radios)
         bind(platform::Action::L2, "", [this] { return stepFilter(-1); });
-        bind(platform::Action::R2, "", [this] { return stepFilter(1); });  // the filter line says it
-        bind(platform::Action::Touchpad, "", [this] {
+        bind(platform::Action::R2, ui::tr("shell.search.filter_hint"), [this] { return stepFilter(1); },
+             [this] { return mode_ != Mode::Recordings; });
+        bind(platform::Action::Touchpad, ui::tr("livetv.search"), [this] {
             searchChannel();
             return true;
         });

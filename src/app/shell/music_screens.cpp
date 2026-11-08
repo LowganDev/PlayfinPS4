@@ -90,7 +90,7 @@ public:
                 show(static_cast<Mode>((static_cast<int>(mode_) + 4) % 5));
                 return true;
             });
-            bind(platform::Action::R2, ui::tr("music.next_tab"), [this] {
+            bind(platform::Action::R2, ui::tr("music.tabs_hint"), [this] {
                 show(static_cast<Mode>((static_cast<int>(mode_) + 1) % 5));
                 return true;
             });

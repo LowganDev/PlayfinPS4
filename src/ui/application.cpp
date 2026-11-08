@@ -394,7 +394,11 @@ void Application::draw(NVGcontext* vg) const {
         nvgFillColor(vg, nvgColor(theme().text));
         nvgText(vg, screen_.width / 2, y + h / 2 + middleAlignedShift(theme().fontBody), toastText_.c_str(), nullptr);
     }
-    drawHints(vg, focus_.actionChain(), screen_.width, screen_.height);
+    const View* scope = focus_.scope();
+    if (scope != nullptr && !scope->hidesHints) {
+        drawHints(vg, hintItems(focus_.actionChain(), navigable(scope), !modals_.empty() || screens_.size() > 1),
+                  screen_.width, screen_.height);
+    }
 }
 
 }  // namespace playfin::ui

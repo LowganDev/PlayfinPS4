@@ -21,6 +21,9 @@
   news, kids, radios), a channel search.
 - Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.
+- The controller's buttons and what they do now, at the bottom left of every screen: navigate, select, the
+  screen's own actions (A–Z, quick look, filters, tabs, refresh), back; in the player with its bar (pause, 10 s,
+  1 min, 5 min, options, stop; volume and channel on Live TV).
 
 ## 1.0.1 (2026-10-17)
 

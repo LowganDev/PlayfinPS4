@@ -47,7 +47,7 @@ public:
         spinner_ = column_->add<ui::Spinner>();
         scroll_->setContent(std::move(content));
         // the touchpad: everything again from the server (what was added, watched, what is on)
-        bind(platform::Action::Touchpad, "", [this] {
+        bind(platform::Action::Touchpad, ui::tr("shell.home.refresh"), [this] {
             AppSession* session = &session_;
             later([session] { ui::Application::current()->replace(makeHome(*session)); });
             return true;
@@ -272,13 +272,16 @@ public:
         grid_->setSource(std::move(source));
         grid_->onNearEnd(14, [this] { loadMore(); });
         // ← in the first column: the A–Z jump (names in order); △: a quick look at the item
-        grid_->bind(platform::Action::Left, "", [this] {
-            if (grid_->focusedIndex() % grid_->columns != 0 || !jumpable()) {
-                return false;
-            }
-            openJump();
-            return true;
-        });
+        grid_->bind(
+            platform::Action::Left, ui::tr("shell.library.jump_hint"),
+            [this] {
+                if (grid_->focusedIndex() % grid_->columns != 0 || !jumpable()) {
+                    return false;
+                }
+                openJump();
+                return true;
+            },
+            [this] { return grid_->focusedIndex() % grid_->columns == 0 && jumpable(); });
         grid_->bind(platform::Action::Options, ui::tr("shell.peek.hint"), [this] {
             const int index = grid_->focusedIndex();
             if (index >= 0 && index < static_cast<int>(source_->items().size())) {

@@ -30,6 +30,7 @@ Screensaver::Screensaver(AppSession& session) : session_(session) {
     background = ui::Color{0, 0, 0, 255};
     focusable = true;
     drawsOwnFocus = true;
+    hidesHints = true;
     backdrop_ = add<ui::ImageView>();
     backdrop_->width = ui::SizeSpec::fill();
     backdrop_->height = ui::SizeSpec::fill();

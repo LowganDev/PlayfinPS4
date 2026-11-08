@@ -243,8 +243,9 @@ View* View::focusEntry() {
     return nullptr;
 }
 
-void View::bind(platform::Action action, std::string label, std::function<bool()> handler) {
-    bindings_.push_back(ActionBinding{action, std::move(label), std::move(handler)});
+void View::bind(platform::Action action, std::string label, std::function<bool()> handler,
+                std::function<bool()> shown) {
+    bindings_.push_back(ActionBinding{action, std::move(label), std::move(handler), std::move(shown)});
 }
 
 void View::markDirty() {

@@ -27,8 +27,10 @@ public:
         hint_->color = ui::theme().textSecondary;
         rows_ = column_->add<ui::Box>(ui::Axis::Column);
         rows_->gap = ui::theme().spacingM;
-        bind(platform::Action::Up, "", [this] { return move(-1); });
-        bind(platform::Action::Down, "", [this] { return move(1); });
+        bind(platform::Action::Up, ui::tr("settings.library_order.move"), [this] { return move(-1); },
+             [this] { return moving_ >= 0; });
+        bind(platform::Action::Down, ui::tr("settings.library_order.move"), [this] { return move(1); },
+             [this] { return moving_ >= 0; });
     }
 
     void onShow() override {

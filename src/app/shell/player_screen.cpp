@@ -131,7 +131,7 @@ private:
         bottom->width = ui::SizeSpec::fill();
         bottom->height = ui::SizeSpec::fill();
         bottom->align = ui::Align::End;
-        bottom->padding = {0, 96, 64, 96};
+        bottom->padding = {0, 96, 104, 96};  // the hints bar below the bar, on the video
         bottom->gap = ui::theme().spacingL;
 
         buildNextCard(*bottom);
@@ -259,20 +259,41 @@ private:
     // ---- controls
 
     void bindControls() {
-        // no hints: the bar and the buttons say enough while a video plays
-        bind(platform::Action::Confirm, "", [this] { return press([this] { togglePause(); }); });
+        navigationHint = false;  // the hints list what each button does, while the bar shows
+        const auto bar = [this] { return bar_ != nullptr && bar_->visible; };
+        const auto video = [this, bar] { return bar() && !live_; };
+        const auto channel = [this, bar] { return bar() && live_; };
+        const auto playing = [this, bar] { return bar() && engine_ && !engine_->state().paused; };
+        const auto paused = [this, bar] { return bar() && engine_ && engine_->state().paused; };
+        const auto nothing = [] { return false; };  // a second label of a button: its first binding acts
+        bind(platform::Action::Confirm, ui::tr("player.hint.pause"), [this] { return press([this] { togglePause(); }); },
+             playing);
+        bind(platform::Action::Confirm, ui::tr("player.hint.play"), nothing, paused);
         // a live channel cannot be sought: ← / → show the bar, L1 / R1 change channel
-        bind(platform::Action::Left, "", [this] { return press([this] { live_ ? showBar() : seekBy(-1); }); });
-        bind(platform::Action::Right, "", [this] { return press([this] { live_ ? showBar() : seekBy(1); }); });
-        bind(platform::Action::L1, "", [this] { return press([this] { live_ ? zap(-1) : seekSeconds(-60); }); });
-        bind(platform::Action::R1, "", [this] { return press([this] { live_ ? zap(1) : seekSeconds(60); }); });
-        bind(platform::Action::L2, "", [this] { return press([this] { live_ ? showBar() : seekSeconds(-300); }); });
-        bind(platform::Action::R2, "", [this] { return press([this] { live_ ? showBar() : seekSeconds(300); }); });
+        bind(platform::Action::Left, ui::tr("player.hint.seek"),
+             [this] { return press([this] { live_ ? showBar() : seekBy(-1); }); }, video);
+        bind(platform::Action::Right, ui::tr("player.hint.seek"),
+             [this] { return press([this] { live_ ? showBar() : seekBy(1); }); }, video);
+        bind(platform::Action::L1, ui::tr("player.hint.minute"),
+             [this] { return press([this] { live_ ? zap(-1) : seekSeconds(-60); }); }, video);
+        bind(platform::Action::L1, ui::tr("player.hint.channel"), nothing, channel);
+        bind(platform::Action::R1, ui::tr("player.hint.minute"),
+             [this] { return press([this] { live_ ? zap(1) : seekSeconds(60); }); }, video);
+        bind(platform::Action::R1, ui::tr("player.hint.channel"), nothing, channel);
+        bind(platform::Action::L2, ui::tr("player.hint.skip"),
+             [this] { return press([this] { live_ ? showBar() : seekSeconds(-300); }); }, video);
+        bind(platform::Action::R2, ui::tr("player.hint.skip"),
+             [this] { return press([this] { live_ ? showBar() : seekSeconds(300); }); }, video);
         // a channel: ↑ / ↓ set the volume; a video: they show the bar
-        bind(platform::Action::Up, "", [this] { return press([this] { live_ ? stepVolume(10) : showBar(); }); });
-        bind(platform::Action::Down, "", [this] { return press([this] { live_ ? stepVolume(-10) : showBar(); }); });
-        bind(platform::Action::Options, "", [this] { return press([this] { openTracks(); }); });
+        bind(platform::Action::Up, ui::tr("player.hint.volume"),
+             [this] { return press([this] { live_ ? stepVolume(10) : showBar(); }); }, channel);
+        bind(platform::Action::Down, ui::tr("player.hint.volume"),
+             [this] { return press([this] { live_ ? stepVolume(-10) : showBar(); }); }, channel);
+        bind(platform::Action::Options, ui::tr("player.hint.options"), [this] { return press([this] { openTracks(); }); },
+             bar);
         bind(platform::Action::Menu, "", [this] { return press([this] { openTracks(); }); });
+        // ◯ leaves (the application's back); its hint while the bar shows
+        bind(platform::Action::Back, ui::tr("player.hint.stop"), [] { return false; }, bar);
     }
 
     template <typename Action>
