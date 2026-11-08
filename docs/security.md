@@ -24,7 +24,14 @@
 - Without a data folder, or when `servers.json` cannot be read, the app runs without saving and never
   overwrites the file.
 - The app writes only inside its data folder (`/data/Playfin` on PS4); every path goes through
-  `core::dataPath()`.
+  `core::dataPath()`. One exception, approved by the user: the software update writes its package, and only
+  that file (`Playfin-<version>.pkg`), to `/data/pkg` (`core::packagePath`), where GoldHEN's Package Installer
+  lists packages. The package is kept only when its size and SHA-256 match the digest GitHub publishes for the
+  release asset; it is never installed by the app.
+- Downloads go to the data folder's `downloads/` only, under names made from the item id (letters, digits,
+  dashes); `downloads.json` is read with a size limit and file names with a `/` are ignored. Download pictures
+  (`file://` URLs) are read from that folder only.
+- The update check asks GitHub's API with a generic User-Agent (`Playfin/<version>`) and no personal detail.
 
 ## Logs
 - Every log line is redacted (`core::redact`): API keys, tokens, `Authorization` headers, password fields and the

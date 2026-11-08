@@ -123,6 +123,49 @@ The screens of the app.
   → home (resume, next up, libraries, latest per library) → library grid (paged, sorted, filtered) → details.
   The OPTIONS/Triangle menu on home and the Account rows of the settings switch user or server, or sign out.
 
+### Added in 2.0
+
+- Details (`browse_screens.cpp`): `Item::people` and `Item::mediaSources` come with a single item
+  (`/Items/{id}` answers every field); `qualityChips` (resolution, `VideoRangeType`, codec, channels),
+  `directorsLine`, `endsAtText`; a version chosen (`makePlayer(…, mediaSourceId)`); the cast as Poster cards of
+  `ItemType::Person` items (`Item::role` under the name), a person (`person_screen.cpp`: `/Items/{id}` for the
+  biography, `/Items?personIds=` films and series).
+- Libraries: ← in the first column (a binding of the grid, before navigation) opens the A–Z card; the index of a
+  letter is the count of names before it (`nameLessThan`, `limit=0`), the pages up to it are loaded
+  (`continueJump`), then `VirtualList::itemView(index)` is focused. △ opens `openPeek` (`peek.cpp`, a modal whose
+  details arrive later, dropped when it closed). `ImageView` breathes its placeholder while a picture is on its
+  way (`redrawNextFrame`, one plain fill).
+- Home: `orderLibraries` (settings `libraryOrder`, `library_order_screen.cpp`: ✕ takes, ↑ / ↓ move, ✕ puts down);
+  `ClockLabel` in the nav bar, refreshed by the app's loop when the minute changes (`ClockLabel::tick`); the
+  touchpad (`Action::Touchpad`, SDL's touchpad button) replaces Home; the downloads in a row.
+- Search: six kinds (`searchKinds()`: films, series, episodes, people, music, channels), L2 / R2 keep one (100 of
+  it).
+- Music: tabs Genres (`/MusicGenres`, a genre opens its albums with `genreIds`) and Songs (`Audio` items of the
+  library; a song plays with the songs listed after it); L2 / R2 move between tabs; `MusicPlayer::setVolume`.
+- Live TV: `filterChannels` / `channelFilters` (`guide.cpp`, pure): favourites (`UserData.IsFavorite`, △ toggles
+  `/UserFavoriteItems/{id}`), recently watched (settings `recentChannels`, 8), the kind of the programme on now
+  (`IsMovie`, `IsSports`, `IsNews`, `IsKids`), radios (`ChannelType`); a search by name or number.
+- Downloads (`downloads.{hpp,cpp}`, owned by `AppSession` like the music): `downloads.json` and the files in the
+  data folder's `downloads/` (`<id>.<container>`, `<id>.jpg`), one at a time on the worker pool
+  (`Client::downloadItem`: `/Items/{id}/Download` through `HttpClient::download` into a `core::FileSink`); free
+  space checked against the version's `Size` (512 MB kept free); progress posted to the main thread once per
+  percent; a failed or refused one says why. The player plays a finished download from its file without the
+  server (`engineOptionsLocal`, no PlaybackInfo, no report) and keeps where it was left in the list. Pictures of
+  downloads are `file://` URLs that `AppSession::fetchImage` reads from `downloads/` only.
+- Software update (`app/update.{hpp,cpp}`): `fetchLatestRelease` (GitHub's API, a generic User-Agent),
+  `parseLatestRelease` (a `.pkg` asset with an https address, a size and a `sha256:` digest), `newerVersion`;
+  `downloadPackage` writes through a `FileSink`, hashing with `net::Sha256Stream` as it arrives, and keeps the
+  file only when size and digest match. `core::packagePath` is `/data/pkg/Playfin-<version>.pkg` on the PS4 (the
+  one write outside the data folder) and the data folder's `pkg/` on Linux. `AppSession::checkForUpdate` runs
+  once at start (not in test mode); the settings tab shows a dot (`NavTab::badge`).
+- PS4 accounts: `platform::consoleUserId()` (`sceUserServiceGetInitialUser`); `servers.json` keeps a
+  `ConsoleProfile` (server, user) per account and an optional shared sign-in; `startTarget` starts each account on
+  its own user, gives an installation from before 2.0 to the first account that starts it, else the shared
+  sign-in, else the servers screen. Saved users and their tokens stay common to the console's accounts.
+- Screensaver (`screensaver.{hpp,cpp}`): after `kIdleMs` (5 min) without input, no modal and no video, a modal of
+  random films and series with a backdrop (`sortBy=Random`), one every 12 s with the title, synopsis and time;
+  any button closes it (each action bound).
+
 ## Threading
 
 - The UI, all OpenGL calls and SDL event handling run on the main thread only.
@@ -198,11 +241,14 @@ The screens of the app.
   (`/Videos/{id}/stream?static=true`) or the server's HLS transcode (`api_key` removed); external subtitles are
   added with `sub-add`.
 - Session logic is pure and unit-tested: `SeekAccumulator` (one seek 300 ms after a burst, clamped), `Reporter`
-  (start, progress every 10 s and on events, stop once), `buttonAt` + `ButtonTimer` (skip intro / credits, next
-  episode in the last 30 s, 8 s on screen), `audioTracks` / `subtitleTracks` (mpv ids: embedded first, external
-  after), `needsRestart` (audio in a transcode, burned-in subtitles).
-- The player screen: ✕ pause, ← / → ±10 s (30 s held), L1 / R1 ±60 s, ↑ / ↓ bar, △ / Options tracks, ○ back
-  (stop reported). Reports run on the worker pool and outlive the screen. In test mode the first picture is shown
+  (start, progress every 10 s and on events, stop once), `buttonAt` + `ButtonTimer` (skip intro / credits, 8 s
+  on screen), `NextCard` (the next episode in the last 10 s, cancelled until sought back, plays on at the end),
+  `audioTracks` / `subtitleTracks` (mpv ids: embedded first, external after), `needsRestart` (audio in a
+  transcode, burned-in subtitles).
+- The player screen: ✕ pause, ← / → ±10 s (30 s held), L1 / R1 ±60 s, L2 / R2 ±5 min, ↑ / ↓ bar, △ / Options
+  tracks, volume and picture, ○ back (stop reported). The next-episode card takes the focus (✕ now, ◯ cancel).
+  The picture: `VideoLayer::fit` and `scale` from the settings; `render::videoBox` places it for both presenters
+  (Fill goes past the screen, the viewport cuts it). Reports run on the worker pool and outlive the screen. In test mode the first picture is shown
   synchronously and paused (deterministic screenshots).
 
 

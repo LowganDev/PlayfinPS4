@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.0 (unreleased)
+
+- Next episode: a card in the last 10 s with the episode's picture and title; ✕ plays it now, ◯ cancels, it plays
+  on by itself when the countdown ends.
+- Player: the volume (kept), the picture whole, filling the screen, stretched or smaller (for TVs that cut the
+  edges), L2 / R2 five minutes back or on, when the video ends in the bar.
+- Details: the version's quality (4K, HDR10, Dolby Vision, codec, 5.1…), when it ends, the director, the cast and
+  crew; a person's films and series; the version to play when there are several.
+- Libraries: ← in the first column jumps to a letter; △ gives a quick look (synopsis, quality, cast); pictures
+  shimmer while they load.
+- Downloads: films, episodes and whole seasons kept on the console and played without the server.
+- Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
+  a dot on the settings tab when one is out.
+- Home: the date and time in the header, the order of the libraries chosen in the settings, the touchpad
+  refreshes it; the downloads in a row.
+- Search: people, music and channels too; L2 / R2 narrow the results to one kind.
+- Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume.
+- Live TV: favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
+  news, kids, radios), a channel search.
+- Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
+- A screensaver after five idle minutes: the server's films and series full screen, with the time.
+
 ## 1.0.1 (2026-10-17)
 
 - Home screen icon: the halo above "Playfin." in Jellyfin's purple-to-blue gradient.

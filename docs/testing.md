@@ -30,7 +30,9 @@
   `sortOrder=Descending` (reversed), `filters` (`IsFavorite`: every 10th movie, `IsUnplayed`: odd ones) and
   `includeItemTypes` (`Series` → s-1 "Test Show", `Episode` → e-1 "Pilot", for searches); `/Shows/s-1/Episodes`
   answers per season (se-2 has e-3); `/Users/{id}/Images/Primary` serves a picture. `requests()`, `count(path)` and
-  `playbackInfoBody()` let tests check what was asked.
+  `playbackInfoBody()` let tests check what was asked. Added in 2.0: `/Items/{id}/Download` (the test clip; 403
+  for `m-transcode`), `/MusicGenres`, people (`includeItemTypes=Person`), `sortBy=Random` (Big Buck Bunny, with a
+  backdrop), `nameLessThan`, GitHub's latest release (`publishRelease`, `/github/latest`), and the showcase.
 - In the Linux UI editor (no system keyboard) the text starts from the field's value: a test that searches twice
   clears the field first.
 - `tests/fixtures/` and the fake server are shared by the unit and end-to-end tests: adding image tags or fields
@@ -39,6 +41,11 @@
   JPEG code shifts negative values (upstream, harmless).
 - Command-line checks (`tests/cli/`, CTest): a test script needs `--test-output`; a startup failure (SDL `dummy`
   driver, no OpenGL) must exit 1 and be written to `playfin.log`.
+- README screenshots: `scripts/readme-shots.sh` fetches the open films' artwork (`scripts/showcase/fetch-art.py`,
+  credits in `scripts/showcase/CREDITS.md`), runs `fake_jellyfin --showcase` and the shell on
+  `scripts/showcase/showcase.script`, and writes `docs/images/screens/*.jpg` (review them before committing).
+- Script tests run with the clock fixed (`--fixed-time 2026-10-16T19:45:00Z --utc-offset 120`): the header's
+  time and the player's "Se termine à" are the same on every run.
 - Changing the look on purpose: `scripts/update-ui-refs.sh`, then review the new images before committing. The
   references are made by the software renderer (the script's default);
   `ui_gallery_gl` checks that NanoVG's GLES2 backend still draws the same within the imgdiff tolerance.

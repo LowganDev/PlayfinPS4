@@ -15,6 +15,16 @@
   twice with the same value.
 - A Resume or Next up row that changes after playback is updated at the next visit of the home screen.
 - The Linux `--renderer gl` mode does not drive the player.
+- 2.0: the music has no visualizer: it needs FFmpeg's audio filters, left out of the PS4 dependency package
+  (rebuilding and publishing it is a release step).
+- 2.0: search results come after the keyboard closes (the PS4 system keyboard is a dialog: nothing can be shown
+  while typing).
+- 2.0: PS4 accounts each start on their own user, but the users saved on the console (and their sign-ins) are
+  common to all accounts: a saved user can be chosen from any account without a password.
+- 2.0: a download is the original file, whatever its format; one that the console cannot decode plays badly
+  offline (no server to transcode). A download played offline tells the server nothing (watched state, resume).
+- 2.0: Live TV channels always go through the server (no direct M3U playback, no guide downloaded on the
+  console).
 
 ## Performance (PS4)
 
