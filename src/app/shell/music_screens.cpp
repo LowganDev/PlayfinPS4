@@ -83,7 +83,7 @@ public:
             session_.libraryChoices[library_.id] = choice_;
             show(Mode::Albums);
         });
-        grid_ = column->add<ui::Grid>(cardSize(CardShape::Square), ui::theme().cardGap, 6);
+        grid_ = column->add<ui::Grid>(cardSize(CardShape::Square), ui::theme().cardGap, kGridColumns);
         grid_->padding = ui::Insets::all(40);
         grid_->margin = {0, -40, 0, -40};
         auto source = std::make_unique<ItemsSource>(session_, std::vector<jellyfin::Item>{}, CardShape::Square,

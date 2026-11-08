@@ -23,8 +23,6 @@ press Down
 press Confirm
 wait 40
 screenshot home
-press Down
-wait 10
 press Confirm
 wait 30
 screenshot livetv_now
@@ -82,7 +80,7 @@ press Back
 wait 20
 press Back
 wait 20
-press Up
+press Down
 wait 40
 screenshot home_music
 press Confirm

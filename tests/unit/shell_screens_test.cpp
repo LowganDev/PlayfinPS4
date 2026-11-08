@@ -581,11 +581,15 @@ TEST_CASE("a card steps forward when focused and back when the focus leaves") {
     CHECK(screen->second->focusProgress() == doctest::Approx(1));
 }
 
-TEST_CASE("cards have the identity's sizes") {
-    CHECK(app::cardImageSize(true).width == doctest::Approx(400));
-    CHECK(app::cardImageSize(true).height == doctest::Approx(225));
-    CHECK(app::cardImageSize(false).width == doctest::Approx(260));
-    CHECK(app::cardImageSize(false).height == doctest::Approx(390));
+TEST_CASE("cards: 3.5 wide ones to a row, posters fill a grid of five") {
+    const float page = 1920 - 2 * 96;
+    const float gap = ui::theme().cardGap;
+    const ui::Size wide = app::cardImageSize(true);
+    CHECK(3.5f * wide.width + 3 * gap == doctest::Approx(page).epsilon(0.005));
+    CHECK(wide.height == doctest::Approx(wide.width * 9 / 16).epsilon(0.01));
+    const ui::Size poster = app::cardImageSize(false);
+    CHECK(app::kGridColumns * poster.width + (app::kGridColumns - 1) * gap == doctest::Approx(page).epsilon(0.005));
+    CHECK(poster.height == doctest::Approx(poster.width * 1.5f).epsilon(0.01));
 }
 
 namespace {

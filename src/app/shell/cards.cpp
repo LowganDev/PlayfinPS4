@@ -17,13 +17,13 @@ namespace playfin::app {
 ui::Size cardImageSize(CardShape shape) {
     switch (shape) {
     case CardShape::Wide:
-        return {400, 225};
+        return {468, 264};
     case CardShape::Poster:
-        return {260, 390};
+        return {323, 485};
     case CardShape::Square:
-        return {260, 260};
+        return {323, 323};
     }
-    return {260, 390};
+    return {323, 485};
 }
 
 ui::Size cardSize(CardShape shape) {

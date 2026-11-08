@@ -14,7 +14,10 @@
 
 namespace playfin::app {
 
-// Poster (260x390), wide (400x225) or square (260x260, music) card: image with its resume bar, title, subtitle.
+// Poster (323x485), wide (468x264) or square (323x323, music) card: image with its resume bar, title, subtitle.
+// The page is 1728 px wide (1920 less 96 on each side): wide cards show 3.5 to a row (the next one peeks at the
+// edge), posters and squares fill a grid of kGridColumns.
+constexpr int kGridColumns = 5;
 enum class CardShape { Wide, Poster, Square };
 inline CardShape shapeOf(bool wide) { return wide ? CardShape::Wide : CardShape::Poster; }
 ui::Size cardImageSize(CardShape shape);

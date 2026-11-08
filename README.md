@@ -35,8 +35,8 @@ The films in the screenshots are the Blender Foundation's open films; their artw
 - **Servers and users:** several servers and several users per server, found on your network or added by
   address; sign-in with a password or Quick Connect; self-signed HTTPS servers trusted on first use (their key is
   then pinned). Each PS4 account starts on its own Jellyfin user, and a sign-in can be shared with the others.
-- **Home:** Resume, Next up, what is on TV, your libraries in the order you choose, the latest additions, your
-  downloads; the date and time in the header.
+- **Home:** laid out as in Jellyfin: your libraries first (in the order you choose), then Resume, Next up, what is
+  on TV, your downloads and the latest additions, on larger cards; the date and time in the header.
 - **Libraries:** sorted and filtered, an A–Z jump bar, a quick look at any title (△).
 - **Details:** the version's quality (4K, HDR10, Dolby Vision, 5.1…), when it ends, the director and the cast
   (each person's films and series), seasons and episodes, favourites and watched marks, the version to play.

@@ -14,7 +14,9 @@
 - Libraries: ← in the first column jumps to a letter; △ gives a quick look (synopsis, quality, cast); pictures
   shimmer while they load.
 - Downloads: films, episodes and whole seasons kept on the console and played without the server.
-- Home: the date and time in the header, the order of the libraries chosen in the settings, the touchpad
+- Home: laid out as in Jellyfin (the libraries first, then Resume, Next up, what is on TV, the downloads, the latest
+  additions) on larger cards: 3.5 wide cards to a row, 5 posters to a row in the libraries. The date and time in
+  the header, the order of the libraries chosen in the settings, the touchpad
   refreshes it; the downloads in a row.
 - Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the
   system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
