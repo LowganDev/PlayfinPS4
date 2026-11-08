@@ -33,6 +33,8 @@ std::unique_ptr<ui::Screen> makeNowPlaying(AppSession& session);
 std::unique_ptr<ui::Screen> makeLiveTv(AppSession& session, jellyfin::Item view);
 // Search field, recent searches, then movies, series and episodes found.
 std::unique_ptr<ui::Screen> makeSearch(AppSession& session);
+// The order of the libraries on Home (pushed from the settings).
+std::unique_ptr<ui::Screen> makeLibraryOrder(AppSession& session);
 // Accent colour, playback quality, language, account, about.
 std::unique_ptr<ui::Screen> makeSettings(AppSession& session);
 // The third-party licences (session.licensesPath), scrolling.

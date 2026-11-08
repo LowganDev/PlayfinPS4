@@ -198,5 +198,7 @@
   "settings.update.progress": "Wird geladen… {0} %",
   "settings.update.ready": "Bereit zur Installation",
   "settings.update.install": "{0} liegt in /data/pkg. Installieren Sie es über GoldHEN › Debug Settings › Package Installer und starten Sie Playfin neu. Ihre Server und Einstellungen bleiben erhalten.",
-  "settings.update.failed": "Der Download wurde nicht abgeschlossen. Versuchen Sie es später erneut."
+  "settings.update.failed": "Der Download wurde nicht abgeschlossen. Versuchen Sie es später erneut.",
+  "settings.library_order": "Reihenfolge der Mediatheken",
+  "settings.library_order.hint": "✕ nimmt eine Mediathek, ↑ und ↓ verschieben sie, ✕ legt sie ab. Die Startseite folgt dieser Reihenfolge."
 }

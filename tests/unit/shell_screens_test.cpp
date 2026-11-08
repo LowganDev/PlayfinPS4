@@ -1868,3 +1868,42 @@ TEST_CASE("software update: nothing newer, the settings say Playfin is up to dat
     CHECK_FALSE(s.shell.session.update.has_value());
     CHECK(shows(*s.shell.application, "Playfin is up to date"));
 }
+
+TEST_CASE("home: the header shows the date and time; the libraries follow the order chosen in the settings") {
+    SettingsShell s;
+    s.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    s.shell.session.fixedUtcOffset = 120;
+    pressAnywhere(s.shell, "Order of the libraries");
+    s.shell.frames(5);
+    std::vector<std::string> before;
+    texts(*s.shell.application->top(), before);
+    pressAnywhere(s.shell, "Shows");  // takes it
+    s.shell.frames(2);
+    s.shell.press(Action::Up);        // moves it above Movies
+    s.shell.frames(2);
+    s.shell.press(Action::Confirm);   // puts it down
+    s.shell.frames(2);
+    REQUIRE(s.shell.session.settings().libraryOrder.size() >= 2);
+    CHECK(s.shell.session.settings().libraryOrder[0] == "lib-shows");
+    s.shell.application->replace(app::makeHome(s.shell.session));
+    s.shell.frames(10);
+    CHECK(shows(*s.shell.application, "Friday 16 \xC2\xB7 21:45"));
+    bool showsFirst = false;
+    bool moviesSeen = false;
+    std::function<void(ui::View&)> walk = [&](ui::View& view) {
+        if (auto* card = dynamic_cast<app::ItemCard*>(&view)) {
+            std::vector<std::string> labels;
+            texts(view, labels);
+            if (!labels.empty() && labels.front() == "Shows" && !moviesSeen) {
+                showsFirst = true;
+            }
+            moviesSeen = moviesSeen || (!labels.empty() && labels.front() == "Movies");
+            (void)card;
+        }
+        for (const auto& child : view.children()) {
+            walk(*child);
+        }
+    };
+    walk(*s.shell.application->top());
+    CHECK(showsFirst);
+}

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "jellyfin/client.hpp"
 #include "jellyfin/models.hpp"
 
@@ -22,5 +25,8 @@ jellyfin::ItemQuery libraryQuery(const jellyfin::Item& library, const LibraryCho
 // others newest or best first. The filter is kept.
 LibraryChoice nextSort(LibraryChoice choice);
 LibraryFilter nextFilter(LibraryFilter filter);
+
+// The libraries in the user's order (ids in `order`), the ones it does not name after them in the server's order.
+std::vector<jellyfin::Item> orderLibraries(std::vector<jellyfin::Item> libraries, const std::vector<std::string>& order);
 
 }  // namespace playfin::app

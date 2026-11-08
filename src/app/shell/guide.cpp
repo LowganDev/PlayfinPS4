@@ -45,6 +45,15 @@ std::string dayHeading(std::int64_t utc, std::int64_t now, int offsetMinutes) {
     return ui::tr("livetv.date", {ui::tr("livetv.weekday." + std::to_string(weekday)), std::to_string(dayOfMonth)});
 }
 
+std::string headerClock(std::int64_t now, int offsetMinutes) {
+    const std::int64_t day = localDay(now, offsetMinutes);
+    const int weekday = static_cast<int>(((day % 7) + 7 + 4) % 7);
+    const std::string iso = jellyfin::utcText(day * 86400);
+    const int dayOfMonth = std::stoi(iso.substr(8, 2));
+    return ui::tr("livetv.date", {ui::tr("livetv.weekday." + std::to_string(weekday)), std::to_string(dayOfMonth)}) +
+           " \xC2\xB7 " + clock24(now, offsetMinutes);
+}
+
 bool airing(const jellyfin::Item& program, std::int64_t now) { return program.startUtc <= now && now < program.endUtc; }
 
 double progress(const jellyfin::Item& program, std::int64_t now) {

@@ -45,6 +45,12 @@ public:
         scroll_->setHeader(navBar_);
         spinner_ = column_->add<ui::Spinner>();
         scroll_->setContent(std::move(content));
+        // the touchpad: everything again from the server (what was added, watched, what is on)
+        bind(platform::Action::Touchpad, "", [this] {
+            AppSession* session = &session_;
+            later([session] { ui::Application::current()->replace(makeHome(*session)); });
+            return true;
+        });
         bind(platform::Action::Menu, "", [this] {  // OPTIONS button: same menu, one hint (triangle) is enough
             openMenu();
             return true;
@@ -91,8 +97,9 @@ private:
     void load() {
         const auto client = session_.client();
         const core::CancelToken token = token_;
+        const std::vector<std::string> order = session_.settings().libraryOrder;
         run<HomeData>(
-            [client, token] {
+            [client, token, order] {
                 HomeData data;
                 // an unreachable server fails every call: stop at the first one (2 workers on PS4)
                 auto unreachable = [](const auto& result) {
@@ -108,6 +115,7 @@ private:
                 data.nextUp = client->nextUp(kRowItems, token);
                 data.libraries = client->libraries(token);
                 if (data.libraries.ok()) {
+                    data.libraries.value().items = orderLibraries(std::move(data.libraries.value().items), order);
                     for (const auto& library : data.libraries.value().items) {
                         if (library.collectionType == "livetv") {
                             data.airing = client->airingNow(kRowItems, token);

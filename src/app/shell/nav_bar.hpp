@@ -57,6 +57,19 @@ private:
     bool focused_ = false;
 };
 
+// The header's date and time ("Vendredi 16 · 21:45"); every one shown is set again when the minute changes.
+class ClockLabel : public ui::Label {
+public:
+    explicit ClockLabel(const AppSession& session);
+    ~ClockLabel() override;
+    void refresh();
+    // once per frame from the app's loop: when the minute changed, every clock shown takes the new time
+    static void tick(const AppSession& session);
+
+private:
+    const AppSession& session_;
+};
+
 // The tab's screen replaces the whole stack.
 void openTab(AppSession& session, Tab tab);
 

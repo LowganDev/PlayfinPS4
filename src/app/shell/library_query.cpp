@@ -86,4 +86,21 @@ LibraryFilter nextFilter(LibraryFilter filter) {
     return LibraryFilter::All;
 }
 
+std::vector<jellyfin::Item> orderLibraries(std::vector<jellyfin::Item> libraries, const std::vector<std::string>& order) {
+    std::vector<jellyfin::Item> out;
+    for (const std::string& id : order) {
+        for (auto it = libraries.begin(); it != libraries.end(); ++it) {
+            if (it->id == id) {
+                out.push_back(std::move(*it));
+                libraries.erase(it);
+                break;
+            }
+        }
+    }
+    for (jellyfin::Item& library : libraries) {
+        out.push_back(std::move(library));
+    }
+    return out;
+}
+
 }  // namespace playfin::app

@@ -198,5 +198,7 @@
   "settings.update.progress": "Baixando… {0}%",
   "settings.update.ready": "Pronta para instalar",
   "settings.update.install": "{0} está em /data/pkg. Instale-o em GoldHEN › Debug Settings › Package Installer e abra o Playfin de novo. Seus servidores e ajustes são mantidos.",
-  "settings.update.failed": "O download não foi concluído. Tente mais tarde."
+  "settings.update.failed": "O download não foi concluído. Tente mais tarde.",
+  "settings.library_order": "Ordem das bibliotecas",
+  "settings.library_order.hint": "✕ pega uma biblioteca, ↑ e ↓ a movem, ✕ a solta. O início segue esta ordem."
 }

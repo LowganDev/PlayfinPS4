@@ -34,6 +34,8 @@ std::optional<Action> fromKey(SDL_Keycode key) {
         return Action::R2;
     case SDLK_m:
         return Action::Menu;
+    case SDLK_r:
+        return Action::Touchpad;
     default:
         return std::nullopt;
     }
@@ -63,6 +65,8 @@ std::optional<Action> fromButton(Uint8 button) {
         return Action::R1;
     case SDL_CONTROLLER_BUTTON_START:
         return Action::Menu;
+    case SDL_CONTROLLER_BUTTON_TOUCHPAD:
+        return Action::Touchpad;
     default:
         return std::nullopt;
     }

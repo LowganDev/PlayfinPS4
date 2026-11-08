@@ -2,7 +2,11 @@
 
 #include <nanovg.h>
 
+#include <algorithm>
+#include <vector>
+
 #include "app/shell/chrome.hpp"
+#include "app/shell/guide.hpp"
 #include "app/shell/music_player.hpp"
 #include "app/shell/screens.hpp"
 #include "ui/application.hpp"
@@ -106,10 +110,50 @@ NavBar::NavBar(AppSession& session, Tab current) : ui::Box(ui::Axis::Row) {
             }
         }
     }
+    auto* clock = add<ClockLabel>(session);
+    clock->margin = {0, ui::theme().spacingL, 0, 0};
     auto* label = add<ui::Label>(who, ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
     label->color = ui::theme().textSecondary;
     label->margin = {0, ui::theme().spacingS, 0, 0};
     addChild(makeAvatar(userName));
+}
+
+namespace {
+std::vector<ClockLabel*>& clocks() {
+    static std::vector<ClockLabel*> all;
+    return all;
+}
+std::int64_t gMinute = -1;
+}  // namespace
+
+ClockLabel::ClockLabel(const AppSession& session)
+    : ui::Label("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold}), session_(session) {
+    clocks().push_back(this);
+    refresh();
+}
+
+ClockLabel::~ClockLabel() {
+    auto& all = clocks();
+    all.erase(std::remove(all.begin(), all.end(), this), all.end());
+}
+
+void ClockLabel::refresh() {
+    const std::int64_t now = session_.now();
+    const std::string text = headerClock(now, session_.utcOffsetMinutes(now));
+    if (text != this->text()) {
+        setText(text);
+    }
+}
+
+void ClockLabel::tick(const AppSession& session) {
+    const std::int64_t minute = session.now() / 60;
+    if (minute == gMinute) {
+        return;
+    }
+    gMinute = minute;
+    for (ClockLabel* clock : clocks()) {
+        clock->refresh();
+    }
 }
 
 NowPlayingChip::NowPlayingChip(AppSession& session) : ui::Box(ui::Axis::Row), session_(session) {

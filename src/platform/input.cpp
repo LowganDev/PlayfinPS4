@@ -5,7 +5,8 @@ namespace playfin::platform {
 namespace {
 
 constexpr const char* kNames[kActionCount] = {"Up",      "Down", "Left", "Right", "Confirm", "Back", "Options",
-                                              "Context", "L1",   "R1",   "L2",    "R2",      "Menu"};
+                                              "Context", "L1",   "R1",   "L2",    "R2",      "Menu",
+                                              "Touchpad"};
 
 }  // namespace
 

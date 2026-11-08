@@ -198,5 +198,7 @@
   "settings.update.progress": "İndiriliyor… %{0}",
   "settings.update.ready": "Kuruluma hazır",
   "settings.update.install": "{0} /data/pkg içinde. GoldHEN › Debug Settings › Package Installer üzerinden kurun, ardından Playfin'i yeniden başlatın. Sunucularınız ve ayarlarınız korunur.",
-  "settings.update.failed": "İndirme tamamlanamadı. Daha sonra yeniden deneyin."
+  "settings.update.failed": "İndirme tamamlanamadı. Daha sonra yeniden deneyin.",
+  "settings.library_order": "Kitaplıkların sırası",
+  "settings.library_order.hint": "✕ bir kitaplığı alır, ↑ ve ↓ taşır, ✕ bırakır. Ana sayfa bu sırayı izler."
 }

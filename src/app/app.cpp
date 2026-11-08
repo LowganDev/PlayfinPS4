@@ -12,6 +12,7 @@
 
 #include "app/gallery.hpp"
 #include "app/settings.hpp"
+#include "app/shell/nav_bar.hpp"
 #include "app/shell/screens.hpp"
 #include "app/shell/music_player.hpp"
 #include "app/shell/session.hpp"
@@ -342,6 +343,7 @@ int run(const Options& options) {
             if (session.updateMusic()) {
                 application.requestRedraw();
             }
+            ClockLabel::tick(session);  // the header's time, once a minute
             application.update(dt);
 
             // test mode too: a frame that should have changed but was not redrawn fails the screenshot comparison

@@ -71,3 +71,18 @@ TEST_CASE("the next sort cycles and takes its natural order") {
     CHECK(app::nextFilter(LibraryFilter::Unplayed) == LibraryFilter::Favorites);
     CHECK(app::nextFilter(LibraryFilter::Favorites) == LibraryFilter::All);
 }
+
+TEST_CASE("libraries in the user's order, the others after in the server's order") {
+    std::vector<jellyfin::Item> libraries(4);
+    libraries[0].id = "movies";
+    libraries[1].id = "shows";
+    libraries[2].id = "music";
+    libraries[3].id = "tv";
+    const auto ordered = app::orderLibraries(libraries, {"tv", "gone", "music"});
+    REQUIRE(ordered.size() == 4);
+    CHECK(ordered[0].id == "tv");
+    CHECK(ordered[1].id == "music");
+    CHECK(ordered[2].id == "movies");
+    CHECK(ordered[3].id == "shows");
+    CHECK(app::orderLibraries(libraries, {}).front().id == "movies");
+}

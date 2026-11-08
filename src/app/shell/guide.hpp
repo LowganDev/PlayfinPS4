@@ -16,6 +16,8 @@ std::string clock24(std::int64_t utc, int offsetMinutes);
 std::string timeRange(const jellyfin::Item& program, int offsetMinutes);
 // "Aujourd'hui", "Demain", then "Dimanche 18" (local days, compared with `now`)
 std::string dayHeading(std::int64_t utc, std::int64_t now, int offsetMinutes);
+// "Vendredi 16 · 21:45": the header's date and time
+std::string headerClock(std::int64_t now, int offsetMinutes);
 // local days since 1970 (for grouping)
 std::int64_t localDay(std::int64_t utc, int offsetMinutes);
 

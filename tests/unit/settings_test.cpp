@@ -53,11 +53,13 @@ TEST_CASE("settings round trip") {
     settings.volume = 70;
     settings.pictureFit = "fill";
     settings.pictureSize = 90;
+    settings.libraryOrder = {"tv", "movies"};
     REQUIRE(app::saveSettings(path, settings));
     const app::Settings loaded = app::loadSettings(path);
     CHECK(loaded.volume == 70);
     CHECK(loaded.pictureFit == "fill");
     CHECK(loaded.pictureSize == 90);
+    CHECK(loaded.libraryOrder == std::vector<std::string>{"tv", "movies"});
     CHECK(loaded.accent == "red");
     CHECK(loaded.maxBitrate == 4000000);
     CHECK(loaded.language == "de");

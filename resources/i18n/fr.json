@@ -198,5 +198,7 @@
   "settings.update.progress": "Téléchargement… {0} %",
   "settings.update.ready": "Prête à installer",
   "settings.update.install": "{0} est dans /data/pkg. Installez-le depuis GoldHEN › Debug Settings › Package Installer, puis relancez Playfin. Vos serveurs et vos réglages sont gardés.",
-  "settings.update.failed": "Le téléchargement n'a pas abouti. Réessayez plus tard."
+  "settings.update.failed": "Le téléchargement n'a pas abouti. Réessayez plus tard.",
+  "settings.library_order": "Ordre des médiathèques",
+  "settings.library_order.hint": "✕ prend une médiathèque, ↑ et ↓ la déplacent, ✕ la pose. L'accueil suit cet ordre."
 }

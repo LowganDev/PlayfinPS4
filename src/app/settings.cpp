@@ -57,6 +57,11 @@ Settings loadSettings(const std::string& path) {
     if (fit == "fit" || fit == "fill" || fit == "stretch") {
         settings.pictureFit = fit;
     }
+    for (const std::string& id : jellyfin::json::strings(root, "libraryOrder")) {
+        if (settings.libraryOrder.size() < 64 && !id.empty() && id.size() <= 64) {
+            settings.libraryOrder.push_back(id);
+        }
+    }
     const std::int64_t size = jellyfin::json::integer(root, "pictureSize", 100);
     settings.pictureSize = size >= 80 && size <= 100 ? static_cast<int>(size) : 100;
     for (const std::string& term : jellyfin::json::strings(root, "recentSearches")) {
@@ -77,6 +82,11 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     writer.key("volume").value(settings.volume);
     writer.key("pictureFit").value(settings.pictureFit);
     writer.key("pictureSize").value(settings.pictureSize);
+    writer.key("libraryOrder").array();
+    for (const std::string& id : settings.libraryOrder) {
+        writer.value(id);
+    }
+    writer.end();
     writer.key("recentSearches").array();
     for (const std::string& term : settings.recentSearches) {
         writer.value(term);

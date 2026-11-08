@@ -200,5 +200,7 @@
   "settings.update.progress": "Stahuje se… {0} %",
   "settings.update.ready": "Připraveno k instalaci",
   "settings.update.install": "{0} je v /data/pkg. Nainstalujte ho přes GoldHEN › Debug Settings › Package Installer a znovu spusťte Playfin. Servery a nastavení zůstanou.",
-  "settings.update.failed": "Stahování se nedokončilo. Zkuste to později."
+  "settings.update.failed": "Stahování se nedokončilo. Zkuste to později.",
+  "settings.library_order": "Pořadí knihoven",
+  "settings.library_order.hint": "✕ vezme knihovnu, ↑ a ↓ ji posunou, ✕ ji položí. Domů se řídí tímto pořadím."
 }

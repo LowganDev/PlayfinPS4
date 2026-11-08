@@ -198,5 +198,7 @@
   "settings.update.progress": "正在下载… {0}%",
   "settings.update.ready": "可以安装",
   "settings.update.install": "{0} 已在 /data/pkg 中。请在 GoldHEN › Debug Settings › Package Installer 中安装，然后重新启动 Playfin。服务器和设置会保留。",
-  "settings.update.failed": "下载未完成，请稍后重试。"
+  "settings.update.failed": "下载未完成，请稍后重试。",
+  "settings.library_order": "媒体库顺序",
+  "settings.library_order.hint": "✕ 选中媒体库，↑ 和 ↓ 移动，✕ 放下。主页按此顺序显示。"
 }

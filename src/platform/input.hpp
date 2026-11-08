@@ -7,8 +7,8 @@
 namespace playfin::platform {
 
 // What the user asked for, independent of the device (controller or keyboard).
-enum class Action { Up, Down, Left, Right, Confirm, Back, Options, Context, L1, R1, L2, R2, Menu };
-constexpr int kActionCount = 13;
+enum class Action { Up, Down, Left, Right, Confirm, Back, Options, Context, L1, R1, L2, R2, Menu, Touchpad };
+constexpr int kActionCount = 14;
 
 const char* actionName(Action action);
 std::optional<Action> actionFromName(std::string_view name);

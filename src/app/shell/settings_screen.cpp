@@ -69,6 +69,9 @@ public:
                                             [this] { chooseAccent(); });
         language_ = column->add<ui::ValueRow>(ui::tr("settings.language"), "", [this] { chooseLanguage(); });
         refreshLanguage();
+        column->add<ui::ValueRow>(ui::tr("settings.library_order"), "", [this] {
+            ui::Application::current()->push(makeLibraryOrder(session_));
+        });
         remembered = accent_;  // the first setting, not the bar above it
 
         addHeading(*column, ui::tr("settings.playback"));

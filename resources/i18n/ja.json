@@ -198,5 +198,7 @@
   "settings.update.progress": "ダウンロード中… {0}%",
   "settings.update.ready": "インストール準備完了",
   "settings.update.install": "{0} は /data/pkg にあります。GoldHEN › Debug Settings › Package Installer からインストールし、Playfin を再起動してください。サーバーと設定はそのまま残ります。",
-  "settings.update.failed": "ダウンロードが完了しませんでした。後でもう一度お試しください。"
+  "settings.update.failed": "ダウンロードが完了しませんでした。後でもう一度お試しください。",
+  "settings.library_order": "ライブラリの順序",
+  "settings.library_order.hint": "✕ でライブラリを選び、↑ と ↓ で移動し、✕ で置きます。ホームはこの順序になります。"
 }
