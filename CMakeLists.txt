@@ -79,13 +79,14 @@ add_library(playfin_jellyfin STATIC
     src/jellyfin/client.cpp
     src/jellyfin/store.cpp
     src/jellyfin/discovery.cpp
+    src/jellyfin/xmltv.cpp
 )
 if(PLATFORM_PS4)
     target_sources(playfin_jellyfin PRIVATE src/net/crypto_mbedtls.cpp)
 else()
     target_sources(playfin_jellyfin PRIVATE src/net/crypto_openssl.cpp)
 endif()
-target_link_libraries(playfin_jellyfin PUBLIC playfin_base yyjson PRIVATE playfin_curl playfin_crypto)
+target_link_libraries(playfin_jellyfin PUBLIC playfin_base yyjson playfin_zlib PRIVATE playfin_curl playfin_crypto)
 playfin_set_warnings(playfin_jellyfin)
 
 # window, input, rendering helpers, system keyboard
@@ -228,7 +229,7 @@ endif()
 
 if(PLAYFIN_FUZZ)
     enable_testing()
-    foreach(name models discovery url redact raster image)
+    foreach(name models discovery url redact raster image xmltv)
         add_executable(fuzz_${name} fuzz/fuzz_${name}.cpp)
         target_link_libraries(fuzz_${name} PRIVATE playfin_jellyfin playfin_render playfin_ui)
         target_link_options(fuzz_${name} PRIVATE -fsanitize=fuzzer)

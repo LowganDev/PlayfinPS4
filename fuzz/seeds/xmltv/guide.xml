@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<tv generator-info-name="test">
+  <!-- a comment with <tags> inside -->
+  <channel id="tf1.fr">
+    <display-name lang="fr">TF1 HD</display-name>
+    <display-name>1</display-name>
+    <icon src="http://example/tf1.png"/>
+  </channel>
+  <channel id='arte.fr'><display-name>Arte</display-name></channel>
+  <programme start="20261108200000 +0100" stop="20261108210000 +0100" channel="tf1.fr">
+    <title lang="fr">Le Journal &amp; la m&#233;t&#xE9;o</title>
+    <title lang="en">News</title>
+    <desc><![CDATA[Les <titres> du jour.]]></desc>
+    <category>News</category>
+  </programme>
+  <programme start="20261108190000 +0100" stop="20261108200000 +0100" channel="tf1.fr">
+    <title>Avant</title>
+  </programme>
+  <programme start="20261101000000 +0000" stop="20261101010000 +0000" channel="arte.fr">
+    <title>Old, outside the window</title>
+  </programme>
+  <programme start="20261108200000" stop="20261108223000" channel="arte.fr">
+    <title>Film</title>
+  </programme>
+</tv>
