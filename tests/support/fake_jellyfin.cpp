@@ -103,6 +103,11 @@ void items(const httplib::Request& req, httplib::Response& res) {
         res.set_content(readFixture("jellyfin/ts/album_tracks.json"), "application/json");
         return;
     }
+    if (req.get_param_value("sortBy") == "Random") {  // the screensaver: Big Buck Bunny has a backdrop
+        res.set_content(R"({"Items":[)" + readFixture("jellyfin/item_movie.json") + R"(],"TotalRecordCount":1,"StartIndex":0})",
+                        "application/json");
+        return;
+    }
     if (types == "Person") {  // the cast of Big Buck Bunny
         const bool match = term.empty() || std::string("frank bunny").find(term) != std::string::npos;
         res.set_content(std::string(R"({"Items":[)") +

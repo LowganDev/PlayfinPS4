@@ -14,6 +14,7 @@
 #include "app/settings.hpp"
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screens.hpp"
+#include "app/shell/screensaver.hpp"
 #include "app/shell/music_player.hpp"
 #include "app/shell/session.hpp"
 #include "jellyfin/models.hpp"
@@ -309,6 +310,7 @@ int run(const Options& options) {
         PF_LOG_INFO("startup: first frame");
 
         bool running = exitCode == 0;
+        float idleMs = 0;
         FrameStats stats;
         int frame = 0;
         std::uint32_t last = platform::ticksMs();
@@ -339,6 +341,13 @@ int run(const Options& options) {
                     application.handle(e);
                 }
             }
+            // the screensaver: after a few idle minutes on the menus (never over a video), while signed in
+            idleMs = events.empty() ? idleMs + dt : 0;
+            if (!testMode && idleMs > Screensaver::kIdleMs && !Screensaver::shown() && !application.hasModal() &&
+                application.videoSource() == nullptr && session.client()) {
+                application.showModal(makeScreensaver(session));
+            }
+            Screensaver::tick(dt);
             refreshHalo();
             if (session.updateMusic()) {
                 application.requestRedraw();

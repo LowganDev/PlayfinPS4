@@ -172,6 +172,7 @@ add_library(playfin_core STATIC
     src/app/shell/library_order_screen.cpp
     src/app/shell/downloads.cpp
     src/app/shell/downloads_screen.cpp
+    src/app/shell/screensaver.cpp
     src/app/shell/cards.cpp
     src/app/shell/chrome.cpp
     src/app/shell/connect_screens.cpp

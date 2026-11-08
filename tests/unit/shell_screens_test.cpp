@@ -18,6 +18,7 @@
 #include "player/queue.hpp"
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screens.hpp"
+#include "app/shell/screensaver.hpp"
 #include "app/shell/session.hpp"
 #include "app/settings.hpp"
 #include "core/data_dir.hpp"
@@ -2066,4 +2067,19 @@ TEST_CASE("downloads: a user without the download right gets a failed download t
     CHECK(entry->state == app::Downloads::State::Failed);
     CHECK(entry->error == "the server does not let this account download");
     core::setDataRoot({});
+}
+
+TEST_CASE("screensaver: the server's films with their backdrop, title, synopsis and the time; any button closes it") {
+    Playing p;
+    p.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    p.shell.session.fixedUtcOffset = 120;
+    p.shell.application->showModal(app::makeScreensaver(p.shell.session));
+    p.frames(3);
+    CHECK(app::Screensaver::shown());
+    CHECK(shows(*p.shell.application, "Big Buck Bunny"));
+    CHECK(shows(*p.shell.application, "A giant rabbit takes on three bullies."));
+    CHECK(shows(*p.shell.application, "Friday 16 \xC2\xB7 21:45"));
+    p.shell.press(Action::R1);
+    CHECK_FALSE(p.shell.application->hasModal());
+    CHECK_FALSE(app::Screensaver::shown());
 }
