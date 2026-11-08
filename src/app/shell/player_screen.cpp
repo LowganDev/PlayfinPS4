@@ -292,10 +292,10 @@ private:
         bind(platform::Action::Confirm, ui::tr("player.hint.play"), nothing, paused);
         // a live channel cannot be sought: ← / → show the bar, L1 / R1 change channel
         bind(platform::Action::Left, ui::tr("player.hint.seek"),
-             [this] { return press([this] { live_ ? showBar() : seekBy(-1); }); }, video);
+             [this] { return press([this] { live_ ? showBar() : seekPress(-1, platform::Action::Left); }); }, video);
         bind(platform::Action::Right, ui::tr("player.hint.seek"),
-             [this] { return press([this] { live_ ? showBar() : seekBy(1); }); }, video);
-        // L1 / R1: as ← / → on a video (held: repeated, faster and faster); a channel: the previous or next one
+             [this] { return press([this] { live_ ? showBar() : seekPress(1, platform::Action::Right); }); }, video);
+        // L1 / R1: as ← / → on a video (held: repeated, longer and longer steps); a channel: the previous or next one
         bind(platform::Action::L1, ui::tr("player.hint.seek"), [this] { return press([this] { shoulder(-1); }); },
              video);
         bind(platform::Action::L1, ui::tr("player.hint.channel"), nothing, channel);
@@ -352,8 +352,18 @@ private:
             zap(direction);
             return;
         }
+        seekPress(direction, direction < 0 ? platform::Action::L1 : platform::Action::R1);
+    }
+
+    // ← / → and L1 / R1 alike: one seek, then ours repeats while the button is held (the platform's repeats of a
+    // held arrow come on frames: ignored)
+    void seekPress(int direction, platform::Action button) {
+        if (ui::Application::current() != nullptr && ui::Application::current()->repeating()) {
+            return;
+        }
         seekBy(direction);
-        shoulderRepeat_.press(direction, now());
+        seekRepeat_.press(direction, now());
+        seekButton_ = button;
     }
 
     // L2 / R2 down: the panel fills for 3 s; released before, nothing happens
@@ -371,18 +381,19 @@ private:
         markDirty();
     }
 
-    // every frame: the shoulder buttons held (repeat, hold) or released
+    // every frame: the seek and shoulder buttons held (repeat, hold) or released
     void updateHeld(std::int64_t t) {
         ui::Application* app = ui::Application::current();
         if (app == nullptr) {
             return;
         }
-        if (shoulderRepeat_.direction() != 0) {
-            const auto button = shoulderRepeat_.direction() < 0 ? platform::Action::L1 : platform::Action::R1;
-            if (!app->held(button) || app->hasModal()) {
-                shoulderRepeat_.release();
-            } else if (const auto direction = shoulderRepeat_.poll(t)) {
-                seekBy(*direction);
+        if (seekRepeat_.direction() != 0) {
+            if (!app->held(seekButton_) || app->hasModal()) {
+                seekRepeat_.release();
+            } else {
+                for (int due = seekRepeat_.poll(t); due > 0; --due) {
+                    seekBy(seekRepeat_.direction());
+                }
             }
         }
         if (hold_.direction() == 0) {
@@ -1206,7 +1217,8 @@ private:
     bool direct_ = false;               // playing a channel's own stream, not the server's relay
     std::int64_t directSinceMs_ = 0;
     std::int64_t lastPictureMs_ = 0;
-    player::ButtonRepeat shoulderRepeat_;  // L1 / R1 held
+    player::ButtonRepeat seekRepeat_;  // ← / → or L1 / R1 held
+    platform::Action seekButton_ = platform::Action::Right;
     player::HoldToSkip hold_;              // L2 / R2 held
     ui::Box* holdPanel_ = nullptr;
     ui::Label* holdLabel_ = nullptr;

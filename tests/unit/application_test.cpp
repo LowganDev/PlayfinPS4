@@ -422,3 +422,21 @@ TEST_CASE("without transitions rows show at once") {
     ui::revealChildren(*screen, 0);
     CHECK(row->opacity == doctest::Approx(1));
 }
+
+TEST_CASE("a button down again before its release is the platform's repeat") {
+    Rig rig;
+    rig.app->handle(press(Action::Right));
+    CHECK(rig.app->held(Action::Right));
+    CHECK_FALSE(rig.app->repeating());
+    rig.app->handle(press(Action::Right));
+    CHECK(rig.app->repeating());
+    rig.app->handle(press(Action::Left));  // another button: a press of its own
+    CHECK_FALSE(rig.app->repeating());
+    Event up;
+    up.type = Event::Type::ActionUp;
+    up.action = Action::Right;
+    rig.app->handle(up);
+    CHECK_FALSE(rig.app->held(Action::Right));
+    rig.app->handle(press(Action::Right));
+    CHECK_FALSE(rig.app->repeating());
+}

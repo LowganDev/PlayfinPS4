@@ -39,12 +39,13 @@ void ButtonRepeat::press(int direction, std::int64_t nowMs) {
     nextMs_ = nowMs + kDelayMs;
 }
 
-std::optional<int> ButtonRepeat::poll(std::int64_t nowMs) {
+int ButtonRepeat::poll(std::int64_t nowMs) {
     if (direction_ == 0 || nowMs < nextMs_) {
-        return std::nullopt;
+        return 0;
     }
-    nextMs_ = nowMs + kIntervalMs;
-    return direction_;
+    const std::int64_t due = (nowMs - nextMs_) / kIntervalMs + 1;
+    nextMs_ += due * kIntervalMs;
+    return static_cast<int>(due < kMaxCatchUp ? due : kMaxCatchUp);
 }
 
 void HoldToSkip::press(int direction, std::int64_t nowMs) {

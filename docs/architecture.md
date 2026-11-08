@@ -134,9 +134,12 @@ The screens of the app.
   Play by state); a second binding of the same button with a `shown` and a handler that returns false gives that
   button another label. `View::hidesHints` on the scope hides the bar (screensaver). Entries with the same label
   merge (← → and L1 R1 in the player).
-- Player buttons: `Application::held(action)` follows ActionDown / ActionUp (the platform repeats directions only).
-  L1 / R1 seek as ← / → and repeat through `player::ButtonRepeat` (400 ms, then every 80 ms) polled in the
-  player's tick while held; `seekStep` grows with the hold (10, 30, 60, 120 s). L2 / R2 go through
+- Player buttons: `Application::held(action)` follows ActionDown / ActionUp (the platform repeats directions only);
+  `Application::repeating()` tells such a repeat from a press. ← / → and L1 / R1 seek alike: the platform's
+  repeats are ignored and `player::ButtonRepeat` (400 ms, then every 200 ms, on time: a late tick catches up, at
+  most 5) repeats while held, polled in the player's tick. Frame-based repeats made the seeking depend on the
+  frame rate, so slower while a video plays and not the same for the arrows and L1 / R1 (seen on the console:
+  +95 s against +225 s for 3 s held). `seekStep` grows with the hold (10, 30, 60, 120 s). L2 / R2 go through
   `player::HoldToSkip` (3 s; the hold panel shows its progress; released early, nothing): the previous or next
   episode (`Extras::previous` / `next`, from `jellyfin::adjacentEpisodes` over every season's episodes:
   `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with

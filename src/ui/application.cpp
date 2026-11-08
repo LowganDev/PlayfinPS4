@@ -271,8 +271,11 @@ void Application::finishEditing(bool accepted) {
 
 void Application::handle(const platform::Event& event) {
     redraw_ = true;
+    repeating_ = false;
     if (event.type == platform::Event::Type::ActionDown || event.type == platform::Event::Type::ActionUp) {
-        held_[static_cast<int>(event.action)] = event.type == platform::Event::Type::ActionDown;
+        bool& held = held_[static_cast<int>(event.action)];
+        repeating_ = held && event.type == platform::Event::Type::ActionDown;
+        held = event.type == platform::Event::Type::ActionDown;
     }
     if (editor_ != nullptr && event.type == platform::Event::Type::Text) {
         editText_ += event.text;

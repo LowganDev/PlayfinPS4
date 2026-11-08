@@ -67,6 +67,8 @@ public:
     void cancelTimers(const void* owner);
     // A button down and not released yet (the player's shoulder buttons repeat and hold through it).
     bool held(platform::Action action) const { return held_[static_cast<int>(action)]; }
+    // The ActionDown being handled came while its button was already down: the platform's repeat of a held direction.
+    bool repeating() const { return repeating_; }
     // The toast shown, empty when none.
     const std::string& toastText() const { return toastLeftMs_ > 0 ? toastText_ : kNoToast; }
     void requestText(const platform::TextInputRequest& request, std::function<void(std::optional<std::string>)> done);
@@ -120,6 +122,7 @@ private:
 
     static inline const std::string kNoToast;
     bool held_[platform::kActionCount] = {};
+    bool repeating_ = false;
     struct Timer {
         float leftMs;
         const void* owner;

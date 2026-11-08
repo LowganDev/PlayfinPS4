@@ -94,18 +94,20 @@ TEST_CASE("seek steps grow while the button is held: 10 s, 30 s after 2 s, 1 min
     CHECK(player::seekStep(60000) == doctest::Approx(120));
 }
 
-TEST_CASE("a held shoulder button repeats like the arrows: after 400 ms, then every 80 ms, never in a burst") {
+TEST_CASE("a held seek button repeats on time: after 400 ms, then every 200 ms, a late poll catching up") {
     player::ButtonRepeat repeat;
-    CHECK_FALSE(repeat.poll(1000).has_value());
+    CHECK(repeat.poll(1000) == 0);
     repeat.press(-1, 1000);
-    CHECK_FALSE(repeat.poll(1399).has_value());
-    CHECK(repeat.poll(1400) == -1);
-    CHECK_FALSE(repeat.poll(1479).has_value());
-    CHECK(repeat.poll(1480) == -1);
-    CHECK(repeat.poll(3000) == -1);  // a late poll: one repeat
-    CHECK_FALSE(repeat.poll(3001).has_value());
+    CHECK(repeat.direction() == -1);
+    CHECK(repeat.poll(1399) == 0);
+    CHECK(repeat.poll(1400) == 1);
+    CHECK(repeat.poll(1599) == 0);
+    CHECK(repeat.poll(1600) == 1);
+    CHECK(repeat.poll(2050) == 2);  // 1800 and 2000: a slow frame loses nothing
+    CHECK(repeat.poll(2199) == 0);
+    CHECK(repeat.poll(9000) == player::ButtonRepeat::kMaxCatchUp);  // a stall gives no burst
     repeat.release();
-    CHECK_FALSE(repeat.poll(9000).has_value());
+    CHECK(repeat.poll(9999) == 0);
 }
 
 TEST_CASE("hold to skip: due once after 3 s held, its progress meanwhile; a release before cancels it") {

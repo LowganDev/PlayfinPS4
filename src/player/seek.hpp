@@ -25,17 +25,20 @@ private:
 // 6 s.
 double seekStep(std::int64_t heldMs);
 
-// Repeats a held shoulder button as the arrows repeat (the platform repeats directions only): first after
-// kDelayMs, then every kIntervalMs; a late poll gives one repeat. `direction` is -1 or 1.
+// Repeats a held seek button (← / → or L1 / R1, all alike): first after kDelayMs, then every kIntervalMs, on time
+// rather than on frames, so a slow frame (a video playing) neither slows the seeking down nor makes one button
+// faster than another. `direction` is -1 or 1.
 class ButtonRepeat {
 public:
     static constexpr std::int64_t kDelayMs = 400;
-    static constexpr std::int64_t kIntervalMs = 80;
+    static constexpr std::int64_t kIntervalMs = 200;
+    static constexpr int kMaxCatchUp = 5;  // repeats given at most by one late poll
 
     void press(int direction, std::int64_t nowMs);
     void release() { direction_ = 0; }
     int direction() const { return direction_; }
-    std::optional<int> poll(std::int64_t nowMs);
+    // The repeats due since the last poll (0 when none).
+    int poll(std::int64_t nowMs);
 
 private:
     int direction_ = 0;
