@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "篩選",
   "music.genres": "類型",
   "music.songs": "歌曲",
-  "music.next_tab": "下一個分頁"
+  "music.next_tab": "下一個分頁",
+  "livetv.search": "尋找頻道",
+  "livetv.filter": "頻道：{0}  ·  L2 / R2 切換",
+  "livetv.filter.all": "全部",
+  "livetv.filter.favorites": "最愛",
+  "livetv.filter.recent": "最近觀看",
+  "livetv.filter.movies": "電影",
+  "livetv.filter.sports": "體育",
+  "livetv.filter.news": "新聞",
+  "livetv.filter.kids": "兒童",
+  "livetv.filter.radio": "電台",
+  "livetv.favorite": "最愛",
+  "livetv.favorite_added": "已加入最愛。",
+  "livetv.favorite_removed": "已移除最愛。",
+  "livetv.no_channel": "這裡沒有頻道。"
 }

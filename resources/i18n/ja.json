@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "絞り込み",
   "music.genres": "ジャンル",
   "music.songs": "曲",
-  "music.next_tab": "次のタブ"
+  "music.next_tab": "次のタブ",
+  "livetv.search": "チャンネルを探す",
+  "livetv.filter": "チャンネル: {0}  ·  L2 / R2 で切り替え",
+  "livetv.filter.all": "すべて",
+  "livetv.filter.favorites": "お気に入り",
+  "livetv.filter.recent": "最近見た",
+  "livetv.filter.movies": "映画",
+  "livetv.filter.sports": "スポーツ",
+  "livetv.filter.news": "ニュース",
+  "livetv.filter.kids": "キッズ",
+  "livetv.filter.radio": "ラジオ",
+  "livetv.favorite": "お気に入り",
+  "livetv.favorite_added": "お気に入りに追加しました。",
+  "livetv.favorite_removed": "お気に入りから外しました。",
+  "livetv.no_channel": "チャンネルがありません。"
 }

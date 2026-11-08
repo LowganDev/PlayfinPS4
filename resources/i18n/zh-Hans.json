@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "筛选",
   "music.genres": "流派",
   "music.songs": "歌曲",
-  "music.next_tab": "下一个标签"
+  "music.next_tab": "下一个标签",
+  "livetv.search": "查找频道",
+  "livetv.filter": "频道：{0}  ·  L2 / R2 切换",
+  "livetv.filter.all": "全部",
+  "livetv.filter.favorites": "收藏",
+  "livetv.filter.recent": "最近观看",
+  "livetv.filter.movies": "电影",
+  "livetv.filter.sports": "体育",
+  "livetv.filter.news": "新闻",
+  "livetv.filter.kids": "少儿",
+  "livetv.filter.radio": "电台",
+  "livetv.favorite": "收藏",
+  "livetv.favorite_added": "已加入收藏。",
+  "livetv.favorite_removed": "已取消收藏。",
+  "livetv.no_channel": "这里没有频道。"
 }

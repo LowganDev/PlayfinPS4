@@ -1987,3 +1987,28 @@ TEST_CASE("music: the genres and the songs tabs (R2); a genre lists its albums; 
     CHECK(shell.session.music().queue().items().size() > 1);
     shell.session.music().stop();
 }
+
+TEST_CASE("Live TV: a channel made a favourite with \\u25b3, the favourites and the recently watched (R2)") {
+    TvShell tv;
+    tv.openLiveTv();
+    CHECK(showsSomewhere(*tv.shell.application, "Channels: All"));
+    ui::View* sport = named(*tv.shell.application->top(), "Playfin Sport");
+    REQUIRE(sport != nullptr);
+    REQUIRE(tv.shell.application->focus().focus(sport));
+    tv.shell.press(Action::Options);
+    tv.shell.frames(5);
+    CHECK(tv.requests("POST", "/UserFavoriteItems/b70fcc93046e175d801feabfe8d97acd") == 1);
+    tv.shell.press(Action::R2);  // Favourites
+    tv.shell.frames(5);
+    CHECK(showsSomewhere(*tv.shell.application, "Channels: Favourites"));
+    CHECK(shows(*tv.shell.application, "\xE2\x99\xA5 Playfin Sport"));
+    CHECK_FALSE(shows(*tv.shell.application, "Playfin Info"));
+    ui::View* favourite = named(*tv.shell.application->top(), "Playfin Sport");
+    REQUIRE(favourite != nullptr);
+    REQUIRE(tv.shell.application->focus().focus(favourite));
+    tv.shell.press(Action::Confirm);  // watched: it becomes the most recent
+    tv.shell.frames(5);
+    REQUIRE_FALSE(tv.shell.session.settings().recentChannels.empty());
+    CHECK(tv.shell.session.settings().recentChannels.front() == "b70fcc93046e175d801feabfe8d97acd");
+    tv.shell.press(Action::Back);
+}

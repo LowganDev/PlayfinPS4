@@ -211,5 +211,19 @@
   "shell.search.filter_hint": "Filtr",
   "music.genres": "Žánry",
   "music.songs": "Skladby",
-  "music.next_tab": "Další karta"
+  "music.next_tab": "Další karta",
+  "livetv.search": "Najít kanál",
+  "livetv.filter": "Kanály: {0}  ·  L2 / R2 pro změnu",
+  "livetv.filter.all": "Všechny",
+  "livetv.filter.favorites": "Oblíbené",
+  "livetv.filter.recent": "Nedávno sledované",
+  "livetv.filter.movies": "Filmy",
+  "livetv.filter.sports": "Sport",
+  "livetv.filter.news": "Zprávy",
+  "livetv.filter.kids": "Děti",
+  "livetv.filter.radio": "Rádia",
+  "livetv.favorite": "Oblíbená",
+  "livetv.favorite_added": "Přidáno k oblíbeným.",
+  "livetv.favorite_removed": "Odebráno z oblíbených.",
+  "livetv.no_channel": "Žádný kanál."
 }

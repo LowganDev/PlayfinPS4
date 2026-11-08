@@ -57,6 +57,11 @@ Settings loadSettings(const std::string& path) {
     if (fit == "fit" || fit == "fill" || fit == "stretch") {
         settings.pictureFit = fit;
     }
+    for (const std::string& id : jellyfin::json::strings(root, "recentChannels")) {
+        if (settings.recentChannels.size() < 8 && !id.empty() && id.size() <= 64) {
+            settings.recentChannels.push_back(id);
+        }
+    }
     for (const std::string& id : jellyfin::json::strings(root, "libraryOrder")) {
         if (settings.libraryOrder.size() < 64 && !id.empty() && id.size() <= 64) {
             settings.libraryOrder.push_back(id);
@@ -82,6 +87,11 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     writer.key("volume").value(settings.volume);
     writer.key("pictureFit").value(settings.pictureFit);
     writer.key("pictureSize").value(settings.pictureSize);
+    writer.key("recentChannels").array();
+    for (const std::string& id : settings.recentChannels) {
+        writer.value(id);
+    }
+    writer.end();
     writer.key("libraryOrder").array();
     for (const std::string& id : settings.libraryOrder) {
         writer.value(id);

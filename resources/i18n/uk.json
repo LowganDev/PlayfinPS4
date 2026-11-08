@@ -213,5 +213,19 @@
   "shell.search.filter_hint": "Фільтр",
   "music.genres": "Жанри",
   "music.songs": "Треки",
-  "music.next_tab": "Наступна вкладка"
+  "music.next_tab": "Наступна вкладка",
+  "livetv.search": "Знайти канал",
+  "livetv.filter": "Канали: {0}  ·  L2 / R2 — змінити",
+  "livetv.filter.all": "Усі",
+  "livetv.filter.favorites": "Улюблені",
+  "livetv.filter.recent": "Нещодавні",
+  "livetv.filter.movies": "Фільми",
+  "livetv.filter.sports": "Спорт",
+  "livetv.filter.news": "Новини",
+  "livetv.filter.kids": "Дітям",
+  "livetv.filter.radio": "Радіо",
+  "livetv.favorite": "До улюблених",
+  "livetv.favorite_added": "Додано до улюблених.",
+  "livetv.favorite_removed": "Вилучено з улюблених.",
+  "livetv.no_channel": "Тут немає каналів."
 }

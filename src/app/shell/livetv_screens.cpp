@@ -1,6 +1,7 @@
 #include <nanovg.h>
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -126,6 +127,16 @@ public:
         nowButton_ = bar->add<ui::Button>(ui::tr("livetv.now"), [this] { show(Mode::Now); });
         guideButton_ = bar->add<ui::Button>(ui::tr("livetv.guide"), [this] { show(Mode::Guide); });
         recordingsButton_ = bar->add<ui::Button>(ui::tr("livetv.recordings"), [this] { show(Mode::Recordings); });
+        searchButton_ = bar->add<ui::Button>(ui::tr("livetv.search"), [this] { searchChannel(); });
+        filterLine_ = page->add<ui::Label>("", bodyStrong());
+        filterLine_->color = ui::theme().textSecondary;
+        // L2 / R2: the channels shown (all, favourites, recent, a kind of programme, radios)
+        bind(platform::Action::L2, "", [this] { return stepFilter(-1); });
+        bind(platform::Action::R2, "", [this] { return stepFilter(1); });  // the filter line says it
+        bind(platform::Action::Touchpad, "", [this] {
+            searchChannel();
+            return true;
+        });
         status_ = page->add<ui::Label>(ui::tr("shell.loading"), bodyText());
         status_->color = ui::theme().textSecondary;
         area_ = page->add<ui::Box>(ui::Axis::Column);
@@ -146,6 +157,85 @@ private:
         nowButton_->setPrimary(mode_ == Mode::Now);
         guideButton_->setPrimary(mode_ == Mode::Guide);
         recordingsButton_->setPrimary(mode_ == Mode::Recordings);
+        const bool channels = mode_ != Mode::Recordings;
+        searchButton_->visible = channels;
+        filterLine_->visible = channels;
+        static const char* const kNames[] = {"livetv.filter.all",    "livetv.filter.favorites", "livetv.filter.recent",
+                                             "livetv.filter.movies", "livetv.filter.sports",    "livetv.filter.news",
+                                             "livetv.filter.kids",   "livetv.filter.radio"};
+        std::string line = ui::tr("livetv.filter", {ui::tr(kNames[static_cast<int>(filter_)])});
+        if (!search_.empty()) {
+            line += " \xC2\xB7 \xE2\x80\x9C" + search_ + "\xE2\x80\x9D";
+        }
+        filterLine_->setText(line);
+    }
+
+    // ---- which channels: a filter (L2 / R2) and a search
+
+    std::vector<jellyfin::Item> visibleChannels() const {
+        return filterChannels(channels_, filter_, session_.settings().recentChannels, search_);
+    }
+
+    bool stepFilter(int step) {
+        if (mode_ == Mode::Recordings) {
+            return false;
+        }
+        const auto filters = channelFilters(channels_, session_.settings().recentChannels);
+        int index = 0;
+        for (std::size_t i = 0; i < filters.size(); ++i) {
+            index = filters[i] == filter_ ? static_cast<int>(i) : index;
+        }
+        const int count = static_cast<int>(filters.size());
+        filter_ = filters[static_cast<std::size_t>(((index + step) % count + count) % count)];
+        show(mode_);
+        return true;
+    }
+
+    void searchChannel() {
+        if (mode_ == Mode::Recordings) {
+            return;
+        }
+        platform::TextInputRequest request;
+        request.title = ui::tr("livetv.search");
+        request.initial = search_;
+        request.maxLength = 40;
+        const core::CancelToken token = token_;
+        ui::Application::current()->requestText(request, [this, token](std::optional<std::string> text) {
+            if (token.cancelled() || !text) {
+                return;
+            }
+            search_ = *text;
+            show(mode_);
+        });
+    }
+
+    // △ on a channel: a favourite or no longer
+    void toggleFavorite(const std::string& channelId) {
+        jellyfin::Item* channel = nullptr;
+        for (auto& candidate : channels_) {
+            channel = candidate.id == channelId ? &candidate : channel;
+        }
+        if (channel == nullptr) {
+            return;
+        }
+        const auto client = session_.client();
+        const bool favorite = !channel->userData.favorite;
+        const core::CancelToken token = token_;
+        run<core::Result<core::Unit>>(
+            [client, channelId, favorite, token] { return client->setFavorite(channelId, favorite, token); },
+            [this, channelId, favorite](core::Result<core::Unit> done) {
+                if (!done.ok()) {
+                    ui::Application::current()->toast(errorText(done.error()));
+                    return;
+                }
+                for (auto& candidate : channels_) {
+                    if (candidate.id == channelId) {
+                        candidate.userData.favorite = favorite;
+                    }
+                }
+                ui::Application::current()->toast(ui::tr(favorite ? "livetv.favorite_added" : "livetv.favorite_removed"));
+                later([this] { show(mode_); });
+            });
     }
 
     void loadChannels() {
@@ -194,6 +284,8 @@ private:
     }
 
     void watch(const jellyfin::Item& channel) {
+        addRecentChannel(session_.settings().recentChannels, channel.id);
+        session_.saveSettings();
         ui::Application::current()->push(makePlayer(session_, channel, 0));
     }
 
@@ -208,9 +300,19 @@ private:
         list->padding = {ui::theme().spacingS, 0, 120, 0};
         const std::int64_t now = session_.now();
         ui::View* first = nullptr;
-        for (const auto& channel : channels_) {
+        const std::vector<jellyfin::Item> shown = visibleChannels();
+        if (shown.empty()) {
+            status_->setText(ui::tr("livetv.no_channel"));
+            status_->visible = true;
+        }
+        for (const auto& channel : shown) {
             auto* row = list->add<Row>([this, channel] { watch(channel); });
             row->name = channel.name;
+            const std::string channelId = channel.id;
+            row->bind(platform::Action::Options, ui::tr("livetv.favorite"), [this, channelId] {
+                toggleFavorite(channelId);
+                return true;
+            });
             row->resting = ui::theme().control;
             row->padding = ui::Insets::all(ui::theme().spacingM);
             auto* logo = row->add<ui::ImageView>();
@@ -223,7 +325,8 @@ private:
             auto* text = row->add<ui::Box>(ui::Axis::Column);
             text->width = ui::SizeSpec::fill();
             text->gap = ui::theme().spacingS;
-            row->addText(text->add<ui::Label>(channel.name, titleText(ui::FontWeight::SemiBold)),
+            row->addText(text->add<ui::Label>((channel.userData.favorite ? "\xE2\x99\xA5 " : "") + channel.name,
+                                              titleText(ui::FontWeight::SemiBold)),
                          false);
             if (const jellyfin::Item* program = channel.currentProgram.get()) {
                 const int offset = session_.utcOffsetMinutes(program->startUtc);
@@ -261,7 +364,7 @@ private:
         channelList->padding = {ui::theme().spacingS, 0, 120, 0};
         ui::Box* left = channelList.get();
         channelScroll->setContent(std::move(channelList));
-        for (const auto& channel : channels_) {
+        for (const auto& channel : visibleChannels()) {
             auto* row = left->add<Row>([this, channel] { watch(channel); });
             row->name = "channel " + channel.name;
             row->resting = ui::theme().control;
@@ -507,6 +610,10 @@ private:
     ui::Button* nowButton_;
     ui::Button* guideButton_;
     ui::Button* recordingsButton_;
+    ui::Button* searchButton_ = nullptr;
+    ui::Label* filterLine_ = nullptr;
+    ChannelFilter filter_ = ChannelFilter::All;
+    std::string search_;
     ui::Label* status_;
     ui::Box* area_;
     ui::Box* programs_ = nullptr;

@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "Filtrer",
   "music.genres": "Genres",
   "music.songs": "Morceaux",
-  "music.next_tab": "Onglet suivant"
+  "music.next_tab": "Onglet suivant",
+  "livetv.search": "Rechercher une chaîne",
+  "livetv.filter": "Chaînes : {0}  ·  L2 / R2 pour changer",
+  "livetv.filter.all": "Toutes",
+  "livetv.filter.favorites": "Favorites",
+  "livetv.filter.recent": "Regardées récemment",
+  "livetv.filter.movies": "Films",
+  "livetv.filter.sports": "Sport",
+  "livetv.filter.news": "Infos",
+  "livetv.filter.kids": "Jeunesse",
+  "livetv.filter.radio": "Radios",
+  "livetv.favorite": "Favorite",
+  "livetv.favorite_added": "Ajoutée aux favorites.",
+  "livetv.favorite_removed": "Retirée des favorites.",
+  "livetv.no_channel": "Aucune chaîne ici."
 }

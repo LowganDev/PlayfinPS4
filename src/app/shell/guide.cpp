@@ -1,5 +1,6 @@
 #include "app/shell/guide.hpp"
 
+#include <algorithm>
 #include <cstdio>
 
 #include "ui/i18n.hpp"
@@ -73,6 +74,95 @@ const jellyfin::Item* onNow(const std::vector<jellyfin::Item>& programs, std::in
         }
     }
     return nullptr;
+}
+
+namespace {
+
+bool matches(const jellyfin::Item& channel, ChannelFilter filter) {
+    const jellyfin::Item* program = channel.currentProgram.get();
+    switch (filter) {
+    case ChannelFilter::All:
+    case ChannelFilter::Recent:
+        return true;
+    case ChannelFilter::Favorites:
+        return channel.userData.favorite;
+    case ChannelFilter::Movies:
+        return program != nullptr && program->isMovie;
+    case ChannelFilter::Sports:
+        return program != nullptr && program->isSports;
+    case ChannelFilter::News:
+        return program != nullptr && program->isNews;
+    case ChannelFilter::Kids:
+        return program != nullptr && program->isKids;
+    case ChannelFilter::Radio:
+        return channel.channelType == "Radio";
+    }
+    return false;
+}
+
+std::string lowerAscii(std::string text) {
+    for (char& c : text) {
+        if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c - 'A' + 'a');
+        }
+    }
+    return text;
+}
+
+}  // namespace
+
+std::vector<jellyfin::Item> filterChannels(const std::vector<jellyfin::Item>& channels, ChannelFilter filter,
+                                           const std::vector<std::string>& recentIds, const std::string& search) {
+    std::vector<jellyfin::Item> out;
+    if (filter == ChannelFilter::Recent) {
+        for (const std::string& id : recentIds) {
+            for (const jellyfin::Item& channel : channels) {
+                if (channel.id == id) {
+                    out.push_back(channel);
+                }
+            }
+        }
+    } else {
+        for (const jellyfin::Item& channel : channels) {
+            if (matches(channel, filter)) {
+                out.push_back(channel);
+            }
+        }
+    }
+    if (search.empty()) {
+        return out;
+    }
+    const std::string wanted = lowerAscii(search);
+    std::vector<jellyfin::Item> found;
+    for (jellyfin::Item& channel : out) {
+        if (lowerAscii(channel.name).find(wanted) != std::string::npos || channel.channelNumber == search) {
+            found.push_back(std::move(channel));
+        }
+    }
+    return found;
+}
+
+std::vector<ChannelFilter> channelFilters(const std::vector<jellyfin::Item>& channels,
+                                          const std::vector<std::string>& recentIds) {
+    std::vector<ChannelFilter> filters{ChannelFilter::All};
+    for (ChannelFilter filter : {ChannelFilter::Favorites, ChannelFilter::Recent, ChannelFilter::Movies,
+                                 ChannelFilter::Sports, ChannelFilter::News, ChannelFilter::Kids, ChannelFilter::Radio}) {
+        if (filter == ChannelFilter::Favorites || !filterChannels(channels, filter, recentIds, {}).empty()) {
+            filters.push_back(filter);  // Favorites always: △ makes one
+        }
+    }
+    return filters;
+}
+
+void addRecentChannel(std::vector<std::string>& recent, const std::string& id) {
+    if (id.empty()) {
+        return;
+    }
+    recent.erase(std::remove(recent.begin(), recent.end(), id), recent.end());
+    recent.insert(recent.begin(), id);
+    if (recent.size() > 8) {
+        recent.resize(8);
+    }
 }
 
 }  // namespace playfin::app

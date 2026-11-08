@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "필터",
   "music.genres": "장르",
   "music.songs": "노래",
-  "music.next_tab": "다음 탭"
+  "music.next_tab": "다음 탭",
+  "livetv.search": "채널 찾기",
+  "livetv.filter": "채널: {0}  ·  L2 / R2로 변경",
+  "livetv.filter.all": "전체",
+  "livetv.filter.favorites": "즐겨찾기",
+  "livetv.filter.recent": "최근 시청",
+  "livetv.filter.movies": "영화",
+  "livetv.filter.sports": "스포츠",
+  "livetv.filter.news": "뉴스",
+  "livetv.filter.kids": "어린이",
+  "livetv.filter.radio": "라디오",
+  "livetv.favorite": "즐겨찾기",
+  "livetv.favorite_added": "즐겨찾기에 추가했습니다.",
+  "livetv.favorite_removed": "즐겨찾기에서 삭제했습니다.",
+  "livetv.no_channel": "채널이 없습니다."
 }

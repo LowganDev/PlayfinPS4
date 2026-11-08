@@ -18,6 +18,7 @@ struct Settings {
     int volume = 100;                     // the player's, 0 to 100
     std::string pictureFit = "fit";       // "fit", "fill" or "stretch"
     int pictureSize = 100;                // percent of the screen the picture may take, 80 to 100
+    std::vector<std::string> recentChannels;  // Live TV channel ids, last watched first, at most 8
     std::vector<std::string> libraryOrder;  // library ids in the order the user chose ("Mes médias", latest rows)
 };
 

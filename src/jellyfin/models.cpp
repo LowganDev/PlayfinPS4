@@ -99,6 +99,11 @@ Item parseItemValue(yyjson_val* value, int depth = 0) {
     item.startUtc = parseUtc(json::string(value, "StartDate"));
     item.endUtc = parseUtc(json::string(value, "EndDate"));
     item.timerId = json::string(value, "TimerId");
+    item.channelType = json::string(value, "ChannelType");
+    item.isMovie = json::boolean(value, "IsMovie");
+    item.isSports = json::boolean(value, "IsSports");
+    item.isNews = json::boolean(value, "IsNews");
+    item.isKids = json::boolean(value, "IsKids");
     yyjson_val* current = json::object(value, "CurrentProgram");
     if (current != nullptr && depth == 0) {
         item.currentProgram = std::make_shared<const Item>(parseItemValue(current, depth + 1));

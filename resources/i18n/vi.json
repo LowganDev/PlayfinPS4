@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "Lọc",
   "music.genres": "Thể loại",
   "music.songs": "Bài hát",
-  "music.next_tab": "Thẻ tiếp theo"
+  "music.next_tab": "Thẻ tiếp theo",
+  "livetv.search": "Tìm kênh",
+  "livetv.filter": "Kênh: {0}  ·  L2 / R2 để đổi",
+  "livetv.filter.all": "Tất cả",
+  "livetv.filter.favorites": "Yêu thích",
+  "livetv.filter.recent": "Xem gần đây",
+  "livetv.filter.movies": "Phim",
+  "livetv.filter.sports": "Thể thao",
+  "livetv.filter.news": "Tin tức",
+  "livetv.filter.kids": "Thiếu nhi",
+  "livetv.filter.radio": "Radio",
+  "livetv.favorite": "Yêu thích",
+  "livetv.favorite_added": "Đã thêm vào yêu thích.",
+  "livetv.favorite_removed": "Đã bỏ khỏi yêu thích.",
+  "livetv.no_channel": "Không có kênh nào."
 }

@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "Filtrele",
   "music.genres": "Türler",
   "music.songs": "Şarkılar",
-  "music.next_tab": "Sonraki sekme"
+  "music.next_tab": "Sonraki sekme",
+  "livetv.search": "Kanal bul",
+  "livetv.filter": "Kanallar: {0}  ·  Değiştirmek için L2 / R2",
+  "livetv.filter.all": "Tümü",
+  "livetv.filter.favorites": "Favoriler",
+  "livetv.filter.recent": "Son izlenenler",
+  "livetv.filter.movies": "Filmler",
+  "livetv.filter.sports": "Spor",
+  "livetv.filter.news": "Haberler",
+  "livetv.filter.kids": "Çocuk",
+  "livetv.filter.radio": "Radyo",
+  "livetv.favorite": "Favori",
+  "livetv.favorite_added": "Favorilere eklendi.",
+  "livetv.favorite_removed": "Favorilerden çıkarıldı.",
+  "livetv.no_channel": "Burada kanal yok."
 }

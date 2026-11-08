@@ -139,6 +139,12 @@ struct Item {
     std::int64_t startUtc = 0;  // programmes: seconds since 1970 (UTC), 0 when unknown
     std::int64_t endUtc = 0;
     std::string timerId;  // a programme scheduled to be recorded
+    std::string channelType;  // a channel: "TV" or "Radio"
+    // a programme's kind, as the guide gives it
+    bool isMovie = false;
+    bool isSports = false;
+    bool isNews = false;
+    bool isKids = false;
     std::shared_ptr<const Item> currentProgram;  // channels listed with their programme on now
     // a single item's details (/Items/{id}): its people and versions
     std::vector<Person> people;

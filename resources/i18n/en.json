@@ -209,5 +209,19 @@
   "shell.search.filter_hint": "Filter",
   "music.genres": "Genres",
   "music.songs": "Songs",
-  "music.next_tab": "Next tab"
+  "music.next_tab": "Next tab",
+  "livetv.search": "Find a channel",
+  "livetv.filter": "Channels: {0}  ·  L2 / R2 to change",
+  "livetv.filter.all": "All",
+  "livetv.filter.favorites": "Favourites",
+  "livetv.filter.recent": "Recently watched",
+  "livetv.filter.movies": "Films",
+  "livetv.filter.sports": "Sport",
+  "livetv.filter.news": "News",
+  "livetv.filter.kids": "Kids",
+  "livetv.filter.radio": "Radio",
+  "livetv.favorite": "Favourite",
+  "livetv.favorite_added": "Added to your favourites.",
+  "livetv.favorite_removed": "Removed from your favourites.",
+  "livetv.no_channel": "No channel here."
 }

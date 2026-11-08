@@ -61,3 +61,39 @@ TEST_CASE("the programme on now and its progress") {
     CHECK(app::progress(programs[2], now) == doctest::Approx(0.0));
     CHECK(app::onNow(programs, jellyfin::parseUtc("2026-10-16T22:00:00Z")) == nullptr);
 }
+
+TEST_CASE("channels: favourites, recently watched in their order, a kind of programme, radios, a search") {
+    std::vector<jellyfin::Item> channels(4);
+    for (int i = 0; i < 4; ++i) {
+        channels[static_cast<std::size_t>(i)].id = "c" + std::to_string(i);
+        channels[static_cast<std::size_t>(i)].channelNumber = std::to_string(i + 1);
+        channels[static_cast<std::size_t>(i)].channelType = "TV";
+    }
+    channels[0].name = "Info";
+    channels[1].name = "Sport";
+    channels[2].name = "Cinéma";
+    channels[3].name = "Radio Jazz";
+    channels[3].channelType = "Radio";
+    channels[1].userData.favorite = true;
+    auto film = std::make_shared<jellyfin::Item>();
+    film->isMovie = true;
+    channels[2].currentProgram = film;
+    using F = app::ChannelFilter;
+    CHECK(app::filterChannels(channels, F::All, {}, "").size() == 4);
+    const auto favourites = app::filterChannels(channels, F::Favorites, {}, "");
+    REQUIRE(favourites.size() == 1);
+    CHECK(favourites[0].name == "Sport");
+    const auto recent = app::filterChannels(channels, F::Recent, {"c3", "c0"}, "");
+    REQUIRE(recent.size() == 2);
+    CHECK(recent[0].name == "Radio Jazz");
+    CHECK(recent[1].name == "Info");
+    CHECK(app::filterChannels(channels, F::Movies, {}, "").front().name == "Cinéma");
+    CHECK(app::filterChannels(channels, F::Radio, {}, "").front().name == "Radio Jazz");
+    CHECK(app::filterChannels(channels, F::All, {}, "jazz").front().name == "Radio Jazz");
+    CHECK(app::filterChannels(channels, F::All, {}, "2").front().name == "Sport");  // by number
+    const auto offered = app::channelFilters(channels, {});
+    CHECK(offered == std::vector<F>{F::All, F::Favorites, F::Movies, F::Radio});
+    std::vector<std::string> ids = {"a", "b"};
+    app::addRecentChannel(ids, "b");
+    CHECK(ids == std::vector<std::string>{"b", "a"});
+}
