@@ -15,6 +15,9 @@ enum class KeyboardStatus { Idle, Running, Done, Cancelled, Failed };
 
 // PS4: the system keyboard dialog. Linux: not available (the UI edits with the PC keyboard).
 bool systemKeyboardAvailable();
+
+// The PS4 account using the app (its user id as text); empty where there is none (Linux).
+std::string consoleUserId();
 bool openSystemKeyboard(const TextInputRequest& request);
 // Polled every frame while Running; Done fills `text` (UTF-8).
 KeyboardStatus pollSystemKeyboard(std::string& text);

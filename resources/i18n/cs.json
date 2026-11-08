@@ -244,5 +244,8 @@
   "downloads.season_added": "Epizody série se stahují.",
   "downloads.download": "Stáhnout",
   "downloads.downloaded": "✓ Staženo",
-  "downloads.retry": "Zkusit stažení znovu"
+  "downloads.retry": "Zkusit stažení znovu",
+  "settings.share": "Sdílet toto přihlášení s ostatními účty PS4",
+  "settings.on": "Zapnuto",
+  "settings.off": "Vypnuto"
 }

@@ -242,5 +242,8 @@
   "downloads.season_added": "Die Folgen der Staffel werden geladen.",
   "downloads.download": "Herunterladen",
   "downloads.downloaded": "✓ Geladen",
-  "downloads.retry": "Download erneut versuchen"
+  "downloads.retry": "Download erneut versuchen",
+  "settings.share": "Diese Anmeldung mit den anderen PS4-Konten teilen",
+  "settings.on": "Ein",
+  "settings.off": "Aus"
 }

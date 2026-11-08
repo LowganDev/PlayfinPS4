@@ -242,5 +242,8 @@
   "downloads.season_added": "Sezonun bölümleri indiriliyor.",
   "downloads.download": "İndir",
   "downloads.downloaded": "✓ İndirildi",
-  "downloads.retry": "İndirmeyi yeniden dene"
+  "downloads.retry": "İndirmeyi yeniden dene",
+  "settings.share": "Bu oturumu diğer PS4 hesaplarıyla paylaş",
+  "settings.on": "Açık",
+  "settings.off": "Kapalı"
 }

@@ -242,5 +242,8 @@
   "downloads.season_added": "Os episódios da temporada estão sendo baixados.",
   "downloads.download": "Baixar",
   "downloads.downloaded": "✓ Baixado",
-  "downloads.retry": "Tentar o download de novo"
+  "downloads.retry": "Tentar o download de novo",
+  "settings.share": "Compartilhar este login com as outras contas do PS4",
+  "settings.on": "Sim",
+  "settings.off": "Não"
 }

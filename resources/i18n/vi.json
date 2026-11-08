@@ -242,5 +242,8 @@
   "downloads.season_added": "Đang tải các tập của mùa.",
   "downloads.download": "Tải xuống",
   "downloads.downloaded": "✓ Đã tải",
-  "downloads.retry": "Thử tải lại"
+  "downloads.retry": "Thử tải lại",
+  "settings.share": "Chia sẻ đăng nhập này với các tài khoản PS4 khác",
+  "settings.on": "Bật",
+  "settings.off": "Tắt"
 }

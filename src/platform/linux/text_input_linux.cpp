@@ -3,6 +3,8 @@
 namespace playfin::platform {
 
 bool systemKeyboardAvailable() { return false; }
+
+std::string consoleUserId() { return {}; }
 bool openSystemKeyboard(const TextInputRequest& request) {
     (void)request;
     return false;

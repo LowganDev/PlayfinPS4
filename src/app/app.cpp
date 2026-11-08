@@ -24,6 +24,7 @@
 #include "core/version.hpp"
 #include "net/http.hpp"
 #include "platform/platform.hpp"
+#include "platform/text_input.hpp"
 #include "render/canvas.hpp"
 #include "render/composite.hpp"
 #include "render/nvg_sw.hpp"
@@ -257,6 +258,7 @@ int run(const Options& options) {
             session.fixedUtcOffset = options.utcOffsetMinutes;
         }
         session.discovery = options.discovery;
+        session.consoleUser = platform::consoleUserId();  // each PS4 account starts on its own Jellyfin user
         if (!storePath || !session.load().ok()) {
             PF_LOG_WARN("servers.json unavailable: servers will not be remembered");
         }

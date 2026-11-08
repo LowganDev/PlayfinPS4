@@ -56,6 +56,15 @@ bool loadModules() {
 
 bool systemKeyboardAvailable() { return true; }
 
+std::string consoleUserId() {
+    sceUserServiceInitialize(nullptr);  // "already initialised" is fine
+    int32_t user = -1;
+    if (sceUserServiceGetInitialUser(&user) < 0 || user < 0) {
+        return {};
+    }
+    return std::to_string(user);
+}
+
 bool openSystemKeyboard(const TextInputRequest& request) {
     if (gRunning || !loadModules()) {
         return false;

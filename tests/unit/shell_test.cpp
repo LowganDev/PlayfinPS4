@@ -140,6 +140,65 @@ TEST_CASE("the session signs in, saves the token and starts at home next time") 
     CHECK(app::startTarget(third) == app::StartTarget::Servers);
 }
 
+TEST_CASE("per PS4 account: each account starts on its own user; a shared sign-in for the others") {
+    test::FakeJellyfin server;
+    TempDir dir;
+    const std::string store = dir.path + "/servers.json";
+    {
+        app::AppSession session(testHttp(), store);
+        REQUIRE(session.load().ok());
+        session.consoleUser = "1001";
+        auto& stored = jellyfin::upsertServer(session.data(), "f1e2d3c4b5a6");
+        jellyfin::rememberUrl(stored, server.baseUrl());
+        session.useServer("f1e2d3c4b5a6", server.baseUrl());
+        const auto auth = session.client()->signIn("demo", "secret");
+        REQUIRE(auth.ok());
+        session.signedIn(auth.value());  // the account 1001 is "demo"
+    }
+    {
+        app::AppSession second(testHttp(), store);  // another PS4 account, never signed in
+        REQUIRE(second.load().ok());
+        second.consoleUser = "1002";
+        CHECK(app::startTarget(second) == app::StartTarget::Servers);
+    }
+    {
+        app::AppSession first(testHttp(), store);  // the first account again
+        REQUIRE(first.load().ok());
+        first.consoleUser = "1001";
+        CHECK(app::startTarget(first) == app::StartTarget::Home);
+        first.shareSignIn(true);  // lent to the accounts that have none
+        CHECK(first.signInShared());
+    }
+    app::AppSession second(testHttp(), store);
+    REQUIRE(second.load().ok());
+    second.consoleUser = "1002";
+    CHECK(app::startTarget(second) == app::StartTarget::Home);
+    REQUIRE(second.client());
+    CHECK(second.client()->session().token == "tok-demo");
+}
+
+TEST_CASE("per PS4 account: an installation from before keeps its sign-in for the account that starts it") {
+    test::FakeJellyfin server;
+    TempDir dir;
+    const std::string store = dir.path + "/servers.json";
+    {
+        app::AppSession session(testHttp(), store);  // 1.x: no accounts known
+        REQUIRE(session.load().ok());
+        auto& stored = jellyfin::upsertServer(session.data(), "f1e2d3c4b5a6");
+        jellyfin::rememberUrl(stored, server.baseUrl());
+        session.useServer("f1e2d3c4b5a6", server.baseUrl());
+        const auto auth = session.client()->signIn("demo", "secret");
+        REQUIRE(auth.ok());
+        session.signedIn(auth.value());
+    }
+    app::AppSession upgraded(testHttp(), store);
+    REQUIRE(upgraded.load().ok());
+    upgraded.consoleUser = "1001";
+    CHECK(app::startTarget(upgraded) == app::StartTarget::Home);
+    REQUIRE(upgraded.data().profiles.size() == 1);
+    CHECK(upgraded.data().profiles[0].consoleUser == "1001");
+}
+
 TEST_CASE("choosing a saved user on another server is where the next start goes") {
     test::FakeJellyfin server;
     TempDir dir;

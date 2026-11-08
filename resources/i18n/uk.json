@@ -246,5 +246,8 @@
   "downloads.season_added": "Епізоди сезону завантажуються.",
   "downloads.download": "Завантажити",
   "downloads.downloaded": "✓ Завантажено",
-  "downloads.retry": "Повторити завантаження"
+  "downloads.retry": "Повторити завантаження",
+  "settings.share": "Ділитися цим входом з іншими обліковими записами PS4",
+  "settings.on": "Увімк.",
+  "settings.off": "Вимк."
 }

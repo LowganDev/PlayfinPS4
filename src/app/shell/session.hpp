@@ -19,6 +19,9 @@ namespace playfin::app {
 
 class MusicPlayer;
 class Downloads;
+class AppSession;
+enum class StartTarget;
+StartTarget startTarget(AppSession& session);
 
 // What the shell screens share: the HTTP client, servers.json, settings.json and the client of the current
 // server/user.
@@ -55,6 +58,12 @@ public:
     jellyfin::StoredServer* server();
     std::shared_ptr<const jellyfin::Client> client() const;
 
+    // The PS4 account using the app (empty: not known, one profile for everyone, as before 2.0).
+    std::string consoleUser;
+    // Lends the current sign-in to the PS4 accounts that have none of their own (or takes it back); saved.
+    void shareSignIn(bool share);
+    bool signInShared() const;
+
     void signedIn(const jellyfin::AuthResult& auth);
     void useStoredUser(const jellyfin::StoredUser& user);
     void forgetToken();
@@ -88,6 +97,9 @@ public:
     bool discovery = true;
 
 private:
+    friend StartTarget startTarget(AppSession& session);
+    // the current server and user become this PS4 account's
+    void rememberProfile();
     jellyfin::Session sessionFor(const std::string& baseUrl) const;
     void stopMusic();
     void setClient(std::shared_ptr<const jellyfin::Client> client);

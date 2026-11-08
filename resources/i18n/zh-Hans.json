@@ -242,5 +242,8 @@
   "downloads.season_added": "正在下载本季剧集。",
   "downloads.download": "下载",
   "downloads.downloaded": "✓ 已下载",
-  "downloads.retry": "重试下载"
+  "downloads.retry": "重试下载",
+  "settings.share": "与其他 PS4 账户共享此登录",
+  "settings.on": "开",
+  "settings.off": "关"
 }

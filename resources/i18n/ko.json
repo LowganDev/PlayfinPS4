@@ -242,5 +242,8 @@
   "downloads.season_added": "시즌 에피소드를 다운로드하는 중입니다.",
   "downloads.download": "다운로드",
   "downloads.downloaded": "✓ 다운로드됨",
-  "downloads.retry": "다운로드 다시 시도"
+  "downloads.retry": "다운로드 다시 시도",
+  "settings.share": "이 로그인을 다른 PS4 계정과 공유",
+  "settings.on": "켜기",
+  "settings.off": "끄기"
 }

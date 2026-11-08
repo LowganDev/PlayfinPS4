@@ -242,5 +242,8 @@
   "downloads.season_added": "正在下載本季集數。",
   "downloads.download": "下載",
   "downloads.downloaded": "✓ 已下載",
-  "downloads.retry": "重試下載"
+  "downloads.retry": "重試下載",
+  "settings.share": "與其他 PS4 帳戶共用此登入",
+  "settings.on": "開",
+  "settings.off": "關"
 }

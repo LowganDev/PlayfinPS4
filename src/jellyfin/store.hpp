@@ -22,11 +22,22 @@ struct StoredServer {
     std::vector<StoredUser> users;
 };
 
+// The Jellyfin user a PS4 account starts on.
+struct ConsoleProfile {
+    std::string consoleUser;  // the console's user id
+    std::string serverId;
+    std::string userId;
+};
+
 struct StoreData {
     std::string deviceId;
     std::string lastServerId;
     std::string lastUserId;
     std::vector<StoredServer> servers;
+    std::vector<ConsoleProfile> profiles;
+    // a sign-in lent to the PS4 accounts that have none of their own (empty: none)
+    std::string sharedServerId;
+    std::string sharedUserId;
 };
 
 // Random UUID v4 (unique per installation, not a secret).

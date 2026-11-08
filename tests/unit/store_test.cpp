@@ -68,9 +68,18 @@ TEST_CASE("servers, pins and users survive a round trip") {
     StoredUser& user = upsertUser(server, "u1");
     user.name = "demo";
     user.token = "tok";
+    data.profiles.push_back({"1001", "srv", "u1"});
+    data.sharedServerId = "srv";
+    data.sharedUserId = "u1";
     REQUIRE(store.save(data).ok());
     const auto loaded = store.load();
     REQUIRE(loaded.ok());
+    REQUIRE(loaded.value().profiles.size() == 1);
+    CHECK(loaded.value().profiles[0].consoleUser == "1001");
+    CHECK(loaded.value().profiles[0].serverId == "srv");
+    CHECK(loaded.value().profiles[0].userId == "u1");
+    CHECK(loaded.value().sharedServerId == "srv");
+    CHECK(loaded.value().sharedUserId == "u1");
     REQUIRE(loaded.value().servers.size() == 1);
     const StoredServer& back = loaded.value().servers[0];
     CHECK(back.name == "Home \"NAS\"\nmédia");

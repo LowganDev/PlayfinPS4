@@ -29,6 +29,19 @@ bool parseData(std::string_view text, StoreData& data) {
     data.deviceId = json::string(root, "deviceId");
     data.lastServerId = json::string(root, "lastServerId");
     data.lastUserId = json::string(root, "lastUserId");
+    data.sharedServerId = json::string(root, "sharedServerId");
+    data.sharedUserId = json::string(root, "sharedUserId");
+    if (yyjson_val* profiles = json::array(root, "profiles")) {
+        yyjson_arr_iter iter = yyjson_arr_iter_with(profiles);
+        yyjson_val* item = nullptr;
+        while ((item = yyjson_arr_iter_next(&iter)) != nullptr && data.profiles.size() < 32) {
+            ConsoleProfile profile{json::string(item, "consoleUser"), json::string(item, "serverId"),
+                                   json::string(item, "userId")};
+            if (!profile.consoleUser.empty() && !profile.serverId.empty()) {
+                data.profiles.push_back(std::move(profile));
+            }
+        }
+    }
     yyjson_val* servers = json::array(root, "servers");
     if (servers == nullptr) {
         return true;
@@ -76,6 +89,15 @@ std::string serialize(const StoreData& data) {
     addString(doc, root, "deviceId", data.deviceId);
     addString(doc, root, "lastServerId", data.lastServerId);
     addString(doc, root, "lastUserId", data.lastUserId);
+    addString(doc, root, "sharedServerId", data.sharedServerId);
+    addString(doc, root, "sharedUserId", data.sharedUserId);
+    yyjson_mut_val* profiles = yyjson_mut_obj_add_arr(doc, root, "profiles");
+    for (const ConsoleProfile& profile : data.profiles) {
+        yyjson_mut_val* object = yyjson_mut_arr_add_obj(doc, profiles);
+        addString(doc, object, "consoleUser", profile.consoleUser);
+        addString(doc, object, "serverId", profile.serverId);
+        addString(doc, object, "userId", profile.userId);
+    }
     yyjson_mut_val* servers = yyjson_mut_obj_add_arr(doc, root, "servers");
     for (const StoredServer& server : data.servers) {
         yyjson_mut_val* object = yyjson_mut_arr_add_obj(doc, servers);

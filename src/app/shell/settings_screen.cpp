@@ -99,6 +99,13 @@ public:
             ui::Application::current()->replace(makeServers(*shared));
         });
         column->add<ui::ValueRow>(ui::tr("shell.menu.sign_out"), "", [shared] { signOut(*shared); });
+        if (!session_.consoleUser.empty()) {  // the PS4's other accounts may start signed in as this user
+            share_ = column->add<ui::ValueRow>(ui::tr("settings.share"), "", [this] {
+                session_.shareSignIn(!session_.signInShared());
+                share_->setValue(ui::tr(session_.signInShared() ? "settings.on" : "settings.off"));
+            });
+            share_->setValue(ui::tr(session_.signInShared() ? "settings.on" : "settings.off"));
+        }
 
         addHeading(*column, ui::tr("settings.about"));
         column->add<ui::ValueRow>(ui::tr("settings.version"), core::version(), nullptr);
@@ -283,6 +290,7 @@ private:
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
     ui::ValueRow* update_ = nullptr;
+    ui::ValueRow* share_ = nullptr;
     bool downloading_ = false;
     ui::ValueRow* server_;
     bool loaded_ = false;

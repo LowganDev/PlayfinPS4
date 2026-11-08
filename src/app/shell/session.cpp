@@ -178,9 +178,35 @@ void AppSession::signedIn(const jellyfin::AuthResult& auth) {
     user.token = auth.token;
     data_.lastServerId = serverId_;
     data_.lastUserId = auth.user.id;
+    rememberProfile();
     save();
     const jellyfin::StoredUser copy = user;  // `user` points into data_.servers
     useStoredUser(copy);
+}
+
+void AppSession::rememberProfile() {
+    if (consoleUser.empty() || data_.lastServerId.empty()) {
+        return;
+    }
+    for (jellyfin::ConsoleProfile& profile : data_.profiles) {
+        if (profile.consoleUser == consoleUser) {
+            profile.serverId = data_.lastServerId;
+            profile.userId = data_.lastUserId;
+            return;
+        }
+    }
+    data_.profiles.push_back({consoleUser, data_.lastServerId, data_.lastUserId});
+}
+
+void AppSession::shareSignIn(bool share) {
+    data_.sharedServerId = share ? data_.lastServerId : std::string();
+    data_.sharedUserId = share ? data_.lastUserId : std::string();
+    save();
+}
+
+bool AppSession::signInShared() const {
+    return !data_.sharedServerId.empty() && data_.sharedServerId == data_.lastServerId &&
+           data_.sharedUserId == data_.lastUserId;
 }
 
 void AppSession::useStoredUser(const jellyfin::StoredUser& user) {
@@ -190,6 +216,7 @@ void AppSession::useStoredUser(const jellyfin::StoredUser& user) {
     session.userId = user.id;
     if (data_.lastUserId != user.id) {  // a saved user chosen: the next start goes there (user ids are per server)
         data_.lastUserId = user.id;
+        rememberProfile();
         save();
     }
     setClient(std::make_shared<const jellyfin::Client>(http_, session));
@@ -231,6 +258,26 @@ core::Result<std::string> AppSession::fetchImage(const std::string& url, const c
 
 StartTarget startTarget(AppSession& session) {
     jellyfin::StoreData& data = session.data();
+    // the PS4 account's own user; the first account of an installation from before 2.0 keeps its sign-in; an
+    // account without one takes the shared sign-in, else chooses
+    if (!session.consoleUser.empty()) {
+        const jellyfin::ConsoleProfile* mine = nullptr;
+        for (const auto& profile : data.profiles) {
+            mine = profile.consoleUser == session.consoleUser ? &profile : mine;
+        }
+        if (mine != nullptr) {
+            data.lastServerId = mine->serverId;
+            data.lastUserId = mine->userId;
+        } else if (data.profiles.empty() && !data.lastUserId.empty()) {
+            session.rememberProfile();
+            session.save();
+        } else if (!data.sharedServerId.empty()) {
+            data.lastServerId = data.sharedServerId;
+            data.lastUserId = data.sharedUserId;
+        } else {
+            return StartTarget::Servers;
+        }
+    }
     jellyfin::StoredServer* server = jellyfin::findServer(data, data.lastServerId);
     if (server == nullptr) {
         return StartTarget::Servers;
