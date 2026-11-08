@@ -200,5 +200,11 @@
   "settings.update.install": "{0} is in /data/pkg. Install it from GoldHEN › Debug Settings › Package Installer, then start Playfin again. Your servers and settings are kept.",
   "settings.update.failed": "The download did not complete. Try again later.",
   "settings.library_order": "Order of the libraries",
-  "settings.library_order.hint": "✕ takes a library, ↑ and ↓ move it, ✕ puts it down. Home follows this order."
+  "settings.library_order.hint": "✕ takes a library, ↑ and ↓ move it, ✕ puts it down. Home follows this order.",
+  "shell.search.people": "People",
+  "shell.search.music": "Music",
+  "shell.search.channels": "Channels",
+  "shell.search.all": "Everything",
+  "shell.search.filter": "Results: {0}  ·  L2 / R2 to change",
+  "shell.search.filter_hint": "Filter"
 }

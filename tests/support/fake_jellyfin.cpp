@@ -86,6 +86,10 @@ void items(const httplib::Request& req, httplib::Response& res) {
     const std::string types = req.get_param_value("includeItemTypes");
     // music (answers recorded on the test server): albums, an artist's albums, playlists, an album's tracks
     const std::string parentId = req.get_param_value("parentId");
+    if (types.find("MusicAlbum") != std::string::npos && !term.empty()) {  // searches find no music
+        res.set_content(R"({"Items":[],"TotalRecordCount":0,"StartIndex":0})", "application/json");
+        return;
+    }
     if (types.find("MusicAlbum") != std::string::npos) {
         const char* name = req.has_param("albumArtistIds") ? "ts/artist_albums.json" : "ts/music_albums.json";
         res.set_content(readFixture(std::string("jellyfin/") + name), "application/json");
@@ -97,6 +101,18 @@ void items(const httplib::Request& req, httplib::Response& res) {
     }
     if (types == "Audio" || albumIds().count(parentId) != 0) {
         res.set_content(readFixture("jellyfin/ts/album_tracks.json"), "application/json");
+        return;
+    }
+    if (types == "Person") {  // the cast of Big Buck Bunny
+        const bool match = term.empty() || std::string("frank bunny").find(term) != std::string::npos;
+        res.set_content(std::string(R"({"Items":[)") +
+                            (match ? R"({"Name":"Frank Bunny","Id":"p-1","Type":"Person","ImageTags":{"Primary":"t-p1"}})" : "") +
+                            R"(],"TotalRecordCount":)" + (match ? "1" : "0") + R"(,"StartIndex":0})",
+                        "application/json");
+        return;
+    }
+    if (types == "TvChannel") {
+        res.set_content(R"({"Items":[],"TotalRecordCount":0,"StartIndex":0})", "application/json");
         return;
     }
     if (!types.empty() && types.find("Movie") == std::string::npos) {

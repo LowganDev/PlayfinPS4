@@ -200,5 +200,11 @@
   "settings.update.install": "{0} 已在 /data/pkg 中。請在 GoldHEN › Debug Settings › Package Installer 中安裝，然後重新啟動 Playfin。伺服器和設定會保留。",
   "settings.update.failed": "下載未完成，請稍後重試。",
   "settings.library_order": "媒體庫順序",
-  "settings.library_order.hint": "✕ 選取媒體庫，↑ 和 ↓ 移動，✕ 放下。首頁依此順序顯示。"
+  "settings.library_order.hint": "✕ 選取媒體庫，↑ 和 ↓ 移動，✕ 放下。首頁依此順序顯示。",
+  "shell.search.people": "人物",
+  "shell.search.music": "音樂",
+  "shell.search.channels": "頻道",
+  "shell.search.all": "全部",
+  "shell.search.filter": "結果：{0}  ·  L2 / R2 切換",
+  "shell.search.filter_hint": "篩選"
 }

@@ -1907,3 +1907,27 @@ TEST_CASE("home: the header shows the date and time; the libraries follow the or
     walk(*s.shell.application->top());
     CHECK(showsFirst);
 }
+
+TEST_CASE("search: people are found too; R2 narrows the results to one kind, L2 goes back") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->push(app::makeSearch(shell.session));
+    shell.frames(5);
+    search(shell, "frank");
+    CHECK(shows(*shell.application, "People"));
+    CHECK(shows(*shell.application, "Frank Bunny"));
+    CHECK(showsSomewhere(*shell.application, "Results: Everything"));
+    for (int i = 0; i < 4; ++i) {
+        shell.press(Action::R2);  // Movies, Series, Episodes, People
+    }
+    shell.frames(5);
+    CHECK(showsSomewhere(*shell.application, "Results: People"));
+    CHECK(shows(*shell.application, "Frank Bunny"));
+    CHECK_FALSE(shows(*shell.application, "Movies"));
+    for (int i = 0; i < 4; ++i) {
+        shell.press(Action::L2);
+    }
+    shell.frames(5);
+    CHECK(showsSomewhere(*shell.application, "Results: Everything"));
+}

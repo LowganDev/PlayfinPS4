@@ -204,5 +204,11 @@
   "settings.update.install": "{0} находится в /data/pkg. Установите его через GoldHEN › Debug Settings › Package Installer и снова запустите Playfin. Серверы и настройки сохранятся.",
   "settings.update.failed": "Загрузка не завершилась. Попробуйте позже.",
   "settings.library_order": "Порядок медиатек",
-  "settings.library_order.hint": "✕ берёт медиатеку, ↑ и ↓ перемещают её, ✕ оставляет. Главная следует этому порядку."
+  "settings.library_order.hint": "✕ берёт медиатеку, ↑ и ↓ перемещают её, ✕ оставляет. Главная следует этому порядку.",
+  "shell.search.people": "Люди",
+  "shell.search.music": "Музыка",
+  "shell.search.channels": "Каналы",
+  "shell.search.all": "Всё",
+  "shell.search.filter": "Результаты: {0}  ·  L2 / R2 — сменить",
+  "shell.search.filter_hint": "Фильтр"
 }

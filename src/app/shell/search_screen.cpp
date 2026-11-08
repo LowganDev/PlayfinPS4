@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+
 #include "app/settings.hpp"
 #include "app/shell/cards.hpp"
 #include "app/shell/chrome.hpp"
@@ -16,17 +19,32 @@ namespace {
 
 constexpr int kRowItems = 24;
 
-struct SearchData {
-    core::Result<jellyfin::ItemPage> movies = jellyfin::ItemPage{};
-    core::Result<jellyfin::ItemPage> series = jellyfin::ItemPage{};
-    core::Result<jellyfin::ItemPage> episodes = jellyfin::ItemPage{};
+// What a search looks for, one row each; L2 / R2 narrow it to one of them.
+struct SearchKind {
+    const char* title;  // translation key
+    std::vector<std::string> types;
+    CardShape shape;
 };
 
-jellyfin::ItemQuery searchQuery(const std::string& term, const char* type) {
+const std::vector<SearchKind>& searchKinds() {
+    static const std::vector<SearchKind> kinds = {
+        {"shell.search.movies", {"Movie"}, CardShape::Poster},
+        {"shell.search.series", {"Series"}, CardShape::Poster},
+        {"shell.search.episodes", {"Episode"}, CardShape::Wide},
+        {"shell.search.people", {"Person"}, CardShape::Poster},
+        {"shell.search.music", {"MusicAlbum", "MusicArtist", "Audio"}, CardShape::Square},
+        {"shell.search.channels", {"TvChannel"}, CardShape::Wide},
+    };
+    return kinds;
+}
+
+using SearchData = std::vector<core::Result<jellyfin::ItemPage>>;  // one per kind asked for
+
+jellyfin::ItemQuery searchQuery(const std::string& term, const std::vector<std::string>& types, int limit) {
     jellyfin::ItemQuery query;
     query.searchTerm = term;
-    query.includeTypes = {type};
-    query.limit = kRowItems;
+    query.includeTypes = types;
+    query.limit = limit;
     query.recursive = true;
     return query;
 }
@@ -48,6 +66,10 @@ public:
                                              [this](const std::string& term) { search(term); });
         field_->width = ui::SizeSpec::fixed(900);
         remembered = field_;  // the field first, not the bar above it
+        filter_ = column_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
+        refreshFilter();
+        bind(platform::Action::L2, "", [this] { return stepFilter(-1); });
+        bind(platform::Action::R2, ui::tr("shell.search.filter_hint"), [this] { return stepFilter(1); });
         status_ = column_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         status_->color = ui::theme().textSecondary;
         status_->visible = false;
@@ -61,6 +83,25 @@ public:
     }
 
 private:
+    // ---- the kinds searched: all of them, or one (L2 / R2)
+
+    void refreshFilter() {
+        const std::string name =
+            filterIndex_ < 0 ? ui::tr("shell.search.all")
+                             : ui::tr(searchKinds()[static_cast<std::size_t>(filterIndex_)].title);
+        filter_->setText(ui::tr("shell.search.filter", {name}));
+    }
+
+    bool stepFilter(int step) {
+        const int count = static_cast<int>(searchKinds().size()) + 1;  // "Tout", then each kind
+        filterIndex_ = ((filterIndex_ + 1 + step) % count + count) % count - 1;
+        refreshFilter();
+        if (!lastTerm_.empty()) {
+            search(lastTerm_);
+        }
+        return true;
+    }
+
     // the recent searches, under the field while nothing is searched
     void showRecent() {
         keepFocusOutOf(recent_);
@@ -103,6 +144,7 @@ private:
             return;
         }
         const std::string term = probe.recentSearches.front();
+        lastTerm_ = term;
         addRecentSearch(session_.settings(), term);
         session_.saveSettings();
         keepFocusOutOf(recent_);
@@ -114,12 +156,19 @@ private:
         const auto client = session_.client();
         const core::CancelToken token = token_;
         const int generation = generation_;
+        const int filter = filterIndex_;
         run<SearchData>(
-            [client, term, token] {
+            [client, term, token, filter] {
                 SearchData data;
-                data.movies = client->items(searchQuery(term, "Movie"), token);
-                data.series = client->items(searchQuery(term, "Series"), token);
-                data.episodes = client->items(searchQuery(term, "Episode"), token);
+                const auto& kinds = searchKinds();
+                for (std::size_t i = 0; i < kinds.size(); ++i) {
+                    if (filter >= 0 && static_cast<int>(i) != filter) {
+                        data.emplace_back(jellyfin::ItemPage{});
+                        continue;
+                    }
+                    // one kind alone: more of it
+                    data.push_back(client->items(searchQuery(term, kinds[i].types, filter >= 0 ? 100 : kRowItems), token));
+                }
                 return data;
             },
             [this, term, generation](SearchData data) {
@@ -131,21 +180,16 @@ private:
 
     void show(const std::string& term, SearchData data) {
         auto open = [this](const jellyfin::Item& item) { openItem(session_, item); };
-        const std::pair<const char*, core::Result<jellyfin::ItemPage>*> rows[] = {
-            {"shell.search.movies", &data.movies},
-            {"shell.search.series", &data.series},
-            {"shell.search.episodes", &data.episodes},
-        };
         bool any = false;
         const core::Error* failure = nullptr;
-        for (const auto& row : rows) {
-            if (!row.second->ok()) {
-                failure = &row.second->error();
+        for (std::size_t i = 0; i < data.size() && i < searchKinds().size(); ++i) {
+            const SearchKind& kind = searchKinds()[i];
+            if (!data[i].ok()) {
+                failure = &data[i].error();
                 continue;
             }
-            if (!row.second->value().items.empty()) {
-                addItemRow(*results_, ui::tr(row.first), session_, row.second->value().items,
-                           row.first == std::string("shell.search.episodes"), open);
+            if (!data[i].value().items.empty()) {
+                addItemRow(*results_, ui::tr(kind.title), session_, data[i].value().items, kind.shape, open);
                 any = true;
             }
         }
@@ -166,6 +210,9 @@ private:
     ui::Label* status_;
     ui::Box* recent_;
     ui::Box* results_;
+    ui::Label* filter_;
+    int filterIndex_ = -1;  // -1: every kind
+    std::string lastTerm_;
     int generation_ = 0;
 };
 

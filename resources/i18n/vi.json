@@ -200,5 +200,11 @@
   "settings.update.install": "{0} nằm trong /data/pkg. Cài đặt từ GoldHEN › Debug Settings › Package Installer rồi mở lại Playfin. Máy chủ và cài đặt của bạn được giữ nguyên.",
   "settings.update.failed": "Tải xuống chưa hoàn tất. Hãy thử lại sau.",
   "settings.library_order": "Thứ tự thư viện",
-  "settings.library_order.hint": "✕ chọn một thư viện, ↑ và ↓ di chuyển, ✕ đặt xuống. Trang chủ theo thứ tự này."
+  "settings.library_order.hint": "✕ chọn một thư viện, ↑ và ↓ di chuyển, ✕ đặt xuống. Trang chủ theo thứ tự này.",
+  "shell.search.people": "Người",
+  "shell.search.music": "Âm nhạc",
+  "shell.search.channels": "Kênh",
+  "shell.search.all": "Tất cả",
+  "shell.search.filter": "Kết quả: {0}  ·  L2 / R2 để đổi",
+  "shell.search.filter_hint": "Lọc"
 }
