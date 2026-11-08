@@ -77,8 +77,18 @@ Playfin is a C++17 application for the PS4 (OpenOrbis) with a Linux build used f
   the frame, then cut to exactly the frame's whole-pixel size; the view draws it 1:1 shifted onto whole pixels
   (under half a pixel), so the renderer copies rows. It skips its placeholder under an opaque picture that covers
   it (decoded images record whether every pixel is opaque).
-- Console measures (real server): home while the focus moves takes 16.7-18.8 ms per drawn frame (median), details
-  about 14 ms. Cycles per pixel on the Jaguar (one thread): clear or opaque fill 2.6, 50 % fill 11, image 1:1 10, scaled image 35-52. Frames
+- Pace: 30 frames a second, evenly (`ui::FramePacer`: a frame is drawn on every other display slot, never two in
+  a row; a quick frame waits for its slot rather than showing at 60 then 30). Not in test mode or `--bench`.
+- Large fades are sprites (`ui/sprites`: `drawVerticalFade`), never gradients: a gradient goes through the general
+  per-pixel shader. The hints' fade (1920x104) as a gradient was half of a home frame on the PS4; a backdrop
+  (`ImageView::backdrop`, `ImageShape::Backdrop`) comes from the loader with the shade baked in, opaque, so it is
+  copied row by row and `BackdropShade` (under it) is skipped once it covers the screen.
+- Bands are drawn dearest first (last frame's cycles per band): no thread is left alone with a heavy band at the
+  end. The `frames:` log gives the time between drawn frames and the slowest update; `slow frame:` and
+  `slow update:` lines over 28 ms.
+- Console measures (2026-11-09, real server, 2.0): home 16-19 ms per drawn frame (34 ms before the sprites), details
+  with a backdrop 20 ms (32-36 ms before), search 14 ms, Now Playing with the visualizer 17 ms; drawn frames 33.4 ms
+  apart (30 a second) on every one of them. Earlier measure (1.0): home 16.7-18.8 ms, details about 14 ms. Cycles per pixel on the Jaguar (one thread): clear or opaque fill 2.6, 50 % fill 11, image 1:1 10, scaled image 35-52. Frames
   above 20 ms log a `slow frame:` line (views vs flush time, each thread's busy time, pixels per path, share of
   time per kind of call).
 - Presentation: `platform::presentFrame` uploads the frame into one texture and draws one quad; Linux compiles a

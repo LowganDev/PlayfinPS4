@@ -32,6 +32,8 @@
 - Fixed: Live TV and other HLS streams (the server's relay of a channel, a transcode) did not play on the console
   since 1.0.0 ("This video cannot be played"): the player refused to follow the playlist to its segments.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.
+- Smoother: the interface draws 30 frames a second, evenly (12-15 before on the home screen and details pages,
+  whose fades are now drawn from pictures), and every screen keeps that pace on the console.
 - The controller's buttons and what they do now, at the bottom left of every screen: navigate, select, the
   screen's own actions (A–Z, quick look, filters, tabs, refresh), back; in the player with its bar (pause, 10 s,
   1 min, 5 min, options, stop; volume and channel on Live TV).
