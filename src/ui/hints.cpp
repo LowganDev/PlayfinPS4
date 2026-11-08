@@ -3,11 +3,13 @@
 #include <nanovg.h>
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <string>
 
 #include "ui/draw.hpp"
 #include "ui/i18n.hpp"
+#include "ui/sprites.hpp"
 #include "ui/text.hpp"
 
 namespace playfin::ui {
@@ -248,14 +250,11 @@ void drawHints(NVGcontext* vg, const std::vector<HintItem>& items, float width, 
     if (items.empty()) {
         return;
     }
-    // a fade into the background under the bar: readable over posters and lists, no band
-    const Color ground = theme().background;
-    const float fade = 104;  // above the player's bar (its bottom at 100)
-    nvgBeginPath(vg);
-    nvgRect(vg, 0, height - fade, width, fade);
-    nvgFillPaint(vg, nvgLinearGradient(vg, 0, height - fade, 0, height - 66, nvgColor(withAlpha(ground, 0)),
-                                       nvgColor(withAlpha(ground, 0xF2))));
-    nvgFill(vg);
+    // a fade into the background under the bar: readable over posters and lists, no band. A sprite: as a gradient
+    // it took half of a frame's time on the PS4 (the renderer's general shader)
+    const int fade = 104;  // above the player's bar (its bottom at 100)
+    drawVerticalFade(vg, 0, std::floor(height) - fade, static_cast<int>(width), fade, fade - 66, theme().background,
+                     0, 0xF2);
     const float cy = height - 44;
     float x = theme().marginSide;
     for (const HintItem& item : items) {

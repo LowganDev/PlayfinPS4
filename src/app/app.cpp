@@ -31,6 +31,7 @@
 #include "render/nvg_sw.hpp"
 #include "render/raster.hpp"
 #include "ui/application.hpp"
+#include "ui/frame_pacer.hpp"
 #include "ui/halo.hpp"
 #include "ui/i18n.hpp"
 #include "ui/images.hpp"
@@ -49,7 +50,7 @@ namespace playfin::app {
 namespace {
 
 constexpr float kLogicalWidth = 1920.0f;
-constexpr double kSlowFrameMs = 20.0;  // software frames slower than this are logged with their raster counts
+constexpr double kSlowFrameMs = 28.0;  // software frames slower than this miss the 30 fps slot: logged with counts
 
 double millisecondsSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
@@ -321,6 +322,8 @@ int run(const Options& options) {
         bool running = exitCode == 0;
         float idleMs = 0;
         FrameStats stats;
+        ui::FramePacer pacer;  // 30 frames a second, evenly (not in test mode nor when benchmarking)
+        const bool paced = !testMode && options.benchFrames == 0;
         int frame = 0;
         std::uint32_t last = platform::ticksMs();
         while (running) {
@@ -365,7 +368,11 @@ int run(const Options& options) {
             application.update(dt);
 
             // test mode too: a frame that should have changed but was not redrawn fails the screenshot comparison
-            const bool redraw = !software || options.benchFrames > 0 || application.needsDraw();
+            const bool redraw = !software || options.benchFrames > 0 ||
+                                (application.needsDraw() && (!paced || pacer.due(now)));
+            if (software && redraw && paced) {
+                pacer.drew(now);
+            }
             // a video under the UI (player): a new picture when mpv has one, the UI drawn on transparency
             ui::VideoSource* videoSource = software ? application.videoSource() : nullptr;
             const bool newPicture = videoSource != nullptr && videoSource->renderVideo();
