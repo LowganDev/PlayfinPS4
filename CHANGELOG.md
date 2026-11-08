@@ -3,7 +3,8 @@
 ## 2.0.0 (unreleased)
 
 - Next episode: a card in the last 10 s with the episode's picture and title; ✕ plays it now, ◯ cancels, it plays
-  on by itself when the countdown ends.
+  on by itself when the countdown ends. The last episode of a season goes on to the next season (specials are
+  skipped); the details page's previous / next episode cross seasons too.
 - Player: the volume (kept), the picture whole, filling the screen, stretched or smaller (for TVs that cut the
   edges), when the video ends in the bar. ← → and L1 / R1 seek 10 s; held, they go faster (30 s after 2 s, 1 min
   after 4 s, 2 min after 6 s). L2 / R2 held 3 s play the previous or next episode (a panel fills meanwhile; a

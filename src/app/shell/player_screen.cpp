@@ -518,21 +518,13 @@ private:
                     if (segments.ok()) {
                         extras.segments = std::move(segments.value());
                     }
-                    if (item.type == jellyfin::ItemType::Episode && !item.seriesId.empty() && !item.seasonId.empty()) {
-                        const auto episodes = client->episodes(item.seriesId, item.seasonId, token);
+                    // the episodes around this one, across seasons (the last of a season goes on to the next)
+                    if (item.type == jellyfin::ItemType::Episode && !item.seriesId.empty()) {
+                        const auto episodes = client->episodes(item.seriesId, "", token);
                         if (episodes.ok()) {
-                            const auto& list = episodes.value().items;
-                            for (std::size_t i = 0; i < list.size(); ++i) {
-                                if (list[i].id != item.id) {
-                                    continue;
-                                }
-                                if (i > 0) {
-                                    extras.previous = list[i - 1];
-                                }
-                                if (i + 1 < list.size()) {
-                                    extras.next = list[i + 1];
-                                }
-                            }
+                            auto around = jellyfin::adjacentEpisodes(episodes.value().items, item.id);
+                            extras.previous = std::move(around.previous);
+                            extras.next = std::move(around.next);
                         }
                     }
                     return extras;

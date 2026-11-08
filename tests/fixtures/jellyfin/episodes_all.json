@@ -1,0 +1,33 @@
+{
+  "Items": [
+    {
+      "Name": "Pilot",
+      "Id": "e-1",
+      "Type": "Episode",
+      "IndexNumber": 1,
+      "ParentIndexNumber": 1,
+      "SeriesId": "s-1",
+      "SeasonId": "se-1"
+    },
+    {
+      "Name": "Second",
+      "Id": "e-2",
+      "Type": "Episode",
+      "IndexNumber": 2,
+      "ParentIndexNumber": 1,
+      "SeriesId": "s-1",
+      "SeasonId": "se-1"
+    },
+    {
+      "Name": "Third",
+      "Id": "e-3",
+      "Type": "Episode",
+      "IndexNumber": 1,
+      "ParentIndexNumber": 2,
+      "SeriesId": "s-1",
+      "SeasonId": "se-2"
+    }
+  ],
+  "TotalRecordCount": 3,
+  "StartIndex": 0
+}

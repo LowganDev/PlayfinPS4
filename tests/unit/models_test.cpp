@@ -287,3 +287,29 @@ TEST_CASE("a playlist says whether it holds music or videos") {
     CHECK(page.value().items[0].type == ItemType::Playlist);
     CHECK(page.value().items[0].mediaType == "Audio");
 }
+
+TEST_CASE("the episodes around one: across seasons, specials only around a special") {
+    auto episode = [](const char* id, int season, int number) {
+        Item item;
+        item.id = id;
+        item.type = ItemType::Episode;
+        item.parentIndexNumber = season;
+        item.indexNumber = number;
+        return item;
+    };
+    const std::vector<Item> all = {episode("sp", 0, 1), episode("a1", 1, 1), episode("a2", 1, 2),
+                                   episode("b1", 2, 1)};
+    auto around = adjacentEpisodes(all, "a2");
+    REQUIRE(around.previous);
+    CHECK(around.previous->id == "a1");
+    REQUIRE(around.next);
+    CHECK(around.next->id == "b1");  // the next season
+    around = adjacentEpisodes(all, "a1");
+    CHECK_FALSE(around.previous);  // the special before is skipped
+    around = adjacentEpisodes(all, "b1");
+    CHECK_FALSE(around.next);
+    around = adjacentEpisodes(all, "sp");
+    REQUIRE(around.next);
+    CHECK(around.next->id == "a1");
+    CHECK_FALSE(adjacentEpisodes(all, "missing").next);
+}

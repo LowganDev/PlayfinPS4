@@ -114,6 +114,7 @@ public:
     core::Result<ItemPage> items(const ItemQuery& query, const core::CancelToken& token = {}) const;
     core::Result<Item> item(const std::string& id, const core::CancelToken& token = {}) const;
     core::Result<ItemPage> seasons(const std::string& seriesId, const core::CancelToken& token = {}) const;
+    // A season's episodes, or every season's in order when `seasonId` is empty.
     core::Result<ItemPage> episodes(const std::string& seriesId, const std::string& seasonId,
                                     const core::CancelToken& token = {}) const;
     core::Result<core::Unit> setFavorite(const std::string& id, bool favorite, const core::CancelToken& token = {}) const;

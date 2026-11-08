@@ -306,7 +306,10 @@ core::Result<ItemPage> Client::seasons(const std::string& seriesId, const core::
 core::Result<ItemPage> Client::episodes(const std::string& seriesId, const std::string& seasonId,
                                         const core::CancelToken& token) const {
     net::Query query = userQuery();
-    query.add("seasonId", seasonId).add("fields", kFields).add("enableImageTypes", kImageTypes);
+    if (!seasonId.empty()) {  // else every season's
+        query.add("seasonId", seasonId);
+    }
+    query.add("fields", kFields).add("enableImageTypes", kImageTypes);
     return parsed<ItemPage>(
         request("GET", "/Shows/" + net::urlEncode(seriesId) + "/Episodes" + query.str(), {}, token), parseItemPage);
 }

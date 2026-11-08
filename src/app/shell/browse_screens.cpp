@@ -596,7 +596,7 @@ private:
                     }
                 }
                 if (item.type == jellyfin::ItemType::Episode && !item.seriesId.empty() && !token.cancelled()) {
-                    data.siblings = client->episodes(item.seriesId, item.seasonId, token);
+                    data.siblings = client->episodes(item.seriesId, "", token);  // every season: next crosses them
                 }
                 return data;
             },

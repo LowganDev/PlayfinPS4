@@ -1,5 +1,6 @@
 #include "jellyfin/models.hpp"
 
+#include <algorithm>
 #include <climits>
 #include <cstdio>
 #include <utility>
@@ -552,6 +553,30 @@ core::Result<std::vector<Timer>> parseTimers(std::string_view text) {
         }
     }
     return timers;
+}
+
+AdjacentEpisodes adjacentEpisodes(const std::vector<Item>& episodes, const std::string& id) {
+    AdjacentEpisodes around;
+    const auto current = std::find_if(episodes.begin(), episodes.end(), [&id](const Item& e) { return e.id == id; });
+    if (current == episodes.end()) {
+        return around;
+    }
+    const bool special = current->parentIndexNumber == 0;
+    const auto counts = [special](const Item& e) { return special || e.parentIndexNumber != 0; };
+    for (auto it = current; it != episodes.begin();) {
+        --it;
+        if (counts(*it)) {
+            around.previous = *it;
+            break;
+        }
+    }
+    for (auto it = current + 1; it != episodes.end(); ++it) {
+        if (counts(*it)) {
+            around.next = *it;
+            break;
+        }
+    }
+    return around;
 }
 
 }  // namespace playfin::jellyfin

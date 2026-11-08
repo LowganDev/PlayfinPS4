@@ -212,7 +212,7 @@ TEST_CASE("details of a partly watched item offer to resume or to start over") {
 TEST_CASE("the player reports the session to the server and stops when leaving") {
     Playing p;
     jellyfin::Item alone = episode();
-    alone.seasonId.clear();  // no next episode: no card takes the first ◯
+    alone.seriesId.clear();  // no next episode: no card takes the first ◯
     p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
     p.frames(10);
     REQUIRE(p.shell.application->videoSource() != nullptr);
@@ -253,7 +253,7 @@ TEST_CASE("settings are saved next to servers.json and read back by a new sessio
 TEST_CASE("the intro skip button shows at the start of an episode with an intro and seeks past it") {
     Playing p;
     jellyfin::Item alone = episode();
-    alone.seasonId.clear();  // no next episode: the 4 s clip is all "last 10 s", the next-episode card would win
+    alone.seriesId.clear();  // no next episode: the 4 s clip is all "last 10 s", the next-episode card would win
     p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
     p.frames(10);
     CHECK(shows(*p.shell.application, "Skip intro"));
@@ -429,7 +429,7 @@ TEST_CASE("at the end of a film the player closes itself cleanly") {
     Playing p;
     jellyfin::Item film = episode();
     film.id = "m-1";        // no segments: no skip button takes the Confirm press
-    film.seasonId.clear();  // no next episode: the end goes back
+    film.seriesId.clear();  // no next episode: the end goes back
     p.shell.application->push(app::makePlayer(p.shell.session, film, 35000000));  // 3.5 s of 4
     p.frames(5);
     REQUIRE(p.shell.application->depth() == 2);
@@ -844,9 +844,25 @@ TEST_CASE("an episode offers the next one and swaps the page for it") {
     CHECK(shell.application->depth() == 2);
     CHECK(shows(*shell.application, "Second"));
     CHECK(shows(*shell.application, "Previous episode"));
+    CHECK(shows(*shell.application, "Next episode"));  // the first of the next season
+    pressButton(shell, "Next episode");
+    shell.frames(10);
+    CHECK(shows(*shell.application, "Third"));
     CHECK_FALSE(shows(*shell.application, "Next episode"));
     shell.press(Action::Back);
     CHECK(shell.application->depth() == 1);
+}
+
+TEST_CASE("the last episode of a season goes on to the next season's first") {
+    Playing p;
+    jellyfin::Item last = episode();
+    last.id = "e-2";
+    last.name = "Second";
+    last.indexNumber = 2;
+    p.shell.application->push(app::makePlayer(p.shell.session, last, 0));
+    p.frames(10);
+    CHECK(showsSomewhere(*p.shell.application, "S2 \xC2\xB7 E1 Third"));
+    p.shell.press(Action::Back);
 }
 
 TEST_CASE("details reload the item when shown again (back from the player) and keep the focus") {
@@ -1780,7 +1796,7 @@ TEST_CASE("profiles also offer the users saved on this console that the server d
 TEST_CASE("player menu: the volume and the picture, kept for the next videos; the bar says when it ends") {
     Playing p;
     jellyfin::Item alone = episode();
-    alone.seasonId.clear();
+    alone.seriesId.clear();
     p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
     p.frames(10);
     CHECK(showsSomewhere(*p.shell.application, "Ends at "));

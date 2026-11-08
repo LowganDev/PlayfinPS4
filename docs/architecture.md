@@ -138,7 +138,8 @@ The screens of the app.
   L1 / R1 seek as ← / → and repeat through `player::ButtonRepeat` (400 ms, then every 80 ms) polled in the
   player's tick while held; `seekStep` grows with the hold (10, 30, 60, 120 s). L2 / R2 go through
   `player::HoldToSkip` (3 s; the hold panel shows its progress; released early, nothing): the previous or next
-  episode of the season (`Extras::previous` / `next`), or channel on Live TV. Test scripts hold a button with
+  episode (`Extras::previous` / `next`, from `jellyfin::adjacentEpisodes` over every season's episodes:
+  `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with
   `down <Action>` / `up <Action>`.
 
 - Details (`browse_screens.cpp`): `Item::people` and `Item::mediaSources` come with a single item

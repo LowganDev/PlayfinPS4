@@ -559,8 +559,13 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.Post("/LiveStreams/Close", guarded([](const httplib::Request&, httplib::Response& res) { res.status = 204; }));
     // season se-2 has its own episode; any other season (or none) lists e-1 and e-2
     http.Get(R"(/Shows/s-1/Episodes)", guarded([](const httplib::Request& req, httplib::Response& res) {
-        const bool second = req.get_param_value("seasonId") == "se-2";
-        res.set_content(readFixture(second ? "jellyfin/episodes_se2.json" : "jellyfin/episodes.json"), "application/json");
+        const std::string season = req.get_param_value("seasonId");
+        if (season.empty()) {  // every season's, in order
+            res.set_content(readFixture("jellyfin/episodes_all.json"), "application/json");
+            return;
+        }
+        res.set_content(readFixture(season == "se-2" ? "jellyfin/episodes_se2.json" : "jellyfin/episodes.json"),
+                        "application/json");
     }));
     const Handler userData = [](const httplib::Request& req, httplib::Response& res) {
         res.set_content(std::string(R"({"IsFavorite":)") + (req.method == "POST" ? "true" : "false") + "}",

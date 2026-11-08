@@ -245,6 +245,14 @@ core::Result<QuickConnectState> parseQuickConnect(std::string_view text);
 core::Result<bool> parseBool(std::string_view text);
 // {"Items":[...],"TotalRecordCount":n,"StartIndex":n} or a bare array; items without Id are dropped
 core::Result<ItemPage> parseItemPage(std::string_view text);
+
+// The episodes before and after `id` in a series' list (in order, every season): specials (season 0) are skipped
+// unless `id` is one.
+struct AdjacentEpisodes {
+    std::optional<Item> previous;
+    std::optional<Item> next;
+};
+AdjacentEpisodes adjacentEpisodes(const std::vector<Item>& episodes, const std::string& id);
 core::Result<Item> parseItem(std::string_view text);
 core::Result<PlaybackInfo> parsePlaybackInfo(std::string_view text);
 core::Result<std::vector<Timer>> parseTimers(std::string_view text);
