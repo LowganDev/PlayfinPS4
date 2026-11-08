@@ -62,18 +62,34 @@ class FrameStats {
 public:
     void add(bool drawn, double rasterMs, double presentMs) {
         ++frames_;
+        const auto now = std::chrono::steady_clock::now();
         if (drawn) {
             raster_.push_back(rasterMs);
+            // the time between two drawn frames of one stretch of drawing (a pause of the UI is not counted)
+            if (lastDrawn_) {
+                const double gap = std::chrono::duration<double, std::milli>(now - *lastDrawn_).count();
+                if (gap < 200) {
+                    gaps_.push_back(gap);
+                }
+            }
+            lastDrawn_ = now;
         }
         present_.push_back(presentMs);
     }
     bool due() const { return frames_ >= 300; }
     void log(const char* label) {
-        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms", label,
-                    static_cast<int>(raster_.size()), frames_, median(raster_), maximum(raster_), median(present_));
+        const auto slots = [this](double from, double to) {
+            return static_cast<int>(std::count_if(gaps_.begin(), gaps_.end(),
+                                                  [from, to](double gap) { return gap >= from && gap < to; }));
+        };
+        PF_LOG_INFO("%s: drawn %d/%d, raster median %.1f ms max %.1f ms, present median %.1f ms; between drawn "
+                    "frames median %.1f ms (one slot %d, two %d, three or more %d)",
+                    label, static_cast<int>(raster_.size()), frames_, median(raster_), maximum(raster_),
+                    median(present_), median(gaps_), slots(0, 25), slots(25, 42), slots(42, 1e9));
         frames_ = 0;
         raster_.clear();
         present_.clear();
+        gaps_.clear();
     }
 
 private:
@@ -87,6 +103,8 @@ private:
     int frames_ = 0;
     std::vector<double> raster_;
     std::vector<double> present_;
+    std::vector<double> gaps_;
+    std::optional<std::chrono::steady_clock::time_point> lastDrawn_;
 };
 #ifdef PLAYFIN_TESTING
 constexpr float kFrameMs = 1000.0f / 60.0f;  // fixed clock of test mode
