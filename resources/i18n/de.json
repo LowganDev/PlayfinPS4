@@ -200,7 +200,7 @@
   "settings.update.install": "{0} liegt in /data/pkg. Installieren Sie es über GoldHEN › Debug Settings › Package Installer und starten Sie Playfin neu. Ihre Server und Einstellungen bleiben erhalten.",
   "settings.update.failed": "Der Download wurde nicht abgeschlossen. Versuchen Sie es später erneut.",
   "settings.library_order": "Reihenfolge der Mediatheken",
-  "settings.library_order.hint": "✕ nimmt eine Mediathek, ↑ und ↓ verschieben sie, ✕ legt sie ab. Die Startseite folgt dieser Reihenfolge.",
+  "settings.library_order.hint": "Wählen Sie eine Mediathek, verschieben Sie sie mit ↑ und ↓ und wählen Sie sie erneut, um sie abzulegen. Die Startseite folgt dieser Reihenfolge.",
   "shell.search.people": "Personen",
   "shell.search.music": "Musik",
   "shell.search.channels": "Sender",

@@ -200,7 +200,7 @@
   "settings.update.install": "{0} /data/pkg içinde. GoldHEN › Debug Settings › Package Installer üzerinden kurun, ardından Playfin'i yeniden başlatın. Sunucularınız ve ayarlarınız korunur.",
   "settings.update.failed": "İndirme tamamlanamadı. Daha sonra yeniden deneyin.",
   "settings.library_order": "Kitaplıkların sırası",
-  "settings.library_order.hint": "✕ bir kitaplığı alır, ↑ ve ↓ taşır, ✕ bırakır. Ana sayfa bu sırayı izler.",
+  "settings.library_order.hint": "Bir kitaplık seçin, ↑ ve ↓ ile taşıyın, bırakmak için yeniden seçin. Ana sayfa bu sırayı izler.",
   "shell.search.people": "Kişiler",
   "shell.search.music": "Müzik",
   "shell.search.channels": "Kanallar",

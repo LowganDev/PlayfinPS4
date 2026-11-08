@@ -202,7 +202,7 @@
   "settings.update.install": "{0} je v /data/pkg. Nainstalujte ho přes GoldHEN › Debug Settings › Package Installer a znovu spusťte Playfin. Servery a nastavení zůstanou.",
   "settings.update.failed": "Stahování se nedokončilo. Zkuste to později.",
   "settings.library_order": "Pořadí knihoven",
-  "settings.library_order.hint": "✕ vezme knihovnu, ↑ a ↓ ji posunou, ✕ ji položí. Domů se řídí tímto pořadím.",
+  "settings.library_order.hint": "Vyberte knihovnu, posuňte ji pomocí ↑ a ↓ a dalším výběrem ji položte. Domů se řídí tímto pořadím.",
   "shell.search.people": "Lidé",
   "shell.search.music": "Hudba",
   "shell.search.channels": "Kanály",
