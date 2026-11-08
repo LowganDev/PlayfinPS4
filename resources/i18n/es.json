@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "Cargando…",
   "settings.tv_guide.ready": "{0} canales",
   "settings.tv_guide.failed": "No leída, vuelva a intentarlo",
-  "settings.tv_guide.invalid": "La dirección debe empezar por http:// o https://."
+  "settings.tv_guide.invalid": "La dirección debe empezar por http:// o https://.",
+  "music.visualizer": "Visualizador",
+  "music.visualizer.bars": "Visualizador: barras",
+  "music.visualizer.mirror": "Visualizador: espejo",
+  "music.visualizer.wave": "Visualizador: onda",
+  "music.visualizer.off": "Visualizador: desactivado"
 }

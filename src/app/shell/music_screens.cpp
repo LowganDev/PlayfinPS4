@@ -1,3 +1,6 @@
+#include <nanovg.h>
+
+#include <algorithm>
 #include <random>
 #include <string>
 #include <vector>
@@ -9,6 +12,9 @@
 #include "app/shell/music_player.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
+#include "app/shell/session.hpp"
+#include "ui/context.hpp"
+#include "ui/draw.hpp"
 #include "ui/i18n.hpp"
 #include "ui/image_view.hpp"
 #include "ui/reveal.hpp"
@@ -464,6 +470,77 @@ private:
 // ---- Now playing
 
 // The progress of the track; ← / → seek 10 s while it has the focus.
+// The visualizer behind Now Playing: the track's spectrum (32 bands, low to high) along the bottom of the screen in
+// the accent colour, as bars, bars mirrored around a line, or a wave; redrawn every frame while the music plays.
+class Visualizer : public ui::View {
+public:
+    Visualizer(MusicPlayer& music, const Settings& settings) : music_(music), settings_(settings) {
+        width = ui::SizeSpec::fill();
+        height = ui::SizeSpec::fill();
+    }
+
+    void draw(NVGcontext* vg) const override {
+        const std::string& style = settings_.visualizer;
+        const MusicPlayer::Status status = music_.status();
+        if (style == "off" || status.track == nullptr || status.loading) {
+            return;
+        }
+        if (!status.paused) {
+            ui::context().redrawNextFrame = true;
+        }
+        // between two frames of the analysis (30 a second): the levels move smoothly at 60
+        const double step = 1.0 / player::kFramesPerSecond;
+        const double position = std::max(0.0, status.position);  // an mp3 starts slightly before 0
+        const auto now = music_.spectrum(position);
+        if (!now) {
+            return;
+        }
+        const auto next = music_.spectrum(position + step);
+        const double t = position / step - static_cast<double>(static_cast<long long>(position / step));
+        float levels[player::kBands];
+        for (int i = 0; i < player::kBands; ++i) {
+            const float a = (*now)[static_cast<std::size_t>(i)];
+            const float b = next ? (*next)[static_cast<std::size_t>(i)] : a;
+            levels[i] = (a + (b - a) * static_cast<float>(t)) / 255.0f;
+        }
+        const float left = 96;
+        const float right = frame.width - 96;
+        const float base = frame.height - 104;  // above the hints
+        const float tall = 220;
+        const float slot = (right - left) / player::kBands;
+        const ui::Color accent = ui::theme().accent;
+        if (style == "wave") {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, left, base);
+            for (int i = 0; i < player::kBands; ++i) {
+                const float x = left + slot * (static_cast<float>(i) + 0.5f);
+                nvgLineTo(vg, x, base - levels[i] * tall);
+            }
+            nvgLineTo(vg, right, base);
+            nvgClosePath(vg);
+            nvgFillPaint(vg, nvgLinearGradient(vg, 0, base - tall, 0, base, nvgColor(ui::withAlpha(accent, 0x90)),
+                                               nvgColor(ui::withAlpha(accent, 0x10))));
+            nvgFill(vg);
+            return;
+        }
+        const bool mirror = style == "mirror";
+        const float middle = mirror ? base - tall / 2 : base;
+        const float reach = mirror ? tall / 2 : tall;
+        nvgBeginPath(vg);
+        for (int i = 0; i < player::kBands; ++i) {
+            const float h = std::max(3.0f, levels[i] * reach);
+            const float x = left + slot * static_cast<float>(i) + slot * 0.15f;
+            nvgRoundedRect(vg, x, middle - h, slot * 0.7f, mirror ? 2 * h : h, 3);
+        }
+        nvgFillColor(vg, nvgColor(ui::withAlpha(accent, 0xA8)));
+        nvgFill(vg);
+    }
+
+private:
+    MusicPlayer& music_;
+    const Settings& settings_;
+};
+
 class SeekBar : public ui::Box {
 public:
     explicit SeekBar(MusicPlayer& music) : ui::Box(ui::Axis::Column), music_(music) {
@@ -509,6 +586,21 @@ private:
 class NowPlayingScreen : public ShellScreen {
 public:
     explicit NowPlayingScreen(AppSession& session) : ShellScreen(session), music_(session.music()) {
+        add<Visualizer>(music_, session_.settings());  // behind the rest
+        // □: the visualizer's next style (bars, mirrored, wave, none), kept in the settings
+        bind(platform::Action::Context, ui::tr("music.visualizer"), [this] {
+            static const char* const kStyles[] = {"bars", "mirror", "wave", "off"};
+            std::string& style = session_.settings().visualizer;
+            std::size_t index = 0;
+            for (std::size_t i = 0; i < 4; ++i) {
+                index = style == kStyles[i] ? i : index;
+            }
+            style = kStyles[(index + 1) % 4];
+            session_.saveSettings();
+            ui::Application::current()->toast(ui::tr("music.visualizer." + style), 1500);
+            markDirty();
+            return true;
+        });
         auto* row = add<ui::Box>(ui::Axis::Row);
         row->width = ui::SizeSpec::fill();
         row->height = ui::SizeSpec::fill();

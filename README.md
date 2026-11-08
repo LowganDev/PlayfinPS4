@@ -46,6 +46,7 @@ The films in the screenshots are the Blender Foundation's open films; their artw
 - **Downloads:** films, episodes and whole seasons kept on the console and played without the server.
 - **Music:** albums, artists, playlists, genres and songs; a queue that keeps playing while you browse, shuffle
   and repeat.
+- **Music visualizer:** the track's spectrum behind Now Playing, as bars, mirrored bars or a wave (□).
 - **Live TV:** channels on now with favourites, categories and a search, a programme guide, recordings
   (scheduling and cancelling), channel change. M3U channels play straight from their source (the server as the
   fallback) and reopen by themselves when the picture stops; an XMLTV guide can be read on the console for

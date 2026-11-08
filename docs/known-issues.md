@@ -23,8 +23,11 @@
   common to all accounts: a saved user can be chosen from any account without a password.
 - 2.0: a download is the original file, whatever its format; one that the console cannot decode plays badly
   offline (no server to transcode). A download played offline tells the server nothing (watched state, resume).
-- 2.0: Live TV channels always go through the server (no direct M3U playback, no guide downloaded on the
-  console).
+- 2.0: the music visualizer downloads each track a second time (decoded apart from the player; small next to a
+  video, and only while Now Playing is open).
+- 2.0: a channel's own stream is tried only when the server gives an http(s) address for it (M3U tuners); other
+  tuners (HDHomeRun) go through the server. The XMLTV guide is matched to the server's channels by name or number
+  only (the server does not give the M3U's tvg-id).
 
 ## Performance (PS4)
 

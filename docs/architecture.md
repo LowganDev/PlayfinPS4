@@ -152,6 +152,13 @@ The screens of the app.
   a guide channel by `channelKey` of its name, then by number; `fill` gives channels without a programme on now
   the guide's, the Live TV guide list takes the guide's programmes when the server has none). Programmes from it
   have no id: no recording is offered for them.
+- Music visualizer: the PS4 FFmpeg has no filters, so mpv cannot hand out the sound. `player::AudioAnalysis`
+  decodes the track a second time on a thread of its own (libavformat / libavcodec / libswresample, the player's
+  header and TLS settings, interruptible) into `player::SpectrumBuilder` (mono 22 050 Hz, Hann window of 1024, FFT,
+  32 log-spaced bands from 40 Hz to 10 kHz, -70..0 dB to 0..255, 30 frames a second). `MusicPlayer::spectrum`
+  starts it on first use for the current track; the Now Playing `Visualizer` draws the frame at the playback
+  position (interpolated) and asks for the next frame while playing. Test mode waits for the whole short track.
+  Linux links FFmpeg through pkg-config (`playfin_av`); the PS4 has it in libmpv's static libraries.
 - Live search (`search_screen.cpp`): a key grid (letters, digits, ' - ., space, delete, clear; □ deletes) types
   into the field; `Application::after` (frame-time timers, cancelled by their owner, ShellScreen cancels its own
   when it goes) starts the search 0.4 s after the last key. The field's ✕ still opens the system keyboard.

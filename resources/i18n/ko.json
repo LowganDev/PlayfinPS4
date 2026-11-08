@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "불러오는 중…",
   "settings.tv_guide.ready": "채널 {0}개",
   "settings.tv_guide.failed": "읽지 못했습니다. 다시 시도하세요",
-  "settings.tv_guide.invalid": "주소는 http:// 또는 https://로 시작해야 합니다."
+  "settings.tv_guide.invalid": "주소는 http:// 또는 https://로 시작해야 합니다.",
+  "music.visualizer": "시각화",
+  "music.visualizer.bars": "시각화: 막대",
+  "music.visualizer.mirror": "시각화: 대칭",
+  "music.visualizer.wave": "시각화: 파형",
+  "music.visualizer.off": "시각화: 끔"
 }

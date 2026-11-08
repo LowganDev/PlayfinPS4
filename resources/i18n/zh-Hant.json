@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "載入中…",
   "settings.tv_guide.ready": "{0} 個頻道",
   "settings.tv_guide.failed": "無法讀取，請再試一次",
-  "settings.tv_guide.invalid": "位址必須以 http:// 或 https:// 開頭。"
+  "settings.tv_guide.invalid": "位址必須以 http:// 或 https:// 開頭。",
+  "music.visualizer": "視覺效果",
+  "music.visualizer.bars": "視覺效果：長條",
+  "music.visualizer.mirror": "視覺效果：鏡像",
+  "music.visualizer.wave": "視覺效果：波形",
+  "music.visualizer.off": "視覺效果：關閉"
 }

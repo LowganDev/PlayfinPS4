@@ -275,5 +275,10 @@
   "settings.tv_guide.loading": "Načítání…",
   "settings.tv_guide.ready": "Kanálů: {0}",
   "settings.tv_guide.failed": "Nenačteno, zkuste znovu",
-  "settings.tv_guide.invalid": "Adresa musí začínat http:// nebo https://."
+  "settings.tv_guide.invalid": "Adresa musí začínat http:// nebo https://.",
+  "music.visualizer": "Vizualizace",
+  "music.visualizer.bars": "Vizualizace: sloupce",
+  "music.visualizer.mirror": "Vizualizace: zrcadlo",
+  "music.visualizer.wave": "Vizualizace: vlna",
+  "music.visualizer.off": "Vizualizace: vypnuto"
 }

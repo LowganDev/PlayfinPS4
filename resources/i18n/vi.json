@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "Đang tải…",
   "settings.tv_guide.ready": "{0} kênh",
   "settings.tv_guide.failed": "Không đọc được, hãy thử lại",
-  "settings.tv_guide.invalid": "Địa chỉ phải bắt đầu bằng http:// hoặc https://."
+  "settings.tv_guide.invalid": "Địa chỉ phải bắt đầu bằng http:// hoặc https://.",
+  "music.visualizer": "Hiệu ứng",
+  "music.visualizer.bars": "Hiệu ứng: cột",
+  "music.visualizer.mirror": "Hiệu ứng: đối xứng",
+  "music.visualizer.wave": "Hiệu ứng: sóng",
+  "music.visualizer.off": "Hiệu ứng: tắt"
 }

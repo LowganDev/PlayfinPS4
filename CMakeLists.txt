@@ -154,11 +154,13 @@ add_library(playfin_player STATIC
     src/player/stream_url.cpp
     src/player/profile.cpp
     src/player/seek.cpp
+    src/player/spectrum.cpp
+    src/player/audio_analysis.cpp
     src/player/queue.cpp
     src/player/session.cpp
     src/player/tracks.cpp
 )
-target_link_libraries(playfin_player PUBLIC playfin_base playfin_jellyfin PRIVATE playfin_mpv)
+target_link_libraries(playfin_player PUBLIC playfin_base playfin_jellyfin PRIVATE playfin_mpv playfin_av)
 playfin_set_warnings(playfin_player)
 
 # app, screens and test harness
@@ -172,6 +174,7 @@ add_library(playfin_core STATIC
     src/app/shell/peek.cpp
     src/app/shell/library_order_screen.cpp
     src/app/shell/downloads.cpp
+    src/app/shell/tv_guide.cpp
     src/app/shell/downloads_screen.cpp
     src/app/shell/screensaver.cpp
     src/app/shell/cards.cpp

@@ -2,11 +2,13 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include "core/task.hpp"
 #include "jellyfin/models.hpp"
+#include "player/audio_analysis.hpp"
 #include "player/engine.hpp"
 #include "player/queue.hpp"
 #include "player/session.hpp"
@@ -56,6 +58,10 @@ public:
     void listen(const void* owner, std::function<void()> changed);
     void unlisten(const void* owner);
 
+    // The visualizer's picture of the current track at `seconds` (its decoding starts on the first call), nullopt
+    // until there.
+    std::optional<player::SpectrumFrame> spectrum(double seconds);
+
 private:
     void startCurrent();
     void updateEngine();
@@ -67,6 +73,8 @@ private:
 
     AppSession& session_;
     std::unique_ptr<player::Engine> engine_;
+    std::unique_ptr<player::AudioAnalysis> analysis_;  // the current track's, for the visualizer
+    std::string analysisFor_;
     player::Queue queue_;
     std::unique_ptr<player::Reporter> reporter_;
     player::StreamChoice stream_;

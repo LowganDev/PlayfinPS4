@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "読み込み中…",
   "settings.tv_guide.ready": "{0} チャンネル",
   "settings.tv_guide.failed": "読み込めません。再試行してください",
-  "settings.tv_guide.invalid": "アドレスは http:// または https:// で始めてください。"
+  "settings.tv_guide.invalid": "アドレスは http:// または https:// で始めてください。",
+  "music.visualizer": "ビジュアライザー",
+  "music.visualizer.bars": "ビジュアライザー：バー",
+  "music.visualizer.mirror": "ビジュアライザー：ミラー",
+  "music.visualizer.wave": "ビジュアライザー：ウェーブ",
+  "music.visualizer.off": "ビジュアライザー：オフ"
 }

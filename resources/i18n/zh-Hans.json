@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "正在加载…",
   "settings.tv_guide.ready": "{0} 个频道",
   "settings.tv_guide.failed": "未能读取，请重试",
-  "settings.tv_guide.invalid": "地址必须以 http:// 或 https:// 开头。"
+  "settings.tv_guide.invalid": "地址必须以 http:// 或 https:// 开头。",
+  "music.visualizer": "可视化",
+  "music.visualizer.bars": "可视化：柱状",
+  "music.visualizer.mirror": "可视化：镜像",
+  "music.visualizer.wave": "可视化：波形",
+  "music.visualizer.off": "可视化：关闭"
 }

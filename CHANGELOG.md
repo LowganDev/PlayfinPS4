@@ -21,7 +21,8 @@
 - Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the
   system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
   one kind. A search typed key by key is kept in the recent ones once a result is opened.
-- Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume.
+- Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume; a visualizer behind Now
+  Playing (bars, mirrored bars or a wave in the accent colour; □ changes it, or turns it off).
 - Live TV: a channel from an M3U tuner plays straight from its source (without the server, without the Jellyfin
   token), through the server when its source cannot be reached; a channel whose picture stops is opened again by
   itself; a TV guide read on the console from an XMLTV address (Settings › Guide TV; plain or gzip, at start and

@@ -277,5 +277,10 @@
   "settings.tv_guide.loading": "Загрузка…",
   "settings.tv_guide.ready": "Каналов: {0}",
   "settings.tv_guide.failed": "Не загружено, повторите",
-  "settings.tv_guide.invalid": "Адрес должен начинаться с http:// или https://."
+  "settings.tv_guide.invalid": "Адрес должен начинаться с http:// или https://.",
+  "music.visualizer": "Визуализация",
+  "music.visualizer.bars": "Визуализация: столбцы",
+  "music.visualizer.mirror": "Визуализация: зеркало",
+  "music.visualizer.wave": "Визуализация: волна",
+  "music.visualizer.off": "Визуализация: выкл."
 }

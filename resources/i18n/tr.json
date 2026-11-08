@@ -273,5 +273,10 @@
   "settings.tv_guide.loading": "Yükleniyor…",
   "settings.tv_guide.ready": "{0} kanal",
   "settings.tv_guide.failed": "Okunamadı, yeniden deneyin",
-  "settings.tv_guide.invalid": "Adres http:// veya https:// ile başlamalı."
+  "settings.tv_guide.invalid": "Adres http:// veya https:// ile başlamalı.",
+  "music.visualizer": "Görselleştirici",
+  "music.visualizer.bars": "Görselleştirici: çubuklar",
+  "music.visualizer.mirror": "Görselleştirici: ayna",
+  "music.visualizer.wave": "Görselleştirici: dalga",
+  "music.visualizer.off": "Görselleştirici: kapalı"
 }

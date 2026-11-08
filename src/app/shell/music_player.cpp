@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <thread>
 
 #include "app/shell/engine_options.hpp"
 #include "app/shell/session.hpp"
@@ -87,6 +88,8 @@ void MusicPlayer::startCurrent() {
     engine_->setPaused(true);  // the previous track stays silent (and cannot end) while the next one loads
     itemId_ = track->id;
     stream_ = player::StreamChoice{};
+    analysis_.reset();  // the previous track's visualizer decoding stops
+    analysisFor_.clear();
     reporter_ = std::make_unique<player::Reporter>(
         [this](player::ReportKind kind, const jellyfin::PlaybackState& state) { send(kind, state); });
     loading_ = true;
@@ -212,6 +215,8 @@ void MusicPlayer::stop() {
         reporter_.reset();
     }
     engine_.reset();
+    analysis_.reset();
+    analysisFor_.clear();
     queue_.set({}, 0, false);
     loading_ = false;
     itemId_.clear();
@@ -312,6 +317,33 @@ void MusicPlayer::setVolume(int percent) {
         engine_->setVolume(percent);
     }
     ++changes_;
+}
+
+std::optional<player::SpectrumFrame> MusicPlayer::spectrum(double seconds) {
+    if (stream_.url.empty() || itemId_.empty()) {
+        return std::nullopt;
+    }
+    if (analysisFor_ != itemId_) {
+        analysis_.reset();  // the previous track's decoding stops
+        analysisFor_ = itemId_;
+        const auto client = session_.client();
+        if (!client) {
+            return std::nullopt;
+        }
+        // the same header and TLS settings as the player's stream of this track
+        const player::EngineOptions options = engineOptionsFor(*client, session_.synchronous);
+        player::AudioAnalysis::Source source;
+        source.url = stream_.url;
+        source.authorization = options.authorization;
+        source.verifyTls = options.verifyTls;
+        source.caFile = options.caFile;
+        analysis_ = std::make_unique<player::AudioAnalysis>(std::move(source));
+        // test mode: the whole (short) track first, so that screenshots are the same on every run
+        for (int i = 0; session_.synchronous && i < 500 && !analysis_->finished() && !analysis_->failed(); ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+    return analysis_ ? analysis_->at(seconds) : std::nullopt;
 }
 
 }  // namespace playfin::app
