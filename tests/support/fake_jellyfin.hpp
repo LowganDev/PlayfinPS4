@@ -24,6 +24,9 @@ public:
     // GitHub's latest release at /github/latest: `version`, its package (`package`, digest included) at
     // /github/Playfin.pkg; an empty version answers 404.
     void publishRelease(std::string version, std::string package);
+    // The README's screenshots: a "Films" library of the Blender Foundation's open films, their posters and
+    // backdrops read from `dir` (<id>-primary.jpg, <id>-backdrop.jpg; scripts/readme-shots.sh fetches them).
+    void showcase(std::string dir);
 
     struct Seen {
         std::string method;
@@ -43,6 +46,7 @@ public:
     std::string timerBody() const;  // the last POST /LiveTv/Timers
 
 private:
+    bool serveShowcase(const httplib::Request& req, httplib::Response& res) const;
     FakeServer server_;
     std::string version_;
     std::atomic<bool> approved_{false};
@@ -53,6 +57,7 @@ private:
     std::vector<Seen> requests_;
     std::string playbackInfoBody_;
     std::string timerBody_;
+    std::string showcaseDir_;
     std::string releaseVersion_;
     std::string releasePackage_;
 };

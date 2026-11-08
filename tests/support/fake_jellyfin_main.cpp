@@ -13,6 +13,7 @@
 int main(int argc, char** argv) {
     bool https = false;
     bool media = false;
+    std::string showcase;  // the README screenshots' artwork
     int port = 0;
     std::string urlFile;
     for (int i = 1; i < argc; ++i) {
@@ -24,12 +25,17 @@ int main(int argc, char** argv) {
             media = true;
         } else if (std::strcmp(argv[i], "--url-file") == 0 && i + 1 < argc) {
             urlFile = argv[++i];
+        } else if (std::strcmp(argv[i], "--showcase") == 0 && i + 1 < argc) {
+            showcase = argv[++i];
         }
     }
     playfin::test::FakeJellyfin server(https ? playfin::test::TlsMode::SelfSigned : playfin::test::TlsMode::None,
                                        "10.10.7", port);
     if (media) {
         server.showMediaViews();
+    }
+    if (!showcase.empty()) {
+        server.showcase(showcase);
     }
     if (!urlFile.empty()) {
         std::ofstream(urlFile) << server.baseUrl();

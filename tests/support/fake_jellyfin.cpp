@@ -7,6 +7,9 @@
 #include <cstdlib>
 #include <cstdio>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <fstream>
 #include <set>
 #include <vector>
 
@@ -182,7 +185,157 @@ std::string posterJpeg() {
     return out;
 }
 
+
+// ---- showcase (README screenshots): the Blender Foundation's open films, free artwork
+
+struct ShowcaseFilm {
+    const char* id;
+    const char* name;
+    int year;
+    int minutes;
+    const char* rating;
+    double community;
+    const char* genres;
+    const char* director;
+    const char* overview;
+};
+
+const ShowcaseFilm kShowcase[] = {
+    {"sc-bbb", "Big Buck Bunny", 2008, 10, "G", 6.5, R"("Animation","Comédie")", "Sacha Goedegebure",
+     "Un lapin géant et paisible voit sa forêt troublée par trois rongeurs farceurs. Il décide de leur donner une "
+     "leçon."},
+    {"sc-sintel", "Sintel", 2010, 15, "PG-13", 7.4, R"("Animation","Fantastique")", "Colin Levy",
+     "Une jeune femme parcourt des terres hostiles à la recherche du bébé dragon qu'elle avait recueilli."},
+    {"sc-tos", "Tears of Steel", 2012, 12, "PG-13", 6.0, R"("Science-fiction","Action")", "Ian Hubert",
+     "À Amsterdam, un groupe de scientifiques tente de sauver le monde des robots en revivant une rupture."},
+    {"sc-ed", "Elephants Dream", 2006, 11, "PG", 6.2, R"("Animation","Science-fiction")", "Bassam Kurdali",
+     "Deux hommes explorent une machine immense et étrange, chacun la voyant à sa façon."},
+    {"sc-cosmos", "Cosmos Laundromat", 2015, 12, "PG", 7.1, R"("Animation","Comédie")", "Mathieu Auvray",
+     "Sur une île déserte, un mouton suicidaire rencontre un vendeur mystérieux qui lui offre une vie nouvelle."},
+    {"sc-spring", "Spring", 2019, 8, "G", 7.3, R"("Animation","Fantastique")", "Andy Goralczyk",
+     "Une bergère et son chien affrontent les esprits anciens pour que le printemps revienne."},
+    {"sc-llamigos", "Caminandes : Llamigos", 2016, 3, "G", 7.0, R"("Animation","Comédie")", "Pablo Vazquez",
+     "En Patagonie, le lama Koro et le manchot Oti se disputent les dernières baies de l'hiver."},
+};
+
+std::string showcaseItem(const ShowcaseFilm& film, bool details) {
+    char head[512];
+    std::snprintf(head, sizeof(head),
+                  R"({"Name":"%s","Id":"%s","ServerId":"f1e2d3c4b5a6","Type":"Movie","ProductionYear":%d,)"
+                  R"("RunTimeTicks":%lld,"OfficialRating":"%s","CommunityRating":%.1f,)",
+                  film.name, film.id, film.year, static_cast<long long>(film.minutes) * 600000000LL, film.rating,
+                  film.community);
+    std::string out = head;
+    out += std::string(R"("Genres":[)") + film.genres + "],";
+    out += std::string(R"("Overview":")") + film.overview + R"(",)";
+    out += std::string(R"("ImageTags":{"Primary":"p-)") + film.id + R"("},"BackdropImageTags":["b-)" + film.id + R"("],)";
+    out += R"("PrimaryImageAspectRatio":0.6667,)";
+    const bool resumed = std::string(film.id) == "sc-sintel";
+    out += std::string(R"("UserData":{"PlaybackPositionTicks":)") + (resumed ? "3600000000" : "0") +
+           R"(,"Played":false,"IsFavorite":false,"PlayedPercentage":)" + (resumed ? "40" : "0") + "}";
+    if (details) {
+        out += std::string(R"(,"People":[{"Name":")") + film.director + R"(","Id":"pd-)" + film.id +
+               R"(","Type":"Director"}])";
+        out += std::string(R"(,"MediaSources":[{"Id":"ms-)") + film.id + R"(","Container":"mkv","Name":")" +
+               film.name + R"(","MediaStreams":[{"Index":0,"Type":"Video","Codec":"h264","Width":1920,"Height":1080,)"
+               R"("VideoRangeType":"SDR"},{"Index":1,"Type":"Audio","Codec":"aac","Channels":6,"IsDefault":true}]}])";
+    }
+    return out + "}";
+}
+
+std::string showcasePage(std::initializer_list<const char*> ids) {
+    std::string items;
+    int count = 0;
+    for (const ShowcaseFilm& film : kShowcase) {
+        bool wanted = ids.size() == 0;
+        for (const char* id : ids) {
+            wanted = wanted || std::string(id) == film.id;
+        }
+        if (wanted) {
+            items += (count++ == 0 ? "" : ",") + showcaseItem(film, false);
+        }
+    }
+    return R"({"Items":[)" + items + R"(],"TotalRecordCount":)" + std::to_string(count) + R"(,"StartIndex":0})";
+}
+
 }  // namespace
+
+bool FakeJellyfin::serveShowcase(const httplib::Request& req, httplib::Response& res) const {
+    std::string dir;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        dir = showcaseDir_;
+    }
+    if (dir.empty() || req.method != "GET") {
+        return false;
+    }
+    const std::string& path = req.path;
+    const auto json = [&res](const std::string& body) { res.set_content(body, "application/json"); };
+    if (path == "/UserViews") {
+        json(R"({"Items":[{"Name":"Films","Id":"lib-showcase","Type":"CollectionFolder","CollectionType":"movies",)"
+             R"("ImageTags":{"Primary":"p-sc-tos"}}],"TotalRecordCount":1,"StartIndex":0})");
+        return true;
+    }
+    if (path == "/Items/Latest") {
+        const std::string page = showcasePage({"sc-spring", "sc-cosmos", "sc-llamigos", "sc-tos", "sc-bbb", "sc-ed"});
+        json(page.substr(page.find('['), page.rfind(']') - page.find('[') + 1));  // Latest answers an array
+        return true;
+    }
+    if (path == "/UserItems/Resume") {
+        json(showcasePage({"sc-sintel"}));
+        return true;
+    }
+    if (path == "/Shows/NextUp" || path == "/LiveTv/Programs/Recommended") {
+        json(R"({"Items":[],"TotalRecordCount":0,"StartIndex":0})");
+        return true;
+    }
+    if (path == "/Items") {  // films only; a search keeps the names that hold it
+        const std::string types = req.get_param_value("includeItemTypes");
+        const std::string term = lower(req.get_param_value("searchTerm"));
+        if (!types.empty() && types.find("Movie") == std::string::npos) {
+            json(R"({"Items":[],"TotalRecordCount":0,"StartIndex":0})");
+            return true;
+        }
+        std::string items;
+        int count = 0;
+        for (const ShowcaseFilm& film : kShowcase) {
+            if (term.empty() || lower(film.name).find(term) != std::string::npos) {
+                items += (count++ == 0 ? "" : ",") + showcaseItem(film, false);
+            }
+        }
+        json(R"({"Items":[)" + items + R"(],"TotalRecordCount":)" + std::to_string(count) + R"(,"StartIndex":0})");
+        return true;
+    }
+    const std::string prefix = "/Items/";
+    if (path.rfind(prefix, 0) == 0) {
+        const std::string rest = path.substr(prefix.size());
+        const std::string id = rest.substr(0, rest.find('/'));
+        if (rest.find("/Images/") != std::string::npos) {
+            const bool backdrop = rest.find("/Images/Backdrop") != std::string::npos;
+            const std::string file = dir + "/" + (id == "lib-showcase" ? "sc-tos" : id) +
+                                     (backdrop ? "-backdrop.jpg" : "-primary.jpg");
+            std::ifstream in(file, std::ios::binary);
+            if (!in) {
+                res.status = 404;
+                return true;
+            }
+            res.set_content(std::string(std::istreambuf_iterator<char>(in), {}), "image/jpeg");
+            return true;
+        }
+        for (const ShowcaseFilm& film : kShowcase) {
+            if (id == film.id && rest == id) {
+                json(showcaseItem(film, true));
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void FakeJellyfin::showcase(std::string dir) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    showcaseDir_ = std::move(dir);
+}
 
 void FakeJellyfin::publishRelease(std::string version, std::string package) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -216,11 +369,14 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         std::lock_guard<std::mutex> lock(mutex_);
         res.set_content(releasePackage_, "application/octet-stream");
     });
-    http.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response&) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        last_ = Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body};
-        requests_.push_back(last_);
-        return httplib::Server::HandlerResponse::Unhandled;
+    http.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            last_ = Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body};
+            requests_.push_back(last_);
+        }
+        return serveShowcase(req, res) ? httplib::Server::HandlerResponse::Handled
+                                       : httplib::Server::HandlerResponse::Unhandled;
     });
     http.Get("/System/Info/Public", [this](const httplib::Request&, httplib::Response& res) {
         res.set_content(R"({"LocalAddress":")" + server_.baseUrl() + R"(","ServerName":"Test Server","Version":")" +
