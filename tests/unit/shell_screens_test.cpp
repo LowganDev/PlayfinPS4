@@ -1147,6 +1147,16 @@ TEST_CASE("the home screen has the navigation bar and starts on its content") {
     CHECK(dynamic_cast<app::ItemCard*>(h.shell.application->focus().focused()) != nullptr);
 }
 
+namespace {
+std::string focusedText(ui::Application& app) {
+    std::vector<std::string> labels;
+    if (app.focus().focused() != nullptr) {
+        texts(*app.focus().focused(), labels);
+    }
+    return labels.empty() ? std::string() : labels.front();
+}
+}  // namespace
+
 TEST_CASE("a tab replaces the screen, and back on a tab screen does nothing") {
     HomeShell h;
     h.shell.press(Action::Up);
@@ -1156,11 +1166,13 @@ TEST_CASE("a tab replaces the screen, and back on a tab screen does nothing") {
     h.shell.frames(5);
     CHECK(h.shell.application->depth() == 1);
     CHECK(shows(*h.shell.application, "Recent searches") == false);  // none yet
-    CHECK(dynamic_cast<ui::TextField*>(h.shell.application->focus().focused()) != nullptr);  // the field first
+    CHECK(focusedText(*h.shell.application) == "A");  // the keyboard first
     ui::Screen* search = h.shell.application->top();
     h.shell.press(Action::Back);
     CHECK(h.shell.application->depth() == 1);
     CHECK(h.shell.application->top() == search);
+    h.shell.press(Action::Up);  // the field
+    CHECK(dynamic_cast<ui::TextField*>(h.shell.application->focus().focused()) != nullptr);
     h.shell.press(Action::Up);
     h.shell.press(Action::Right);
     REQUIRE(focusedIsTab(*h.shell.application, "Settings"));
