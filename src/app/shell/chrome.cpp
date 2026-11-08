@@ -6,6 +6,7 @@
 
 #include "ui/box.hpp"
 #include "ui/draw.hpp"
+#include "ui/images.hpp"
 #include "ui/label.hpp"
 #include "ui/sprites.hpp"
 #include "ui/theme.hpp"
@@ -97,11 +98,14 @@ BackdropShade::BackdropShade() {
 }
 
 void BackdropShade::draw(NVGcontext* vg) const {
+    if (picture_ != nullptr && picture_->coversFrame()) {
+        return;
+    }
     const ui::Color bg = ui::theme().background;
-    const float split = static_cast<float>(std::round(frame.height * 0.7f));
+    const float split = static_cast<float>(ui::backdropSplit(static_cast<int>(std::round(frame.height))));
     // a sprite: as a gradient over 70 % of the screen it cost more than all the rest of a details frame
     ui::drawVerticalFade(vg, 0, 0, static_cast<int>(std::round(frame.width)), static_cast<int>(split),
-                         static_cast<int>(split), bg, 143, 255);
+                         static_cast<int>(split), bg, ui::kBackdropTopAlpha, 255);
     nvgBeginPath(vg);
     nvgRect(vg, 0, split, frame.width, frame.height - split);
     nvgFillColor(vg, nvgRGBA(bg.r, bg.g, bg.b, 255));

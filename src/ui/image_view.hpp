@@ -20,6 +20,10 @@ public:
 
     Fit fit = Fit::Cover;
     Color placeholder;
+    // a screen's backdrop: the picture comes with the backdrop shade baked in (ImageShape::Backdrop)
+    bool backdrop = false;
+    // the picture is shown, opaque, over the whole frame (what is under it need not be drawn)
+    bool coversFrame() const;
 
     void draw(NVGcontext* vg) const override;
 

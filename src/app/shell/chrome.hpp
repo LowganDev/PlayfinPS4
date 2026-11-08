@@ -5,6 +5,7 @@
 
 #include "jellyfin/client.hpp"
 #include "jellyfin/models.hpp"
+#include "ui/image_view.hpp"
 #include "ui/text.hpp"
 #include "ui/view.hpp"
 
@@ -31,8 +32,14 @@ std::unique_ptr<ui::View> makeAvatar(const std::string& userName);
 // as through 55 % opacity and a 20 % shade, while drawn opaque: the renderer copies it).
 class BackdropShade : public ui::View {
 public:
+    // Under `picture` (an ImageView with `backdrop`, which has the shade baked in): drawn while the picture is not
+    // there yet or fades in, skipped once it covers the screen.
     BackdropShade();
+    void setPicture(const ui::ImageView* picture) { picture_ = picture; }
     void draw(NVGcontext* vg) const override;
+
+private:
+    const ui::ImageView* picture_ = nullptr;
 };
 
 // The backdrop of an item (its own, else its series'), empty when it has none.

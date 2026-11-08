@@ -31,12 +31,14 @@ Screensaver::Screensaver(AppSession& session) : session_(session) {
     focusable = true;
     drawsOwnFocus = true;
     hidesHints = true;
+    auto* shade = add<BackdropShade>();  // under the picture, which has it baked in
     backdrop_ = add<ui::ImageView>();
     backdrop_->width = ui::SizeSpec::fill();
     backdrop_->height = ui::SizeSpec::fill();
     backdrop_->cornerRadius = 0;
-    backdrop_->placeholder = ui::Color{0, 0, 0, 255};
-    add<BackdropShade>();
+    backdrop_->placeholder = ui::Color{0, 0, 0, 0};
+    backdrop_->backdrop = true;
+    shade->setPicture(backdrop_);
     auto* column = add<ui::Box>(ui::Axis::Column);
     column->width = ui::SizeSpec::fill();
     column->height = ui::SizeSpec::fill();

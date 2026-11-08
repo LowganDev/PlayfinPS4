@@ -97,7 +97,30 @@ DecodedImage coverResize(const DecodedImage& image, int width, int height) {
 
 }  // namespace
 
-std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height, ImageShape shape) {
+int backdropSplit(int height) { return static_cast<int>(std::lround(height * 0.7)); }
+
+void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::uint8_t groundR, std::uint8_t groundG,
+                   std::uint8_t groundB) {
+    const int split = backdropSplit(height);
+    for (int y = 0; y < height; ++y) {
+        // as the shade drawn over it: NanoVG's gradient sampled at the pixel's centre, then the ground
+        const float t = y < split ? (static_cast<float>(y) + 0.5f) / static_cast<float>(split) : 1.0f;
+        const float a = y < split ? (kBackdropTopAlpha + (255 - kBackdropTopAlpha) * t) / 255.0f : 1.0f;
+        const int keep = static_cast<int>(std::lround((1 - a) * 256));
+        const int add[3] = {static_cast<int>(std::lround(groundR * a * 256)), static_cast<int>(std::lround(groundG * a * 256)),
+                            static_cast<int>(std::lround(groundB * a * 256))};
+        std::uint8_t* p = &rgba[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) * 4];
+        for (int x = 0; x < width; ++x, p += 4) {
+            for (int c = 0; c < 3; ++c) {
+                p[c] = static_cast<std::uint8_t>(std::min(255, (p[c] * keep + add[c] + 128) >> 8));
+            }
+            p[3] = 255;
+        }
+    }
+}
+
+std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height, ImageShape shape,
+                                        Color ground) {
     if (!looksLikeImage(bytes)) {
         return std::nullopt;
     }
@@ -146,7 +169,8 @@ std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int
         }
     }
     stbi_image_free(data);
-    if (shape == ImageShape::Crop && (out.width > width || out.height > height)) {
+    const bool crop = shape == ImageShape::Crop || shape == ImageShape::Backdrop;
+    if (crop && (out.width > width || out.height > height)) {
         const int cw = std::min(out.width, std::max(width, 1));
         const int ch = std::min(out.height, std::max(height, 1));
         const int left = (out.width - cw) / 2;
@@ -163,8 +187,11 @@ std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int
         out.width = cw;
         out.height = ch;
     }
-    if (shape == ImageShape::Crop && width > 0 && height > 0 && (out.width != width || out.height != height)) {
+    if (crop && width > 0 && height > 0 && (out.width != width || out.height != height)) {
         out = coverResize(out, width, height);  // smaller than the frame: scaled up to cover it, centre kept
+    }
+    if (shape == ImageShape::Backdrop) {
+        shadeBackdrop(out.rgba, out.width, out.height, ground.r, ground.g, ground.b);
     }
     out.opaque = true;
     for (std::size_t i = 3; i < out.rgba.size() && out.opaque; i += 4) {
@@ -346,7 +373,7 @@ struct ImageLoader::Shared {
         }
         if (disk) {
             if (auto cached = disk->read(job.url)) {
-                job.image = decodeImage(*cached, job.width, job.height, job.shape);
+                job.image = decodeImage(*cached, job.width, job.height, job.shape, job.ground);
                 if (job.image) {
                     return job;
                 }
@@ -369,7 +396,7 @@ struct ImageLoader::Shared {
             job.skipped = true;
             return job;
         }
-        job.image = decodeImage(bytes, job.width, job.height, job.shape);
+        job.image = decodeImage(bytes, job.width, job.height, job.shape, job.ground);
         return job;
     }
 };
@@ -397,7 +424,7 @@ std::unique_ptr<ImageRequest> ImageLoader::request(const std::string& url, int w
     core::CancelToken token;
     auto handle = std::make_unique<ImageRequest>(token);
     const std::string key = url + "|" + std::to_string(width) + "x" + std::to_string(height) +
-                            (shape == ImageShape::Crop ? "c" : "");
+                            (shape == ImageShape::Crop ? "c" : shape == ImageShape::Backdrop ? "b" : "");
     if (auto hit = cache_.find(key); hit != cache_.end()) {
         lru_.splice(lru_.begin(), lru_, hit->second);
         ready(hit->second->second);
@@ -422,6 +449,7 @@ void ImageLoader::start(const std::string& key, const std::string& url, int widt
     job.width = width;
     job.height = height;
     job.shape = shape;
+    job.ground = theme().background;
     std::shared_ptr<Job> wanted = jobs_[key];
     if (config_.synchronous) {
         shared_->decoded.push_back(shared_->work(std::move(job), *wanted));

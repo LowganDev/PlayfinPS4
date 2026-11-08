@@ -14,6 +14,7 @@
 
 #include "core/result.hpp"
 #include "core/task.hpp"
+#include "ui/theme.hpp"
 
 namespace playfin::ui {
 
@@ -46,11 +47,20 @@ constexpr long long kMaxImagePixels = 8LL * 1024 * 1024;  // a progressive JPEG 
 
 // Whole: the full picture, box-filtered down so it still covers width x height. Crop: the same, then the centre
 // cut to width x height, so a covering view shows it pixel for pixel (the CPU renderer then copies rows).
-enum class ImageShape { Whole, Crop };
+// Backdrop: Crop with the backdrop shade baked in (the ground colour from 143 to 255 over the top 70 %, the ground
+// below), once, instead of a shade blended over 1.45 million pixels every frame.
+enum class ImageShape { Whole, Crop, Backdrop };
+
+// Shades a picture as a backdrop (in place, opaque afterwards): see ImageShape::Backdrop.
+void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::uint8_t groundR, std::uint8_t groundG,
+                   std::uint8_t groundB);
+// The backdrop's shade: where its gradient ends (70 % of the height) and its alpha at the top.
+int backdropSplit(int height);
+constexpr std::uint8_t kBackdropTopAlpha = 143;
 
 // JPEG/PNG → RGBA, box-filtered down (never upscaled). nullopt on bad data or over the limits above.
 std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height,
-                                        ImageShape shape = ImageShape::Whole);
+                                        ImageShape shape = ImageShape::Whole, Color ground = {});
 // The header names a supported format within the limits (cheap: nothing is decoded).
 bool looksLikeImage(const std::string& bytes);
 std::uint64_t fnv1a(std::string_view text);
@@ -125,6 +135,7 @@ private:
         int width = 0;
         int height = 0;
         ImageShape shape = ImageShape::Whole;
+        Color ground;  // Backdrop: the shade's colour (the theme's background, read on the main thread)
         bool skipped = false;  // nobody wanted it any more when the worker got to it
         std::optional<DecodedImage> image;
     };

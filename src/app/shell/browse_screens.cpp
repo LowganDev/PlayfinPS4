@@ -509,12 +509,15 @@ class DetailsScreen : public ShellScreen {
 public:
     DetailsScreen(AppSession& session, jellyfin::Item item) : ShellScreen(session), item_(std::move(item)) {
         enterRise = 40;
+        // the shade under the picture: the picture has it baked in and covers it once there
+        auto* shade = add<BackdropShade>();
         backdrop_ = add<ui::ImageView>();
         backdrop_->width = ui::SizeSpec::fill();
         backdrop_->height = ui::SizeSpec::fill();
         backdrop_->cornerRadius = 0;
         backdrop_->placeholder = ui::Color{0, 0, 0, 0};
-        add<BackdropShade>();
+        backdrop_->backdrop = true;
+        shade->setPicture(backdrop_);
         scroll_ = add<ui::VScroll>();
         auto content = std::make_unique<ui::Box>(ui::Axis::Column);
         content->padding = pagePadding();

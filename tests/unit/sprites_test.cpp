@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "ui/images.hpp"
 #include "ui/sprites.hpp"
 
 using namespace playfin;
@@ -19,4 +20,23 @@ TEST_CASE("a vertical fade: premultiplied, from transparent to its alpha over th
     CHECK(pixels[last + 1] == 25);  // 32 * 200 / 255
     CHECK(pixels[last + 2] == 50);  // 64 * 200 / 255
     CHECK(ui::verticalFadeImage(0, 5, 2, ground, 0, 255).empty());
+}
+
+
+TEST_CASE("a backdrop's shade is baked in: as the shade blended over it, then the ground below 70 %") {
+    const int width = 2;
+    const int height = 10;  // split at row 7
+    std::vector<std::uint8_t> rgba(static_cast<std::size_t>(width * height * 4), 200);
+    ui::shadeBackdrop(rgba, width, height, 14, 14, 17);
+    CHECK(ui::backdropSplit(height) == 7);
+    const auto at = [&](std::size_t y, std::size_t c) { return static_cast<int>(rgba[y * width * 4 + c]); };
+    // row 0: alpha (143 + 112 * 0.5 / 7) / 255 = 0.592: 200 * 0.408 + 14 * 0.592 = 89.9
+    CHECK(at(0, 0) == doctest::Approx(90).epsilon(0.02));
+    CHECK(at(0, 2) == doctest::Approx(92).epsilon(0.02));
+    CHECK(at(6, 0) < at(0, 0));  // darker down the gradient
+    CHECK(at(7, 0) == 14);       // the ground from the split
+    CHECK(at(9, 2) == 17);
+    for (std::size_t i = 3; i < rgba.size(); i += 4) {
+        CHECK(rgba[i] == 255);  // opaque: drawn as a copy of rows
+    }
 }
