@@ -122,6 +122,8 @@ public:
     // music
     core::Result<ItemPage> artists(const std::string& libraryId, int startIndex, int limit,
                                    const core::CancelToken& token = {}) const;
+    core::Result<ItemPage> musicGenres(const std::string& libraryId, int startIndex, int limit,
+                                       const core::CancelToken& token = {}) const;
     core::Result<ItemPage> playlistItems(const std::string& playlistId, const core::CancelToken& token = {}) const;
 
     // Live TV

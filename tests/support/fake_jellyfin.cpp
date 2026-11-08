@@ -188,6 +188,11 @@ void FakeJellyfin::publishRelease(std::string version, std::string package) {
 FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     : server_(mode), version_(std::move(version)) {
     httplib::Server& http = server_.http();
+    http.Get("/MusicGenres", guarded([](const httplib::Request&, httplib::Response& res) {
+        res.set_content(R"({"Items":[{"Name":"Synthwave","Id":"g-synth","Type":"MusicGenre"},)"
+                        R"({"Name":"Jazz","Id":"g-jazz","Type":"MusicGenre"}],"TotalRecordCount":2,"StartIndex":0})",
+                        "application/json");
+    }));
     http.Get("/github/latest", [this](const httplib::Request&, httplib::Response& res) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (releaseVersion_.empty()) {

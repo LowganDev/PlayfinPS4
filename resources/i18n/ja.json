@@ -206,5 +206,8 @@
   "shell.search.channels": "チャンネル",
   "shell.search.all": "すべて",
   "shell.search.filter": "結果: {0}  ·  L2 / R2 で切り替え",
-  "shell.search.filter_hint": "絞り込み"
+  "shell.search.filter_hint": "絞り込み",
+  "music.genres": "ジャンル",
+  "music.songs": "曲",
+  "music.next_tab": "次のタブ"
 }

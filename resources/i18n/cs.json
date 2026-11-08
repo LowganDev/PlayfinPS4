@@ -208,5 +208,8 @@
   "shell.search.channels": "Kanály",
   "shell.search.all": "Vše",
   "shell.search.filter": "Výsledky: {0}  ·  L2 / R2 pro změnu",
-  "shell.search.filter_hint": "Filtr"
+  "shell.search.filter_hint": "Filtr",
+  "music.genres": "Žánry",
+  "music.songs": "Skladby",
+  "music.next_tab": "Další karta"
 }

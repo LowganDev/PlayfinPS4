@@ -210,5 +210,8 @@
   "shell.search.channels": "Каналы",
   "shell.search.all": "Всё",
   "shell.search.filter": "Результаты: {0}  ·  L2 / R2 — сменить",
-  "shell.search.filter_hint": "Фильтр"
+  "shell.search.filter_hint": "Фильтр",
+  "music.genres": "Жанры",
+  "music.songs": "Треки",
+  "music.next_tab": "Следующая вкладка"
 }

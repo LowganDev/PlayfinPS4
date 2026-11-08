@@ -206,5 +206,8 @@
   "shell.search.channels": "频道",
   "shell.search.all": "全部",
   "shell.search.filter": "结果：{0}  ·  L2 / R2 切换",
-  "shell.search.filter_hint": "筛选"
+  "shell.search.filter_hint": "筛选",
+  "music.genres": "流派",
+  "music.songs": "歌曲",
+  "music.next_tab": "下一个标签"
 }

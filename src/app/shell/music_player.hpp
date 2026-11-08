@@ -33,6 +33,8 @@ public:
     void jump(int offset);  // the offset-th upcoming track
     void setShuffle(bool on);
     void setRepeat(player::Repeat repeat);
+    // 0 to 100, kept in the settings (the video player's too)
+    void setVolume(int percent);
     // Reports the track stopped, forgets the queue and closes the engine.
     void stop();
     // Engine events, reports, the next track when one ends.

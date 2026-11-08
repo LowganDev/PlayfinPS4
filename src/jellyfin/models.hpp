@@ -27,6 +27,7 @@ enum class ItemType {
     TvChannel,
     Program,
     Person,
+    MusicGenre,
     Video,
     Other,
 };

@@ -206,5 +206,8 @@
   "shell.search.channels": "채널",
   "shell.search.all": "전체",
   "shell.search.filter": "결과: {0}  ·  L2 / R2로 변경",
-  "shell.search.filter_hint": "필터"
+  "shell.search.filter_hint": "필터",
+  "music.genres": "장르",
+  "music.songs": "노래",
+  "music.next_tab": "다음 탭"
 }

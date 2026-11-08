@@ -75,6 +75,9 @@ void MusicPlayer::startCurrent() {
         player::EngineOptions options = engineOptionsFor(*client, session_.synchronous);
         options.audioOnly = true;
         engine_ = player::Engine::create(options, [] {});  // update() polls it every frame
+        if (engine_) {
+            engine_->setVolume(session_.settings().volume);
+        }
         if (!engine_) {
             PF_LOG_ERROR("music: no engine");
             stop();
@@ -299,6 +302,16 @@ MusicPlayer::Status MusicPlayer::status() const {
         status.duration = static_cast<double>(status.track->runTimeTicks) / player::kTicksPerSecond;
     }
     return status;
+}
+
+void MusicPlayer::setVolume(int percent) {
+    percent = percent < 0 ? 0 : percent > 100 ? 100 : percent;
+    session_.settings().volume = percent;
+    session_.saveSettings();
+    if (engine_) {
+        engine_->setVolume(percent);
+    }
+    ++changes_;
 }
 
 }  // namespace playfin::app

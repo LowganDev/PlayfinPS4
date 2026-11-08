@@ -206,5 +206,8 @@
   "shell.search.channels": "Kênh",
   "shell.search.all": "Tất cả",
   "shell.search.filter": "Kết quả: {0}  ·  L2 / R2 để đổi",
-  "shell.search.filter_hint": "Lọc"
+  "shell.search.filter_hint": "Lọc",
+  "music.genres": "Thể loại",
+  "music.songs": "Bài hát",
+  "music.next_tab": "Thẻ tiếp theo"
 }

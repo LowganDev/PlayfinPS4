@@ -1931,3 +1931,59 @@ TEST_CASE("search: people are found too; R2 narrows the results to one kind, L2 
     shell.frames(5);
     CHECK(showsSomewhere(*shell.application, "Results: Everything"));
 }
+
+namespace {
+// the item card whose first label is `title`
+app::ItemCard* findItemCard(ui::View& view, const std::string& title) {
+    if (auto* card = dynamic_cast<app::ItemCard*>(&view)) {
+        std::vector<std::string> labels;
+        texts(view, labels);
+        if (!labels.empty() && labels.front() == title) {
+            return card;
+        }
+    }
+    for (const auto& child : view.children()) {
+        if (app::ItemCard* found = findItemCard(*child, title)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+}  // namespace
+
+TEST_CASE("music: the genres and the songs tabs (R2); a genre lists its albums; a song plays with the next ones") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeMusicLibrary(shell.session, musicLibrary()));
+    shell.frames(10);
+    pressButton(shell, "Genres");
+    shell.frames(10);
+    CHECK(shows(*shell.application, "Synthwave"));
+    CHECK(server.count("/MusicGenres") >= 1);
+    auto* card = findItemCard(*shell.application->top(), "Synthwave");
+    REQUIRE(card != nullptr);
+    REQUIRE(shell.application->focus().focus(card));
+    shell.press(Action::Confirm);
+    shell.frames(10);
+    CHECK(shell.application->depth() == 3);
+    CHECK(shows(*shell.application, "Aurore synthétique"));
+    bool byGenre = false;
+    for (const auto& request : server.requests()) {
+        byGenre = byGenre || request.target.find("genreIds=g-synth") != std::string::npos;
+    }
+    CHECK(byGenre);
+    shell.press(Action::Back);
+    shell.frames(5);
+    shell.press(Action::R2);  // Genres -> Songs
+    shell.frames(10);
+    auto* song = findItemCard(*shell.application->top(), "Néon");
+    REQUIRE(song != nullptr);
+    REQUIRE(shell.application->focus().focus(song));
+    shell.press(Action::Confirm);
+    untilPlaying(shell);
+    CHECK(shell.session.music().active());
+    CHECK(shell.session.music().queue().items().size() > 1);
+    shell.session.music().stop();
+}

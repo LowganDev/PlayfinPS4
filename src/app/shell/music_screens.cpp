@@ -51,11 +51,15 @@ std::string durationText(std::int64_t ticks) {
 
 class MusicLibraryScreen : public ShellScreen {
 public:
-    enum class Mode { Albums, Artists, Playlists };
+    enum class Mode { Albums, Artists, Playlists, Genres, Songs };
 
-    MusicLibraryScreen(AppSession& session, jellyfin::Item library)
-        : ShellScreen(session), library_(std::move(library)), choice_(session.libraryChoices[library_.id]) {
-        auto* column = addPage(*this, library_.name);
+    // `genre`: the albums of one genre of the library (its tabs hidden)
+    MusicLibraryScreen(AppSession& session, jellyfin::Item library, jellyfin::Item genre = {})
+        : ShellScreen(session),
+          library_(std::move(library)),
+          genre_(std::move(genre)),
+          choice_(session.libraryChoices[library_.id]) {
+        auto* column = addPage(*this, genre_.id.empty() ? library_.name : library_.name + " \xC2\xB7 " + genre_.name);
         count_ = column->add<ui::Label>(ui::tr("shell.loading"), bodyText());
         count_->color = ui::theme().textSecondary;
         auto* bar = column->add<ui::Box>(ui::Axis::Row);
@@ -63,6 +67,11 @@ public:
         albums_ = bar->add<ui::Button>(ui::tr("music.albums"), [this] { show(Mode::Albums); });
         artists_ = bar->add<ui::Button>(ui::tr("music.artists"), [this] { show(Mode::Artists); });
         playlists_ = bar->add<ui::Button>(ui::tr("music.playlists"), [this] { show(Mode::Playlists); });
+        genres_ = bar->add<ui::Button>(ui::tr("music.genres"), [this] { show(Mode::Genres); });
+        songs_ = bar->add<ui::Button>(ui::tr("music.songs"), [this] { show(Mode::Songs); });
+        const bool tabs = genre_.id.empty();
+        artists_->visible = playlists_->visible = genres_->visible = songs_->visible = tabs;
+        albums_->visible = tabs;
         sort_ = bar->add<ui::Button>("", [this] {
             choice_ = nextSort(choice_);
             session_.libraryChoices[library_.id] = choice_;
@@ -72,10 +81,20 @@ public:
         grid_->padding = ui::Insets::all(40);
         grid_->margin = {0, -40, 0, -40};
         auto source = std::make_unique<ItemsSource>(session_, std::vector<jellyfin::Item>{}, CardShape::Square,
-                                                    [this](const jellyfin::Item& item) { openItem(session_, item); });
+                                                    [this](const jellyfin::Item& item) { press(item); });
         source_ = source.get();
         grid_->setSource(std::move(source));
         grid_->onNearEnd(14, [this] { loadMore(); });
+        if (genre_.id.empty()) {  // L2 / R2: the previous or next tab
+            bind(platform::Action::L2, "", [this] {
+                show(static_cast<Mode>((static_cast<int>(mode_) + 4) % 5));
+                return true;
+            });
+            bind(platform::Action::R2, ui::tr("music.next_tab"), [this] {
+                show(static_cast<Mode>((static_cast<int>(mode_) + 1) % 5));
+                return true;
+            });
+        }
         refreshBar();
     }
     void onShow() override {
@@ -86,10 +105,29 @@ public:
     }
 
 private:
+    // a genre: its albums; a song: it plays, the songs listed after it follow
+    void press(const jellyfin::Item& item) {
+        if (item.type == jellyfin::ItemType::MusicGenre) {
+            ui::Application::current()->push(std::make_unique<MusicLibraryScreen>(session_, library_, item));
+        } else if (mode_ == Mode::Songs && item.type == jellyfin::ItemType::Audio) {
+            const auto& items = source_->items();
+            int index = 0;
+            for (std::size_t i = 0; i < items.size(); ++i) {
+                index = items[i].id == item.id ? static_cast<int>(i) : index;
+            }
+            session_.music().play(items, index, false);
+            ui::Application::current()->push(makeNowPlaying(session_));
+        } else {
+            openItem(session_, item);
+        }
+    }
+
     void refreshBar() {
         albums_->setPrimary(mode_ == Mode::Albums);
         artists_->setPrimary(mode_ == Mode::Artists);
         playlists_->setPrimary(mode_ == Mode::Playlists);
+        genres_->setPrimary(mode_ == Mode::Genres);
+        songs_->setPrimary(mode_ == Mode::Songs);
         sort_->visible = mode_ == Mode::Albums;
         const char* sortKey = choice_.sort == LibrarySort::DateAdded ? "shell.library.sort.date_added"
                               : choice_.sort == LibrarySort::Year    ? "shell.library.sort.year"
@@ -121,17 +159,28 @@ private:
         const int start = static_cast<int>(source_->items().size());
         const Mode mode = mode_;
         const jellyfin::Item library = library_;
+        const std::string genreId = genre_.id;
         const LibraryChoice choice = choice_;
         const core::CancelToken token = token_;
         const int generation = generation_;
         run<core::Result<jellyfin::ItemPage>>(
-            [client, start, mode, library, choice, token]() -> core::Result<jellyfin::ItemPage> {
+            [client, start, mode, library, genreId, choice, token]() -> core::Result<jellyfin::ItemPage> {
                 if (mode == Mode::Artists) {
                     return client->artists(library.id, start, kPage, token);
+                }
+                if (mode == Mode::Genres) {
+                    return client->musicGenres(library.id, start, kPage, token);
                 }
                 jellyfin::ItemQuery query;
                 if (mode == Mode::Albums) {
                     query = libraryQuery(library, choice, start);
+                    query.genreId = genreId;
+                } else if (mode == Mode::Songs) {
+                    query.parentId = library.id;
+                    query.includeTypes = {"Audio"};
+                    query.sortBy = "SortName";
+                    query.startIndex = start;
+                    query.limit = kPage;
                 } else {
                     query.includeTypes = {"Playlist"};
                     query.startIndex = start;
@@ -163,12 +212,15 @@ private:
     }
 
     jellyfin::Item library_;
+    jellyfin::Item genre_;
     LibraryChoice choice_;
     Mode mode_ = Mode::Albums;
     ui::Label* count_;
     ui::Button* albums_;
     ui::Button* artists_;
     ui::Button* playlists_;
+    ui::Button* genres_;
+    ui::Button* songs_;
     ui::Button* sort_;
     ui::Grid* grid_;
     ItemsSource* source_;
@@ -484,6 +536,7 @@ public:
         controls->add<ui::Button>(ui::tr("music.previous"), [this] { music_.previous(); });
         pause_ = controls->add<ui::Button>(ui::tr("music.pause"), [this] { music_.togglePause(); });
         controls->add<ui::Button>(ui::tr("music.next"), [this] { music_.next(); });
+        volume_ = controls->add<ui::Button>("", [this] { later([this] { chooseVolume(); }); });
         auto* modes = middle->add<ui::Box>(ui::Axis::Row);
         modes->gap = ui::theme().spacingM;
         modes->margin = {ui::theme().spacingS, 0, 0, 0};
@@ -553,8 +606,20 @@ private:
         repeat_->setText(ui::tr(repeat == player::Repeat::Off   ? "music.repeat.off"
                                 : repeat == player::Repeat::All ? "music.repeat.all"
                                                                 : "music.repeat.one"));
+        volume_->setText(ui::tr("player.volume_value", {std::to_string(session_.settings().volume)}));
         refreshUpNext();
         markDirty();
+    }
+
+    void chooseVolume() {
+        std::vector<std::string> names;
+        int selected = 0;
+        for (int i = 0; i <= 10; ++i) {
+            names.push_back(std::to_string(100 - i * 10) + " %");
+            selected = 100 - i * 10 == session_.settings().volume ? i : selected;
+        }
+        ui::Application::current()->showModal(ui::makeChoiceDialog(
+            ui::tr("player.volume"), names, selected, [this](int index) { music_.setVolume(100 - index * 10); }));
     }
 
     void refreshUpNext() {
@@ -595,6 +660,7 @@ private:
     ui::Button* pause_;
     ui::Button* shuffle_;
     ui::Button* repeat_;
+    ui::Button* volume_ = nullptr;
     ui::Box* upNext_;
     std::string trackId_;
     std::string upNextSignature_;

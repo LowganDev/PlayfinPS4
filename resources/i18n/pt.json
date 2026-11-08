@@ -206,5 +206,8 @@
   "shell.search.channels": "Canais",
   "shell.search.all": "Tudo",
   "shell.search.filter": "Resultados: {0}  ·  L2 / R2 para mudar",
-  "shell.search.filter_hint": "Filtrar"
+  "shell.search.filter_hint": "Filtrar",
+  "music.genres": "Gêneros",
+  "music.songs": "Músicas",
+  "music.next_tab": "Próxima aba"
 }

@@ -206,5 +206,8 @@
   "shell.search.channels": "Kanallar",
   "shell.search.all": "Tümü",
   "shell.search.filter": "Sonuçlar: {0}  ·  Değiştirmek için L2 / R2",
-  "shell.search.filter_hint": "Filtrele"
+  "shell.search.filter_hint": "Filtrele",
+  "music.genres": "Türler",
+  "music.songs": "Şarkılar",
+  "music.next_tab": "Sonraki sekme"
 }

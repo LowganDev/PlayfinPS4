@@ -322,6 +322,17 @@ core::Result<core::Unit> Client::setPlayed(const std::string& id, bool played, c
         request(played ? "POST" : "DELETE", "/UserPlayedItems/" + net::urlEncode(id) + userQuery().str(), {}, token));
 }
 
+core::Result<ItemPage> Client::musicGenres(const std::string& libraryId, int startIndex, int limit,
+                                           const core::CancelToken& token) const {
+    net::Query query = userQuery();
+    query.add("parentId", libraryId)
+        .add("sortBy", "SortName")
+        .add("startIndex", startIndex)
+        .add("limit", limit)
+        .add("enableImageTypes", kImageTypes);
+    return parsed<ItemPage>(request("GET", "/MusicGenres" + query.str(), {}, token), parseItemPage);
+}
+
 core::Result<ItemPage> Client::artists(const std::string& libraryId, int startIndex, int limit,
                                        const core::CancelToken& token) const {
     net::Query query = userQuery();

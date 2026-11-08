@@ -151,6 +151,7 @@ ItemType itemTypeFromName(std::string_view name) {
         {"TvChannel", ItemType::TvChannel},
         {"Program", ItemType::Program},
         {"Person", ItemType::Person},
+        {"MusicGenre", ItemType::MusicGenre},
         {"Video", ItemType::Video},
     };
     for (const auto& entry : kTypes) {
