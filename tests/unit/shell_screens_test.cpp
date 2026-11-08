@@ -1164,6 +1164,26 @@ std::string focusedText(ui::Application& app) {
 }
 }  // namespace
 
+TEST_CASE("the search page keeps its field and tabs on screen while a key has the focus") {
+    HomeShell h;
+    for (int i = 0; i < 8; ++i) {
+        h.shell.session.settings().recentSearches.push_back("search " + std::to_string(i));  // a long page
+    }
+    h.shell.press(Action::Up);
+    h.shell.press(Action::Right);
+    h.shell.press(Action::Confirm);
+    h.shell.frames(5);
+    REQUIRE(focusedText(*h.shell.application) == "A");
+    bool found = false;
+    for (ui::View* view = h.shell.application->focus().focused(); view != nullptr; view = view->parent()) {
+        if (const auto* scroll = dynamic_cast<ui::VScroll*>(view)) {
+            found = true;
+            CHECK(scroll->scrollOffset() == doctest::Approx(0));  // seen cut on the console
+        }
+    }
+    CHECK(found);
+}
+
 TEST_CASE("a tab replaces the screen, and back on a tab screen does nothing") {
     HomeShell h;
     h.shell.press(Action::Up);
