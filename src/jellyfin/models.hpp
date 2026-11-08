@@ -82,6 +82,8 @@ struct MediaSource {
     std::string container;
     std::string transcodingUrl;  // server path with query, when the server transcodes
     std::string liveStreamId;    // a live channel's stream opened by PlaybackInfo (closed by the client)
+    std::string path;            // where the server reads it (a live channel: its tuner's stream address)
+    std::string protocol;        // "File", "Http"…
     bool isInfiniteStream = false;
     bool supportsDirectPlay = false;
     bool supportsDirectStream = false;

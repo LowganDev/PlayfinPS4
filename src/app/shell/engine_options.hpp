@@ -10,5 +10,8 @@ namespace playfin::app {
 player::EngineOptions engineOptionsFor(const jellyfin::Client& client, bool synchronous);
 // The same for a file on the console (a download): no server, no header.
 player::EngineOptions engineOptionsLocal(bool synchronous);
+// A live channel's own stream (another host than the server): no Jellyfin header, the system's certificates,
+// reconnection when it drops.
+player::EngineOptions engineOptionsDirect(bool synchronous);
 
 }  // namespace playfin::app

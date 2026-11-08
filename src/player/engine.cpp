@@ -121,6 +121,9 @@ std::unique_ptr<Engine> Engine::create(const EngineOptions& options, std::functi
         setOption(mpv, "sub-font", "Noto Sans");
         setOption(mpv, "sub-font-provider", "none");
     }
+    if (options.reconnect) {
+        setOption(mpv, "stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");
+    }
     setOption(mpv, "tls-verify", options.verifyTls ? "yes" : "no");
     if (!options.caFile.empty()) {
         setOption(mpv, "tls-ca-file", options.caFile);

@@ -19,6 +19,12 @@ player::EngineOptions engineOptionsLocal(bool synchronous) {
     return options;
 }
 
+player::EngineOptions engineOptionsDirect(bool synchronous) {
+    player::EngineOptions options = engineOptionsLocal(synchronous);
+    options.reconnect = true;
+    return options;
+}
+
 player::EngineOptions engineOptionsFor(const jellyfin::Client& client, bool synchronous) {
     const std::string resources = platform::resourceDir();
     player::EngineOptions options;

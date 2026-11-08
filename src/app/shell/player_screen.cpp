@@ -37,6 +37,8 @@ namespace {
 constexpr std::int64_t kBarMs = 4000;          // the bar hides after 4 s without input
 constexpr std::int64_t kHoldGapMs = 450;       // presses closer than this are one held button (first repeat: 400)
 constexpr std::int64_t kStatsMs = 1000;
+constexpr std::int64_t kDirectStartMs = 8000;  // a channel's own stream: no picture by then, the server's relay
+constexpr std::int64_t kStallMs = 15000;       // a channel without a new picture this long is opened again
 
 struct Loaded {
     core::Result<jellyfin::PlaybackInfo> info = core::makeError(core::ErrorKind::Cancelled, "");
@@ -565,7 +567,9 @@ private:
 
     bool createEngine(const jellyfin::Client& client) {
         // the frame loop polls the engine every frame
-        engine_ = player::Engine::create(engineOptionsFor(client, session().synchronous), [] {});
+        player::EngineOptions options = engineOptionsFor(client, session().synchronous);
+        options.reconnect = live_;
+        engine_ = player::Engine::create(options, [] {});
         if (engine_) {
             engine_->setVolume(session().settings().volume);
         }
@@ -601,9 +605,72 @@ private:
         if (!subtitleChosen_) {
             subtitleIndex_ = source_.defaultSubtitleIndex;
         }
+        if (live_ && !choice_.sourceUrl.empty() && startDirect()) {
+            return;
+        }
         engine_->load(choice_.url, static_cast<double>(startTicks) / player::kTicksPerSecond);
         if (session().synchronous) {
             showFirstPictureNow();
+        }
+    }
+
+    // ---- a live channel's own stream (an M3U tuner's): straight from its host, the server's relay as the fallback
+
+    bool startDirect() {
+        // its own engine: the Jellyfin header must not go to another host
+        auto direct = player::Engine::create(engineOptionsDirect(session().synchronous), [] {});
+        if (!direct) {
+            return false;
+        }
+        engine_ = std::move(direct);
+        engine_->setVolume(session().settings().volume);
+        direct_ = true;
+        directSinceMs_ = now();
+        PF_LOG_INFO("player: the channel's own stream, without the server");
+        engine_->load(choice_.sourceUrl, 0);
+        if (session().synchronous) {
+            showFirstPictureNow();
+        }
+        return true;
+    }
+
+    // the own stream failed or shows nothing: the server's relay (next frame: called from the engine's events)
+    void fallBackToServer() {
+        if (!direct_) {
+            return;
+        }
+        direct_ = false;
+        PF_LOG_INFO("player: the channel's own stream did not play, through the server");
+        later([this] {
+            const auto client = session().client();
+            if (!client || !createEngine(*client)) {
+                showError();
+                return;
+            }
+            frameShown_ = false;
+            engine_->load(choice_.url, 0);
+            if (session().synchronous) {
+                showFirstPictureNow();
+            }
+        });
+    }
+
+    // a channel whose picture stopped (the stream dropped): opened again, every kStallMs at most; its own stream
+    // that shows nothing within kDirectStartMs: the server's relay
+    void watchLive(const player::Engine::State& state, bool freshPicture, std::int64_t t) {
+        if (direct_ && !frameShown_ && !freshPicture && t - directSinceMs_ > kDirectStartMs) {
+            fallBackToServer();
+            return;
+        }
+        if (freshPicture || !frameShown_ || state.paused) {
+            lastPictureMs_ = t;
+            return;
+        }
+        if (t - lastPictureMs_ > kStallMs) {
+            lastPictureMs_ = t;
+            PF_LOG_WARN("player: no picture for %lld s, the channel is opened again",
+                        static_cast<long long>(kStallMs / 1000));
+            engine_->load(direct_ ? choice_.sourceUrl : choice_.url, 0);
         }
     }
 
@@ -645,6 +712,10 @@ private:
             ended();
             break;
         case player::EngineEvent::Error:
+            if (direct_) {
+                fallBackToServer();
+                break;
+            }
             showError();
             break;
         }
@@ -690,6 +761,9 @@ private:
         if (state.buffering != spinner_->visible || (!frameShown_ && !spinner_->visible)) {
             spinner_->visible = state.buffering || !frameShown_;
             markDirty();
+        }
+        if (live_) {
+            watchLive(state, freshPicture, t);
         }
         frameShown_ = frameShown_ || freshPicture;
         if (bar_->visible) {
@@ -1127,6 +1201,9 @@ private:
     bool leaving_ = false;  // the next episode takes this screen's place
     bool local_ = false;    // a download, played from the console
     bool volumeUnsaved_ = false;
+    bool direct_ = false;               // playing a channel's own stream, not the server's relay
+    std::int64_t directSinceMs_ = 0;
+    std::int64_t lastPictureMs_ = 0;
     player::ButtonRepeat shoulderRepeat_;  // L1 / R1 held
     player::HoldToSkip hold_;              // L2 / R2 held
     ui::Box* holdPanel_ = nullptr;

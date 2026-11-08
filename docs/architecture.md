@@ -141,6 +141,11 @@ The screens of the app.
   episode (`Extras::previous` / `next`, from `jellyfin::adjacentEpisodes` over every season's episodes:
   `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with
   `down <Action>` / `up <Action>`.
+- Live TV direct (`player_screen.cpp`): `chooseStream` keeps `sourceUrl` (`directSourceUrl`: endless, Protocol
+  Http, an http(s) Path); the player tries it first on an engine of its own (`engineOptionsDirect`: no Jellyfin
+  header, FFmpeg reconnect options), falls back to the server's relay on an engine error or with no picture after
+  8 s, and opens a live stream again after 15 s without a new picture (`watchLive`). The live stream PlaybackInfo
+  opened is closed as before.
 - Live search (`search_screen.cpp`): a key grid (letters, digits, ' - ., space, delete, clear; □ deletes) types
   into the field; `Application::after` (frame-time timers, cancelled by their owner, ShellScreen cancels its own
   when it goes) starts the search 0.4 s after the last key. The field's ✕ still opens the system keyboard.

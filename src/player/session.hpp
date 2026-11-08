@@ -23,8 +23,13 @@ struct StreamChoice {
     std::string mediaSourceId;
     std::string playSessionId;
     std::string liveStreamId;  // a live channel: closed when playback ends
+    std::string sourceUrl;     // a live channel's own stream (an M3U tuner's), tried before the server's relay
     std::vector<ExternalSubtitle> externalSubtitles;
 };
+
+// A live channel's stream address when it can be played without the server: an endless http or https stream
+// (an M3U tuner's), else empty. It is played with no Jellyfin header (another host).
+std::string directSourceUrl(const jellyfin::MediaSource& source);
 
 // The first media source: played directly when the server allows it, else through its transcoding URL (joined to
 // the server address, api key removed). An error when the server refused or offers neither.

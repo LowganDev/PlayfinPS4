@@ -466,8 +466,19 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         } else if (audioIds().count(req.matches[1]) != 0) {
             name = "ts/playbackinfo_audio.json";
         }
-        res.set_content(readFixture("jellyfin/" + name), "application/json");
+        std::string body = readFixture("jellyfin/" + name);
+        if (name == "ts/playbackinfo_live.json") {  // the tuner's stream, reachable from the tests
+            const std::string recorded = "http://streams/ch1/index.m3u8";
+            const std::string source = liveSource_.empty() ? baseUrl() + "/iptv/ch1" : liveSource_;
+            body.replace(body.find(recorded), recorded.size(), source);
+        }
+        res.set_content(body, "application/json");
     }));
+    // a channel's own stream, as an M3U tuner gives it (the player must reach it without the Jellyfin header)
+    http.Get(R"(/iptv/([^/]+))", [](const httplib::Request&, httplib::Response& res) {
+        static const std::string clip = readFixture("media/clip.mp4");
+        res.set_content(clip, "video/mp4");
+    });
     http.Get(R"(/MediaSegments/([^/]+))", guarded([](const httplib::Request& req, httplib::Response& res) {
         if (req.matches[1] != "e-1") {
             res.status = 404;

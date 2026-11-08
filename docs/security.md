@@ -31,6 +31,9 @@
 - Downloads go to the data folder's `downloads/` only, under names made from the item id (letters, digits,
   dashes); `downloads.json` is read with a size limit and file names with a `/` are ignored. Download pictures
   (`file://` URLs) are read from that folder only.
+- A live channel's own stream (an M3U tuner's `Path`, http or https only, `player::directSourceUrl`) is played by an
+  engine without the Authorization header (`engineOptionsDirect`: the token never reaches the tuner's host) and with
+  TLS verification against the bundled CA list; anything else goes through the server.
 - The update check asks GitHub's API with a generic User-Agent (`Playfin/<version>`) and no personal detail.
 
 ## Logs

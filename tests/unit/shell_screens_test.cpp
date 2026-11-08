@@ -1726,6 +1726,42 @@ TEST_CASE("a channel plays live through the server, cannot be sought and closes 
     CHECK(p.server.last().target.find(kLiveStreamId) != std::string::npos);
 }
 
+TEST_CASE("a channel's own stream plays without the server's relay, and without the Jellyfin header") {
+    Playing p;
+    p.server.showMediaViews();
+    p.shell.application->push(app::makePlayer(p.shell.session, channel("Playfin Info"), 0));
+    p.frames(10);
+    REQUIRE(p.shell.application->videoSource() != nullptr);
+    int direct = 0;
+    for (const auto& seen : p.server.requests()) {
+        if (seen.path == "/iptv/ch1") {
+            ++direct;
+            CHECK(seen.authorization.empty());  // the token never goes to the tuner's host
+        }
+        CHECK(seen.path.find("master.m3u8") == std::string::npos);  // no relay
+    }
+    CHECK(direct > 0);
+    p.shell.press(Action::Back);
+    p.frames(5);
+    CHECK(requestsTo(p.server, "POST", "/LiveStreams/Close") == 1);  // opened by PlaybackInfo, closed all the same
+}
+
+TEST_CASE("a channel whose own stream cannot be reached plays through the server's relay") {
+    Playing p;
+    p.server.showMediaViews();
+    p.server.setLiveSource("http://127.0.0.1:9/live");  // nothing listens there
+    p.shell.application->push(app::makePlayer(p.shell.session, channel("Playfin Info"), 0));
+    p.frames(20);
+    REQUIRE(p.shell.application->videoSource() != nullptr);
+    bool relayed = false;
+    for (const auto& seen : p.server.requests()) {
+        relayed = relayed || seen.path.find("master.m3u8") != std::string::npos;
+    }
+    CHECK(relayed);
+    CHECK_FALSE(shows(*p.shell.application, "This video cannot be played"));
+    p.shell.press(Action::Back);
+}
+
 TEST_CASE("R1 and L1 change channel in the live player") {
     Playing p;
     p.server.showMediaViews();

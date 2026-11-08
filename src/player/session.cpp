@@ -28,6 +28,17 @@ std::string absolute(const jellyfin::Session& session, const std::string& path) 
 
 }  // namespace
 
+std::string directSourceUrl(const jellyfin::MediaSource& source) {
+    if (!source.isInfiniteStream || source.protocol != "Http") {
+        return {};
+    }
+    const std::string& path = source.path;
+    if (path.rfind("http://", 0) != 0 && path.rfind("https://", 0) != 0) {
+        return {};
+    }
+    return path;
+}
+
 core::Result<StreamChoice> chooseStream(const jellyfin::Session& session, const std::string& itemId,
                                         const jellyfin::PlaybackInfo& info, MediaKind kind) {
     if (!info.errorCode.empty() || info.sources.empty()) {
@@ -39,6 +50,7 @@ core::Result<StreamChoice> chooseStream(const jellyfin::Session& session, const 
     choice.mediaSourceId = source.id;
     choice.playSessionId = info.playSessionId;
     choice.liveStreamId = source.liveStreamId;
+    choice.sourceUrl = directSourceUrl(source);
     if (source.supportsDirectPlay) {
         choice.url = directStreamUrl(session, itemId, source.id, info.playSessionId, kind);
     } else if (!source.transcodingUrl.empty() && !absolute(session, source.transcodingUrl).empty()) {

@@ -393,6 +393,8 @@ MediaSource parseSource(yyjson_val* value) {
     source.container = json::string(value, "Container");
     source.transcodingUrl = json::string(value, "TranscodingUrl");
     source.liveStreamId = json::string(value, "LiveStreamId");
+    source.path = json::string(value, "Path");
+    source.protocol = json::string(value, "Protocol");
     source.isInfiniteStream = json::boolean(value, "IsInfiniteStream");
     source.supportsDirectPlay = json::boolean(value, "SupportsDirectPlay");
     source.supportsDirectStream = json::boolean(value, "SupportsDirectStream");

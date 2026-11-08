@@ -257,4 +257,25 @@ TEST_CASE("a live channel plays through the server's relay and keeps its live st
     CHECK(choice.value().url.find("/videos/79cf8fe4-4f3f-38fb-e052-65ad38d3f2aa/master.m3u8") != std::string::npos);
     CHECK(choice.value().url.find("ApiKey") == std::string::npos);
     CHECK(choice.value().liveStreamId.rfind("e2329f4997b378e64ccf8fa396deb76e_", 0) == 0);
+    CHECK(choice.value().sourceUrl == "http://streams/ch1/index.m3u8");  // tried first, straight from the source
+}
+
+TEST_CASE("a live channel's own source is played directly only over http or https") {
+    jellyfin::MediaSource source;
+    source.isInfiniteStream = true;
+    source.protocol = "Http";
+    source.path = "https://iptv.example/live/1.m3u8?user=a";
+    CHECK(player::directSourceUrl(source) == "https://iptv.example/live/1.m3u8?user=a");
+    source.path = "http://192.168.1.20:8000/ch1";
+    CHECK(player::directSourceUrl(source) == "http://192.168.1.20:8000/ch1");
+    for (const char* path : {"udp://239.0.0.1:1234", "rtsp://cam/1", "file:///etc/passwd", "/media/live.ts", ""}) {
+        source.path = path;
+        CHECK(player::directSourceUrl(source).empty());
+    }
+    source.path = "http://192.168.1.20:8000/ch1";
+    source.protocol = "File";
+    CHECK(player::directSourceUrl(source).empty());
+    source.protocol = "Http";
+    source.isInfiniteStream = false;  // a recording: through the server
+    CHECK(player::directSourceUrl(source).empty());
 }

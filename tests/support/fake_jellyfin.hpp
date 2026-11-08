@@ -21,6 +21,8 @@ public:
     void approveQuickConnect() { approved_ = true; }
     // The user views of the test server (Live TV, music, playlists, recordings) instead of movies and shows.
     void showMediaViews() { mediaViews_ = true; }
+    // Where the live channels' tuner streams from (their PlaybackInfo's Path): this server's /iptv/ch1 unless set.
+    void setLiveSource(std::string url) { liveSource_ = std::move(url); }
     // GitHub's latest release at /github/latest: `version`, its package (`package`, digest included) at
     // /github/Playfin.pkg; an empty version answers 404.
     void publishRelease(std::string version, std::string package);
@@ -51,6 +53,7 @@ private:
     std::string version_;
     std::atomic<bool> approved_{false};
     std::atomic<bool> mediaViews_{false};
+    std::string liveSource_;  // set before the server answers (tests set it before playing)
     mutable std::mutex mutex_;
     Seen last_;
     std::vector<Seen> reports_;

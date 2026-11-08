@@ -22,7 +22,9 @@
   system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
   one kind. A search typed key by key is kept in the recent ones once a result is opened.
 - Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume.
-- Live TV: favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
+- Live TV: a channel from an M3U tuner plays straight from its source (without the server, without the Jellyfin
+  token), through the server when its source cannot be reached; a channel whose picture stops is opened again by
+  itself; favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
   news, kids, radios), a channel search.
 - Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.

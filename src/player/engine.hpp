@@ -25,6 +25,7 @@ struct EngineOptions {
     std::string authorization;  // the Jellyfin "Authorization" header sent with every stream request
     int decoderThreads = 0;     // 0: FFmpeg's count of the CPUs (it finds only 1 on the PS4)
     bool audioOnly = false;     // music: no video track (album art included), nothing to render
+    bool reconnect = false;     // live: FFmpeg reconnects an http stream that drops
 };
 
 // Options every player gets before anything else: no configuration files, scripts or key bindings of mpv, and a
