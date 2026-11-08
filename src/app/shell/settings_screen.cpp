@@ -176,7 +176,7 @@ private:
         const core::CancelToken token = token_;
         ui::Application* app = ui::Application::current();
         auto percent = std::make_shared<std::atomic<int>>(0);
-        run<core::Result<core::Unit>>(
+        runTransfer<core::Result<core::Unit>>(
             [http, release, target, token, app, percent, this] {
                 return downloadPackage(
                     *http, release, target,

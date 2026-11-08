@@ -177,6 +177,37 @@ TEST_CASE("per PS4 account: each account starts on its own user; a shared sign-i
     CHECK(second.client()->session().token == "tok-demo");
 }
 
+TEST_CASE("per PS4 account: a second account choosing the same saved user gets its own profile") {
+    test::FakeJellyfin server;
+    TempDir dir;
+    const std::string store = dir.path + "/servers.json";
+    {
+        app::AppSession session(testHttp(), store);
+        REQUIRE(session.load().ok());
+        session.consoleUser = "1001";
+        auto& stored = jellyfin::upsertServer(session.data(), "f1e2d3c4b5a6");
+        jellyfin::rememberUrl(stored, server.baseUrl());
+        session.useServer("f1e2d3c4b5a6", server.baseUrl());
+        const auto auth = session.client()->signIn("demo", "secret");
+        REQUIRE(auth.ok());
+        session.signedIn(auth.value());
+    }
+    {
+        app::AppSession second(testHttp(), store);  // 1002 picks "demo" in the list of saved users
+        REQUIRE(second.load().ok());
+        second.consoleUser = "1002";
+        REQUIRE(app::startTarget(second) == app::StartTarget::Servers);
+        second.useServer("f1e2d3c4b5a6", server.baseUrl());
+        REQUIRE(second.server() != nullptr);
+        const jellyfin::StoredUser demo = second.server()->users.front();
+        second.useStoredUser(demo);
+    }
+    app::AppSession again(testHttp(), store);
+    REQUIRE(again.load().ok());
+    again.consoleUser = "1002";
+    CHECK(app::startTarget(again) == app::StartTarget::Home);
+}
+
 TEST_CASE("per PS4 account: an installation from before keeps its sign-in for the account that starts it") {
     test::FakeJellyfin server;
     TempDir dir;

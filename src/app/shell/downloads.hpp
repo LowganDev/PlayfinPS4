@@ -60,8 +60,13 @@ public:
     void listen(const void* owner, std::function<void()> changed);
     void unlisten(const void* owner);
 
+    // At exit: the running download is cancelled (it stays queued for the next start).
+    void stop();
+
     // Bytes free where downloads go (0 when unknown).
     static std::int64_t freeBytes();
+    // What the queue asks before and during a transfer (freeBytes; tests replace it). Called on the transfer thread.
+    std::function<std::int64_t()> freeSpace = &Downloads::freeBytes;
 
 private:
     void startNext();
@@ -73,7 +78,7 @@ private:
 
     AppSession& session_;
     std::vector<Entry> entries_;
-    std::string running_;     // id of the download on its way
+    std::string running_;     // id of the download on its way (until its job ends, even when removed meanwhile)
     core::CancelToken token_;  // cancels it
     std::vector<std::pair<const void*, std::function<void()>>> listeners_;
     std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);

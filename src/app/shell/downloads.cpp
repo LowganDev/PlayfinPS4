@@ -1,5 +1,6 @@
 #include "app/shell/downloads.hpp"
 
+#include <dirent.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
 
@@ -24,6 +25,8 @@ namespace {
 constexpr std::size_t kMaxListBytes = 2 * 1024 * 1024;
 constexpr std::size_t kMaxEntries = 500;
 constexpr std::int64_t kSpareBytes = 512LL * 1024 * 1024;  // what is left free for the console and the app
+constexpr std::int64_t kCheckEvery = 64LL * 1024 * 1024;    // free space asked again after this much
+const char* const kNoSpace = "no space left";
 
 std::optional<std::string> folder() {
     const auto path = core::dataPath("downloads");
@@ -42,6 +45,33 @@ std::string safe(const std::string& text) {
         }
     }
     return out.substr(0, 64);
+}
+
+// what a download stopped by the app's closing left behind ("<file>.part"); nothing runs yet
+void sweepParts(const std::string& dir) {
+    DIR* listing = ::opendir(dir.c_str());
+    if (listing == nullptr) {
+        return;
+    }
+    std::vector<std::string> parts;
+    while (const dirent* file = ::readdir(listing)) {
+        const std::string name = file->d_name;
+        if (name.size() > 5 && name.compare(name.size() - 5, 5, ".part") == 0 && name.find('/') == std::string::npos) {
+            parts.push_back(name);
+        }
+    }
+    ::closedir(listing);
+    for (const std::string& name : parts) {
+        if (const auto path = core::resolveInside(dir, name)) {
+            ::unlink(path->c_str());
+        }
+    }
+}
+
+// a failure of the connection: the next ones would fail the same way, so the queue waits
+bool connectionLost(const core::Error& error) {
+    return error.kind == core::ErrorKind::Network || error.kind == core::ErrorKind::Timeout ||
+           error.kind == core::ErrorKind::Tls;
 }
 
 const char* stateName(Downloads::State state) {
@@ -65,6 +95,9 @@ Downloads::~Downloads() {
 }
 
 void Downloads::load() {
+    if (const auto dir = folder()) {
+        sweepParts(*dir);
+    }
     const auto path = core::dataPath("downloads.json");
     std::string text;
     if (!path || core::readSmallFile(*path, kMaxListBytes, text) != core::ReadStatus::Ok) {
@@ -187,7 +220,7 @@ std::string Downloads::localImageUrl(const std::string& id) const {
 
 void Downloads::add(const jellyfin::Item& item) {
     const std::string id = safe(item.id);
-    if (id.empty() || find(id) != nullptr) {
+    if (id.empty() || find(id) != nullptr || entries_.size() >= kMaxEntries) {
         return;
     }
     Entry entry;
@@ -220,10 +253,13 @@ void Downloads::retry(const std::string& id) {
     }
 }
 
+void Downloads::stop() { token_.cancel(); }
+
 void Downloads::remove(const std::string& id) {
     if (running_ == id) {
-        token_.cancel();  // its job ends with "cancelled"; the part file goes with its sink
-        running_.clear();
+        // its job ends with "cancelled" and its part file goes with its sink; the next one waits for that (the
+        // same film added again would write the same part file)
+        token_.cancel();
     }
     const auto dir = folder();
     for (auto it = entries_.begin(); it != entries_.end(); ++it) {
@@ -297,7 +333,7 @@ void Downloads::startNext() {
         return;
     }
     if (next->size > 0) {
-        const std::int64_t free = freeBytes();
+        const std::int64_t free = freeSpace ? freeSpace() : 0;
         if (free > 0 && free < next->size + kSpareBytes) {
             next->state = State::Failed;
             next->error = ui::tr("downloads.no_space");
@@ -321,7 +357,8 @@ void Downloads::startNext() {
     const core::CancelToken token = token_;
     std::weak_ptr<bool> alive = alive_;
     ui::Application* app = ui::Application::current();
-    auto job = [client, id, filePath, imagePath, imageUrl, token, alive, app, this]() {
+    const std::function<std::int64_t()> freeNow = freeSpace;
+    auto job = [client, id, filePath, imagePath, imageUrl, token, alive, app, freeNow, this]() {
         std::int64_t received = 0;
         if (!filePath) {
             return std::make_pair(core::Result<core::Unit>(core::makeError(core::ErrorKind::Storage, "bad name")),
@@ -338,12 +375,37 @@ void Downloads::startNext() {
             return std::make_pair(core::Result<core::Unit>(core::makeError(core::ErrorKind::Storage, "cannot write")),
                                   received);
         }
+        // the free space is asked at the start, once the length is known, then every 64 MB: an episode's size is
+        // not known beforehand, and the console's storage may fill meanwhile
         int lastPercent = -1;
+        std::int64_t expected = 0;
+        std::int64_t checkAt = 0;
+        bool noSpace = false;
+        const auto enoughSpace = [&] {
+            const std::int64_t written = static_cast<std::int64_t>(sink.written());
+            checkAt = written + kCheckEvery;
+            const std::int64_t free = freeNow ? freeNow() : 0;
+            const std::int64_t left = expected > written ? expected - written : 0;
+            return free <= 0 || free >= left + kSpareBytes;
+        };
         auto result = client->downloadItem(
-            id, [&sink](const char* data, std::size_t size) { return sink.write(data, size); },
+            id,
+            [&](const char* data, std::size_t size) {
+                if (static_cast<std::int64_t>(sink.written()) >= checkAt && !enoughSpace()) {
+                    noSpace = true;
+                    return false;
+                }
+                return sink.write(data, size);
+            },
             [&](long long now, long long total) {
+                if (total > 0 && expected != total) {
+                    expected = total;
+                    checkAt = 0;  // asked again at the next write, with the length
+                }
                 received = now;
-                const int percent = total > 0 ? static_cast<int>(now * 100 / total) : -1;
+                // a step: a percent, or a megabyte when the length is not known
+                const int percent = total > 0 ? static_cast<int>(now * 100 / total)
+                                              : static_cast<int>(now / (1024 * 1024));
                 if (percent != lastPercent && app != nullptr) {
                     lastPercent = percent;
                     app->mainQueue().post([alive, id, now, total, this] {
@@ -354,7 +416,9 @@ void Downloads::startNext() {
                 }
             },
             token);
-        if (result.ok() && !sink.commit()) {
+        if (noSpace) {
+            result = core::makeError(core::ErrorKind::Storage, kNoSpace);
+        } else if (result.ok() && !sink.commit()) {
             result = core::makeError(core::ErrorKind::Storage, "the file could not be written");
         }
         received = sink.written();
@@ -370,7 +434,7 @@ void Downloads::startNext() {
         done(job());
         return;
     }
-    core::runAsync<Outcome>(app->pool(), app->mainQueue(), job, done, core::CancelToken{});
+    core::runAsync<Outcome>(session_.transfers(), app->mainQueue(), job, done, core::CancelToken{});
 }
 
 void Downloads::progress(const std::string& id, std::int64_t received, std::int64_t total) {
@@ -395,15 +459,20 @@ void Downloads::finished(const std::string& id, core::Result<core::Unit> result,
             found->received = received;
             PF_LOG_INFO("downloads: %s done (%lld bytes)", id.c_str(), static_cast<long long>(received));
         } else if (result.error().kind != core::ErrorKind::Cancelled) {
+            const core::Error& error = result.error();
             found->state = State::Failed;
-            found->error = result.error().kind == core::ErrorKind::Unauthorized ? ui::tr("downloads.not_allowed")
-                                                                               : errorText(result.error());
-            PF_LOG_WARN("downloads: %s failed: %s", id.c_str(), result.error().message.c_str());
+            found->error = error.kind == core::ErrorKind::Unauthorized ? ui::tr("downloads.not_allowed")
+                           : error.message == kNoSpace                ? ui::tr("downloads.no_space")
+                                                                      : errorText(error);
+            PF_LOG_WARN("downloads: %s failed: %s", id.c_str(), error.message.c_str());
         }
         save();
     }
     notify();
-    startNext();
+    // without the server, the rest stays queued (it goes on when one is added or tried again, or at the next start)
+    if (result.ok() || !connectionLost(result.error())) {
+        startNext();
+    }
 }
 
 }  // namespace playfin::app

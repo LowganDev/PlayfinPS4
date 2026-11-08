@@ -453,6 +453,7 @@ int run(const Options& options) {
         // the player's and the music's stop reports and the live stream's close go out before the pool stops
         application.closeScreens();
         session.music().stop();
+        session.stopTransfers();  // a download or the update package: cancelled, its thread joined
         if (!pool.finish(std::chrono::seconds(2))) {
             PF_LOG_WARN("exit: network jobs still running after 2 s, dropped");
         }

@@ -11,6 +11,7 @@
 #include "app/settings.hpp"
 #include "app/update.hpp"
 #include "app/shell/library_query.hpp"
+#include "core/task.hpp"
 #include "jellyfin/client.hpp"
 #include "jellyfin/store.hpp"
 #include "net/http.hpp"
@@ -42,6 +43,12 @@ public:
     bool updateMusic();
     // Work for the worker pool that nothing waits for (reports, closing a live stream); inline in test mode.
     void submit(std::function<void()> job);
+    // One thread of its own for the long transfers (downloads, the update package), so that they never hold the
+    // app's worker pool (2 threads on the PS4) for hours. Created on first use; its jobs post to the main queue.
+    core::WorkerPool& transfers();
+    // At exit, before the main queue goes: the downloads are cancelled (the queue goes on at the next start) and
+    // the transfer thread waits for its job to end.
+    void stopTransfers();
 
     // Without a data folder, or when servers.json cannot be read, nothing is ever written (the file is kept).
     core::Result<core::Unit> load();
@@ -98,8 +105,8 @@ public:
 
 private:
     friend StartTarget startTarget(AppSession& session);
-    // the current server and user become this PS4 account's
-    void rememberProfile();
+    // the current server and user become this PS4 account's; true when its profile changed
+    bool rememberProfile();
     jellyfin::Session sessionFor(const std::string& baseUrl) const;
     void stopMusic();
     void setClient(std::shared_ptr<const jellyfin::Client> client);
@@ -109,6 +116,7 @@ private:
     std::string settingsPath_;
     std::unique_ptr<MusicPlayer> music_;
     std::unique_ptr<Downloads> downloads_;
+    std::unique_ptr<core::WorkerPool> transfers_;  // after downloads_: joined before it goes
     Settings settings_;
     jellyfin::ServerStore store_;
     bool storeUsable_ = false;  // loaded from a readable file: saving may replace it

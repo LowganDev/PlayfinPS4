@@ -3,6 +3,7 @@
 #include <stb/stb_image_write.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <cstdlib>
 #include <cstdio>
@@ -11,6 +12,7 @@
 #include <iterator>
 #include <fstream>
 #include <set>
+#include <thread>
 #include <vector>
 
 #include "jellyfin/json.hpp"
@@ -500,6 +502,14 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.Get(R"(/Items/([^/]+)/Download)", guarded([](const httplib::Request& req, httplib::Response& res) {
         if (req.matches[1] == "m-transcode") {
             res.status = 403;
+            return;
+        }
+        if (req.matches[1] == "m-slow") {  // a film that takes long: 64 KB every 20 ms until the client leaves
+            res.set_chunked_content_provider("video/mp4", [](std::size_t, httplib::DataSink& sink) {
+                static const std::string chunk(64 * 1024, 'x');
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                return sink.write(chunk.data(), chunk.size());
+            });
             return;
         }
         static const std::string clip = readFixture("media/clip.mp4");

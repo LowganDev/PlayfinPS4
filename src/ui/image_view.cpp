@@ -35,6 +35,7 @@ void ImageView::layout(TextMetrics& metrics) {
         return;
     }
     requested_ = key;
+    requestedAtMs_ = context().timeMs;
     request_ = context().images->request(url_, w, h, [this](TextureRef texture) {
         texture_ = std::move(texture);
         failed_ = !texture_;
@@ -54,7 +55,9 @@ void ImageView::draw(NVGcontext* vg) const {
         nvgBeginPath(vg);
         nvgRoundedRect(vg, 0, 0, frame.width, frame.height, cornerRadius);
         Color fill = placeholder;
-        if (!texture_ && !failed_ && request_ && placeholder.a == 255) {
+        constexpr float kShimmerMs = 20000;
+        if (!texture_ && !failed_ && request_ && placeholder.a == 255 &&
+            context().timeMs - requestedAtMs_ < kShimmerMs) {
             // on its way: the placeholder breathes towards the raised surface (1.2 s), cheap: one plain fill
             const double phase = std::fmod(static_cast<double>(context().timeMs), 1200.0) / 1200.0;
             const float t = static_cast<float>(0.5 - 0.5 * std::cos(phase * 6.283185307179586)) * 0.6f;

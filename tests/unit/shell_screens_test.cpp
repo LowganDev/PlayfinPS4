@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
@@ -307,6 +308,23 @@ TEST_CASE("next-episode card: in the last 10 s, \u2715 plays the next episode no
     p.frames(10);
     CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 1);
     CHECK(p.shell.application->depth() == 2);  // the next episode took the player's place
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("next-episode card: a dialog over it gives the focus back to it when it closes") {
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    p.frames(1);
+    p.shell.press(Action::Options);  // the options dialog
+    REQUIRE(p.shell.application->hasModal());
+    p.frames(10);
+    CHECK(showsSomewhere(*p.shell.application, "Next episode"));
+    p.shell.press(Action::Back);  // the dialog closes
+    p.frames(2);
+    REQUIRE_FALSE(p.shell.application->hasModal());
+    p.shell.press(Action::Confirm);  // ✕ on the card
+    p.frames(10);
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 1);
     p.shell.press(Action::Back);
 }
 
@@ -2042,6 +2060,12 @@ TEST_CASE("downloads: a film downloaded from its page, listed, played from the c
     p.frames(10);
     CHECK(p.shell.application->videoSource() != nullptr);
     CHECK(p.server.count("/Items/m-1/PlaybackInfo") == asked);
+    p.shell.press(Action::Options);  // its sound and picture can be changed too
+    REQUIRE(p.shell.application->hasModal());
+    CHECK(showsSomewhere(*p.shell.application, "Volume: "));
+    CHECK(showsSomewhere(*p.shell.application, "Picture"));
+    p.shell.press(Action::Back);
+    p.frames(2);
     p.shell.press(Action::Back);
     p.frames(5);
     p.shell.press(Action::Options);  // delete
@@ -2051,6 +2075,94 @@ TEST_CASE("downloads: a film downloaded from its page, listed, played from the c
     p.frames(3);
     CHECK(p.shell.session.downloads().find("m-1") == nullptr);
     CHECK_FALSE(std::filesystem::exists(*file));
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: a long one runs on its own thread, and the app's closing stops it at once") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-slow";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    const auto* entry = p.shell.session.downloads().find("m-slow");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Running);
+    // the app's worker pool (one thread here) still runs other jobs meanwhile
+    std::atomic<bool> ran{false};
+    p.shell.pool.submit([&ran] { ran = true; });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!ran && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    CHECK(ran);
+    // its progress reaches the screen a megabyte at a time (the length is not known)
+    const auto later = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (entry->received == 0 && std::chrono::steady_clock::now() < later) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        p.frames(1);
+    }
+    CHECK(entry->received > 0);
+    const auto start = std::chrono::steady_clock::now();
+    p.shell.session.stopTransfers();
+    CHECK(std::chrono::steady_clock::now() - start < std::chrono::seconds(2));
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: the storage filling up during a transfer stops it, with why, and leaves no part file") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.downloads().freeSpace = [] { return std::int64_t{100 * 1000 * 1000}; };  // under the spare
+    jellyfin::Item episode;  // no size known beforehand
+    episode.id = "e-1";
+    episode.type = jellyfin::ItemType::Episode;
+    p.shell.session.downloads().add(episode);
+    p.frames(3);
+    const auto* entry = p.shell.session.downloads().find("e-1");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Failed);
+    CHECK(entry->error == ui::tr("downloads.no_space"));
+    std::size_t files = 0;
+    for (const auto& file : std::filesystem::directory_iterator(p.shell.dir.path + "/downloads")) {
+        CHECK(file.path().extension() != ".part");
+        CHECK(file.path().extension() != ".mkv");
+        ++files;
+    }
+    CHECK(files <= 1);  // its picture at most
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: without the server the first fails and the others wait, queued") {
+    Shell shell;
+    core::setDataRoot(shell.dir.path);
+    shell.remember("http://127.0.0.1:9", "tok-demo");  // nothing listens there
+    shell.session.useServer("f1e2d3c4b5a6", "http://127.0.0.1:9");
+    jellyfin::StoredUser user;
+    user.id = "u-demo";
+    user.token = "tok-demo";
+    shell.session.useStoredUser(user);
+    // three queued when the app closed; the console starts without its network
+    std::ofstream(shell.dir.path + "/downloads.json")
+        << R"({"version":1,"items":[{"id":"m-1","file":"m-1.mkv","type":"Movie","state":"queued"},)"
+           R"({"id":"m-2","file":"m-2.mkv","type":"Movie","state":"queued"},)"
+           R"({"id":"m-3","file":"m-3.mkv","type":"Movie","state":"queued"}]})";
+    const auto& entries = shell.session.downloads().entries();
+    REQUIRE(entries.size() == 3);
+    CHECK(entries[0].state == app::Downloads::State::Failed);
+    CHECK(entries[1].state == app::Downloads::State::Queued);
+    CHECK(entries[2].state == app::Downloads::State::Queued);
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: part files left by a closing are removed at the next start") {
+    Shell shell;
+    core::setDataRoot(shell.dir.path);
+    std::filesystem::create_directories(shell.dir.path + "/downloads");
+    const std::string part = shell.dir.path + "/downloads/m-1.mkv.part";
+    std::ofstream(part) << "half a film";
+    shell.session.downloads();
+    CHECK_FALSE(std::filesystem::exists(part));
     core::setDataRoot({});
 }
 

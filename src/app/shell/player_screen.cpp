@@ -650,6 +650,7 @@ private:
             nextCountdown_->setText(text);
         }
         if (nextCard_->visible) {
+            focusNextCard();  // shown under a dialog: focused once it closes
             return;
         }
         if (const auto client = session().client()) {
@@ -659,7 +660,18 @@ private:
         nextCard_->visible = true;
         hideSkip();
         markDirty();
-        if (ui::Application* app = ui::Application::current(); app != nullptr && !app->hasModal()) {
+        focusNextCard();
+    }
+
+    // the card has the focus while it shows, unless the user went to the bar's buttons: a dialog closing gives the
+    // focus back to the screen, and the card shown under it never had it
+    void focusNextCard() {
+        ui::Application* app = ui::Application::current();
+        if (app == nullptr || app->hasModal() || app->top() != this) {
+            return;
+        }
+        const ui::View* focused = app->focus().focused();
+        if (focused == nullptr || focused == this || !isAncestorOf(focused)) {
             app->focus().focus(nextCard_);
         }
     }
@@ -705,6 +717,10 @@ private:
     void release() {
         if (ui::Application* app = ui::Application::current(); app != nullptr && app->videoSource() == this) {
             app->setVideoSource(nullptr);
+        }
+        if (volumeUnsaved_) {
+            volumeUnsaved_ = false;
+            session().saveSettings();
         }
         if (engine_) {
             if (local_) {  // where it was left, for the next time it is played offline
@@ -773,7 +789,16 @@ private:
     // ---- tracks
 
     void openTracks() {
-        if (!engine_ || source_.id.empty()) {
+        if (!engine_) {
+            return;
+        }
+        if (source_.id.empty()) {  // a download: its tracks are not known here, its sound and picture are
+            ui::Application::current()->showModal(ui::makeDialog(
+                barTitle(), "",
+                {{ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
+                  [this] { later([this] { chooseVolume(); }); }},
+                 {ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); }},
+                 {ui::tr("ui.cancel"), {}}}));
             return;
         }
         std::string audioName;
@@ -797,17 +822,21 @@ private:
 
     // ---- volume and picture (kept in the settings for the next videos)
 
-    void setVolume(int percent) {
+    // `save` false: kept when the player closes (the live channels' ↑/↓ step it often)
+    void setVolume(int percent, bool save = true) {
         percent = percent < 0 ? 0 : percent > 100 ? 100 : percent;
         session().settings().volume = percent;
-        session().saveSettings();
+        volumeUnsaved_ = !save;
+        if (save) {
+            session().saveSettings();
+        }
         if (engine_) {
             engine_->setVolume(percent);
         }
     }
 
     void stepVolume(int delta) {
-        setVolume(session().settings().volume + delta);
+        setVolume(session().settings().volume + delta, false);
         if (ui::Application* app = ui::Application::current()) {
             app->toast(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}), 1500);
         }
@@ -980,6 +1009,7 @@ private:
     std::int64_t barUntil_ = 0;
     bool leaving_ = false;  // the next episode takes this screen's place
     bool local_ = false;    // a download, played from the console
+    bool volumeUnsaved_ = false;  // stepped by ↑/↓: saved when the player closes
     std::int64_t lastSeekPressMs_ = 0;
     std::int64_t holdStartMs_ = 0;
     int lastDirection_ = 0;

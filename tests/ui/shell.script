@@ -54,6 +54,8 @@ press Back
 wait 20
 press Back
 wait 20
+press Back
+wait 20
 press Options
 wait 15
 screenshot menu

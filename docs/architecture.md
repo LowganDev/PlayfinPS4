@@ -146,22 +146,28 @@ The screens of the app.
   `/UserFavoriteItems/{id}`), recently watched (settings `recentChannels`, 8), the kind of the programme on now
   (`IsMovie`, `IsSports`, `IsNews`, `IsKids`), radios (`ChannelType`); a search by name or number.
 - Downloads (`downloads.{hpp,cpp}`, owned by `AppSession` like the music): `downloads.json` and the files in the
-  data folder's `downloads/` (`<id>.<container>`, `<id>.jpg`), one at a time on the worker pool
+  data folder's `downloads/` (`<id>.<container>`, `<id>.jpg`), one at a time on `AppSession::transfers()`, a
+  thread of its own (never the worker pool: the PS4 has 2 workers, and a film takes hours)
   (`Client::downloadItem`: `/Items/{id}/Download` through `HttpClient::download` into a `core::FileSink`); free
-  space checked against the version's `Size` (512 MB kept free); progress posted to the main thread once per
-  percent; a failed or refused one says why. The player plays a finished download from its file without the
+  space checked against the version's `Size`, then again during the transfer (once the length is known, then
+  every 64 MB: episodes have no size beforehand), 512 MB kept free; progress posted to the main thread once per
+  percent (per megabyte without a length); a failed or refused one says why. A lost connection stops the queue
+  (the others stay queued). At exit `AppSession::stopTransfers()` cancels the transfer and joins its thread
+  before the main queue goes; the part file left is removed at the next start. The player plays a finished download from its file without the
   server (`engineOptionsLocal`, no PlaybackInfo, no report) and keeps where it was left in the list. Pictures of
   downloads are `file://` URLs that `AppSession::fetchImage` reads from `downloads/` only.
 - Software update (`app/update.{hpp,cpp}`): `fetchLatestRelease` (GitHub's API, a generic User-Agent),
   `parseLatestRelease` (a `.pkg` asset with an https address, a size and a `sha256:` digest), `newerVersion`;
   `downloadPackage` writes through a `FileSink`, hashing with `net::Sha256Stream` as it arrives, and keeps the
-  file only when size and digest match. `core::packagePath` is `/data/pkg/Playfin-<version>.pkg` on the PS4 (the
-  one write outside the data folder) and the data folder's `pkg/` on Linux. `AppSession::checkForUpdate` runs
+  file only when size and digest match; it runs on the transfer thread too. `core::packagePath` is
+  `/data/pkg/Playfin-<version>.pkg` on the PS4 (the one write outside the data folder; the folder is created
+  when missing and never chmodded) and the data folder's `pkg/` on Linux. `AppSession::checkForUpdate` runs
   once at start (not in test mode); the settings tab shows a dot (`NavTab::badge`).
 - PS4 accounts: `platform::consoleUserId()` (`sceUserServiceGetInitialUser`); `servers.json` keeps a
   `ConsoleProfile` (server, user) per account and an optional shared sign-in; `startTarget` starts each account on
   its own user, gives an installation from before 2.0 to the first account that starts it, else the shared
-  sign-in, else the servers screen. Saved users and their tokens stay common to the console's accounts.
+  sign-in, else the servers screen. Saved users and their tokens stay common to the console's accounts; choosing
+  one always updates the account's profile (another account may have chosen the same user last).
 - Screensaver (`screensaver.{hpp,cpp}`): after `kIdleMs` (5 min) without input, no modal and no video, a modal of
   random films and series with a backdrop (`sortBy=Random`), one every 12 s with the title, synopsis and time;
   any button closes it (each action bound).

@@ -33,6 +33,7 @@ private:
     TextureRef texture_;
     float alpha_ = 0;
     bool failed_ = false;
+    float requestedAtMs_ = 0;  // the shimmer stops after a while (a request that never answers)
 };
 
 }  // namespace playfin::ui

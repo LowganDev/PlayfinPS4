@@ -23,7 +23,30 @@ AppSession::AppSession(net::HttpConfig http, std::string storePath, std::string 
     languageAtStart = settings_.language;
 }
 
-AppSession::~AppSession() = default;
+AppSession::~AppSession() { stopTransfers(); }
+
+core::WorkerPool& AppSession::transfers() {
+    if (!transfers_) {
+        transfers_ = std::make_unique<core::WorkerPool>(1);
+    }
+    return *transfers_;
+}
+
+void AppSession::stopTransfers() {
+    if (downloads_) {
+        downloads_->stop();
+    }
+    if (!transfers_) {
+        return;
+    }
+    if (!transfers_->finish(std::chrono::seconds(3))) {
+        // a transfer that does not hear its cancel: left running rather than waited for (the app is closing)
+        PF_LOG_WARN("exit: a transfer still running after 3 s, left behind");
+        static_cast<void>(transfers_.release());
+        return;
+    }
+    transfers_.reset();
+}
 
 // before the client changes: the stop is reported to the server the music came from
 void AppSession::stopMusic() {
@@ -184,18 +207,20 @@ void AppSession::signedIn(const jellyfin::AuthResult& auth) {
     useStoredUser(copy);
 }
 
-void AppSession::rememberProfile() {
+bool AppSession::rememberProfile() {
     if (consoleUser.empty() || data_.lastServerId.empty()) {
-        return;
+        return false;
     }
     for (jellyfin::ConsoleProfile& profile : data_.profiles) {
         if (profile.consoleUser == consoleUser) {
+            const bool changed = profile.serverId != data_.lastServerId || profile.userId != data_.lastUserId;
             profile.serverId = data_.lastServerId;
             profile.userId = data_.lastUserId;
-            return;
+            return changed;
         }
     }
     data_.profiles.push_back({consoleUser, data_.lastServerId, data_.lastUserId});
+    return true;
 }
 
 void AppSession::shareSignIn(bool share) {
@@ -214,9 +239,11 @@ void AppSession::useStoredUser(const jellyfin::StoredUser& user) {
     jellyfin::Session session = sessionFor(baseUrl_);
     session.token = user.token;
     session.userId = user.id;
-    if (data_.lastUserId != user.id) {  // a saved user chosen: the next start goes there (user ids are per server)
-        data_.lastUserId = user.id;
-        rememberProfile();
+    // a saved user chosen: the next start goes there (user ids are per server), for this PS4 account too (another
+    // account may have chosen the same user last, so the profile is checked even when the last user is unchanged)
+    const bool userChanged = data_.lastUserId != user.id;
+    data_.lastUserId = user.id;
+    if (rememberProfile() || userChanged) {
         save();
     }
     setClient(std::make_shared<const jellyfin::Client>(http_, session));

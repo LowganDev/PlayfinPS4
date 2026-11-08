@@ -33,6 +33,16 @@ public:
         }
         core::runAsync<T>(app->pool(), app->mainQueue(), std::move(job), std::move(done), token_);
     }
+    // the same, on the transfer thread (a long transfer that must not hold the worker pool)
+    template <typename T>
+    void runTransfer(std::function<T()> job, std::function<void(T)> done) {
+        ui::Application* app = ui::Application::current();
+        if (session_.synchronous || app == nullptr) {
+            done(job());
+            return;
+        }
+        core::runAsync<T>(session_.transfers(), app->mainQueue(), std::move(job), std::move(done), token_);
+    }
 
     // next frame (after the screen is shown and focused)
     void later(std::function<void()> action) {

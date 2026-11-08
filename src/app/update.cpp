@@ -1,5 +1,6 @@
 #include "app/update.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <vector>
 
