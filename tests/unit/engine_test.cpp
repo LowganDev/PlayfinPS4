@@ -162,6 +162,17 @@ TEST_CASE("the player never runs scripts or configuration, nor follows a file to
     CHECK(has("load-unsafe-playlists", "no"));
 }
 
+TEST_CASE("references are followed for an HLS playlist over http(s) only") {
+    CHECK(playfin::player::followsReferences("http://192.168.1.2:8098/ch1/index.m3u8"));
+    CHECK(playfin::player::followsReferences("https://h:8920/videos/x/master.m3u8?DeviceId=a&b=c"));
+    CHECK(playfin::player::followsReferences("https://iptv.example/live/1.M3U8#x"));
+    CHECK_FALSE(playfin::player::followsReferences("/data/Playfin/downloads/a.m3u8"));  // a local file
+    CHECK_FALSE(playfin::player::followsReferences("file:///tmp/list.m3u8"));
+    CHECK_FALSE(playfin::player::followsReferences("https://h:8920/Videos/x/stream?static=true"));
+    CHECK_FALSE(playfin::player::followsReferences("https://h:8920/x.m3u8.mp4"));
+    CHECK_FALSE(playfin::player::followsReferences("https://h/m3u8"));
+}
+
 TEST_CASE("a hardening option this mpv does not know is a warning, except ytdl (built without Lua)") {
     CHECK(playfin::player::optionMayBeMissing("ytdl"));
     for (const auto& option : playfin::player::hardeningOptions()) {

@@ -78,7 +78,9 @@
 - Player: `engine_test` plays `tests/fixtures/media/clip.mp4` (generated, see its README) through libmpv with
   `ao=null` (frames, seek, pause, end, missing file, external subtitle, non-blocking render);
   `playback_api_test`, `profile_test`, `player_session_test` and the player cases of `shell_screens_test` run
-  against the fake server, which streams the clip for every item, answers PlaybackInfo (direct, or transcode for
+  against the fake server, which streams the clip for every item (live channels and transcodes as HLS: a playlist
+  and `clip.ts` as its segment, so that following an HLS playlist is tested; before, the relay served the MP4
+  under `master.m3u8` and a player that could not follow HLS segments passed), answers PlaybackInfo (direct, or transcode for
   `m-transcode`), media segments (`e-1`) and records the playback reports. `ui_shell` screenshots the player bar
   and the track menu over the clip's first picture.
 
@@ -99,7 +101,9 @@ PC with generated content, for testing music and Live TV:
   the tuner, the guide and the recordings folder (`/recordings`), refreshes them, makes the playlist.
 
 What the real server answers (fixtures recorded from it in `tests/fixtures/jellyfin/ts/`, API keys redacted):
-- A channel's media source is the tuner's URL (`http://streams/...`, unreachable from the console). With
+- A channel's media source is the tuner's URL (`http://streams/...`, unreachable from the console; started with
+  `STREAMS=<this PC>:8098 up.sh` the M3U gives the PC's address instead and the console plays the channels
+  directly). With
   `EnableDirectPlay: false` and no `hls` container in the direct play profiles, `PlaybackInfo` returns a
   `TranscodingUrl` (`/videos/{id}/master.m3u8?...&LiveStreamId=...`): the server relays the channel (video copied
   when compatible). The live stream closes with `POST /LiveStreams/Close?liveStreamId=` (not under `/LiveTv`).

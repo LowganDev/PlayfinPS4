@@ -29,6 +29,8 @@
   when the address changes) for the channels the server has no guide for; favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
   news, kids, radios), a channel search.
 - Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
+- Fixed: Live TV and other HLS streams (the server's relay of a channel, a transcode) did not play on the console
+  since 1.0.0 ("This video cannot be played"): the player refused to follow the playlist to its segments.
 - A screensaver after five idle minutes: the server's films and series full screen, with the time.
 - The controller's buttons and what they do now, at the bottom left of every screen: navigate, select, the
   screen's own actions (A–Z, quick look, filters, tabs, refresh), back; in the player with its bar (pause, 10 s,

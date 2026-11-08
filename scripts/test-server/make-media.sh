@@ -108,15 +108,37 @@ for n in 1 2 3; do
         "$logo"
 done
 
-cat > "$LIVE/channels.m3u" <<'M3U'
+# the channels' address: "streams" (inside Docker) or <this PC>:8098 for the console's direct play
+STREAMS=${STREAMS:-streams}
+cat > "$LIVE/channels.m3u" <<M3U
 #EXTM3U
-#EXTINF:-1 tvg-id="playfin.info" tvg-chno="1" tvg-name="Playfin Info" tvg-logo="http://streams/logos/1.png" group-title="Playfin",Playfin Info
-http://streams/ch1/index.m3u8
-#EXTINF:-1 tvg-id="playfin.sport" tvg-chno="2" tvg-name="Playfin Sport" tvg-logo="http://streams/logos/2.png" group-title="Playfin",Playfin Sport
-http://streams/ch2/index.m3u8
-#EXTINF:-1 tvg-id="playfin.cinema" tvg-chno="3" tvg-name="Playfin Cinéma" tvg-logo="http://streams/logos/3.png" group-title="Playfin",Playfin Cinéma
-http://streams/ch3/index.m3u8
+#EXTINF:-1 tvg-id="playfin.info" tvg-chno="1" tvg-name="Playfin Info" tvg-logo="http://$STREAMS/logos/1.png" group-title="Playfin",Playfin Info
+http://$STREAMS/ch1/index.m3u8
+#EXTINF:-1 tvg-id="playfin.sport" tvg-chno="2" tvg-name="Playfin Sport" tvg-logo="http://$STREAMS/logos/2.png" group-title="Playfin",Playfin Sport
+http://$STREAMS/ch2/index.m3u8
+#EXTINF:-1 tvg-id="playfin.cinema" tvg-chno="3" tvg-name="Playfin Cinéma" tvg-logo="http://$STREAMS/logos/3.png" group-title="Playfin",Playfin Cinéma
+http://$STREAMS/ch3/index.m3u8
+#EXTINF:-1 tvg-id="playfin.direct" tvg-chno="4" tvg-name="Playfin Direct" group-title="Playfin",Playfin Direct
+http://$STREAMS/ch4/index.m3u8
 M3U
+
+# the console's own XMLTV guide (Settings > TV guide: http://<this PC>:8098/console-guide.xml): only "Playfin
+# Direct", which the server's guide leaves empty, so that the console's guide visibly fills it
+python3 - "$DATA/hls/console-guide.xml" <<'PY'
+import datetime, sys
+now = datetime.datetime.now().astimezone()
+t = now.replace(minute=0, second=0, microsecond=0) - datetime.timedelta(hours=2)
+fmt = lambda d: d.strftime("%Y%m%d%H%M%S %z")
+lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<tv generator-info-name="playfin-testserver console">',
+         '  <channel id="direct.console"><display-name>Playfin Direct</display-name><display-name>4</display-name></channel>']
+for i in range(48):
+    title = ["Guide de la console", "Direct de la console", "Magazine XMLTV"][i % 3]
+    lines.append(f'  <programme start="{fmt(t)}" stop="{fmt(t + datetime.timedelta(minutes=40))}" channel="direct.console">'
+                 f'<title lang="fr">{title}</title><desc lang="fr">{title}, lu par la console dans son propre guide.</desc></programme>')
+    t += datetime.timedelta(minutes=40)
+lines.append('</tv>')
+open(sys.argv[1], "w", encoding="utf-8").write("\n".join(lines) + "\n")
+PY
 
 python3 - "$LIVE/guide.xml" <<'PY'
 import datetime, sys, xml.sax.saxutils as su

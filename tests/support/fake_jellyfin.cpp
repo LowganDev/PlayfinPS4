@@ -23,6 +23,11 @@ namespace playfin::test {
 
 namespace {
 
+// an HLS playlist of one segment, "clip.ts" next to it (the test clip)
+const char* const kHlsPlaylist =
+    "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:4.0,\nclip.ts\n"
+    "#EXT-X-ENDLIST\n";
+
 using Handler = std::function<void(const httplib::Request&, httplib::Response&)>;
 
 bool authorized(const httplib::Request& req) {
@@ -469,7 +474,7 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         std::string body = readFixture("jellyfin/" + name);
         if (name == "ts/playbackinfo_live.json") {  // the tuner's stream, reachable from the tests
             const std::string recorded = "http://streams/ch1/index.m3u8";
-            const std::string source = liveSource_.empty() ? baseUrl() + "/iptv/ch1" : liveSource_;
+            const std::string source = liveSource_.empty() ? baseUrl() + "/iptv/ch1/index.m3u8" : liveSource_;
             body.replace(body.find(recorded), recorded.size(), source);
         }
         res.set_content(body, "application/json");
@@ -478,10 +483,14 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.Get("/xmltv/guide.xml", [](const httplib::Request&, httplib::Response& res) {
         res.set_content(readFixture("xmltv/guide.xml"), "application/xml");
     });
-    // a channel's own stream, as an M3U tuner gives it (the player must reach it without the Jellyfin header)
-    http.Get(R"(/iptv/([^/]+))", [](const httplib::Request&, httplib::Response& res) {
-        static const std::string clip = readFixture("media/clip.mp4");
-        res.set_content(clip, "video/mp4");
+    // a channel's own stream, as an M3U tuner gives it: HLS, the test clip as its one segment (the player must reach
+    // it without the Jellyfin header)
+    http.Get(R"(/iptv/([^/]+)/index.m3u8)", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content(kHlsPlaylist, "application/vnd.apple.mpegurl");
+    });
+    http.Get(R"(/iptv/([^/]+)/clip.ts)", [](const httplib::Request&, httplib::Response& res) {
+        static const std::string clip = readFixture("media/clip.ts");
+        res.set_content(clip, "video/mp2t");
     });
     http.Get(R"(/MediaSegments/([^/]+))", guarded([](const httplib::Request& req, httplib::Response& res) {
         if (req.matches[1] != "e-1") {
@@ -508,10 +517,14 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
         static const std::string tone = readFixture("media/tone.mp3");
         res.set_content(tone, "audio/mpeg");
     }));
-    // the relayed live channel (TranscodingUrl of the recorded live PlaybackInfo): the test clip
+    // the relayed live channel (TranscodingUrl of the recorded live PlaybackInfo): HLS as Jellyfin gives it, the test
+    // clip as its one segment
     http.Get(R"(/videos/([^/]+)/master.m3u8)", guarded([](const httplib::Request&, httplib::Response& res) {
-        static const std::string clip = readFixture("media/clip.mp4");
-        res.set_content(clip, "video/mp4");
+        res.set_content(kHlsPlaylist, "application/vnd.apple.mpegurl");
+    }));
+    http.Get(R"(/videos/([^/]+)/clip.ts)", guarded([](const httplib::Request&, httplib::Response& res) {
+        static const std::string clip = readFixture("media/clip.ts");
+        res.set_content(clip, "video/mp2t");
     }));
     // downloads: the test clip; "m-transcode" is not allowed (a user without the download right)
     http.Get(R"(/Items/([^/]+)/Download)", guarded([](const httplib::Request& req, httplib::Response& res) {

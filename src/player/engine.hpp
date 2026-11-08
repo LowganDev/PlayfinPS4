@@ -32,6 +32,11 @@ struct EngineOptions {
 // media file can open neither other files (references, playlists) nor its own fonts (they would reach FreeType).
 std::vector<std::pair<const char*, const char*>> hardeningOptions();
 
+// An HLS playlist over http(s) (a live channel, a transcode): its segments are references the demuxer has to open, so
+// the player follows references for it alone (FFmpeg's HLS demuxer opens only segments of the playlist's protocol
+// family). Every other file keeps "access-references" off.
+bool followsReferences(const std::string& url);
+
 // True for an option an mpv build may lack with nothing lost (ytdl: mpv built without Lua, as on the PS4). Any other
 // option mpv does not know is logged as a warning, so a protection renamed by a newer mpv does not go unnoticed.
 bool optionMayBeMissing(const char* name);

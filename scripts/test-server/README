@@ -1,7 +1,12 @@
 Jellyfin test server with music and Live TV (docs/testing.md, "Test server").
 
-    scripts/test-server/up.sh     # media (first time), 3 live channels, Jellyfin on port 8097, set-up
+    scripts/test-server/up.sh     # media (first time), 4 live channels, Jellyfin on port 8097, set-up
     scripts/test-server/down.sh   # stops everything; data kept in ~/.local/share/playfin-testserver
 
 Sign in as "playfin" / "playfin-test" (local test server only). Remove ~/.local/share/playfin-testserver to start
 from scratch.
+
+For the console: STREAMS=<this PC's address>:8098 scripts/test-server/up.sh puts the channels' own address in the
+M3U list, so that Playfin plays them directly from the PC (port 8098) rather than through Jellyfin. The console's
+own TV guide (Settings > TV guide) is http://<this PC's address>:8098/console-guide.xml: it describes channel 4,
+"Playfin Direct", which the server's guide leaves empty.

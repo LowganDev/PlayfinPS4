@@ -3,6 +3,8 @@
 #include <mpv/client.h>
 #include <mpv/render.h>
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstring>
 
@@ -71,6 +73,16 @@ void setOption(mpv_handle* mpv, const char* name, const std::string& value) {
 }  // namespace
 
 bool optionMayBeMissing(const char* name) { return std::strcmp(name, "ytdl") == 0; }
+
+bool followsReferences(const std::string& url) {
+    const bool web = url.rfind("http://", 0) == 0 || url.rfind("https://", 0) == 0;
+    std::string path = url.substr(0, url.find_first_of("?#"));
+    std::transform(path.begin(), path.end(), path.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    const std::string extension = ".m3u8";
+    return web && path.size() > extension.size() &&
+           path.compare(path.size() - extension.size(), extension.size(), extension) == 0;
+}
 
 std::vector<std::pair<const char*, const char*>> hardeningOptions() {
     return {{"config", "no"},
@@ -175,6 +187,7 @@ void Engine::load(const std::string& url, double startSeconds) {
     impl_->loaded = false;
     impl_->shownFirst = false;
     impl_->error.clear();
+    mpv_set_property_string(impl_->mpv, "access-references", followsReferences(url) ? "yes" : "no");
     impl_->command({"loadfile", url.c_str(), "replace"});
 }
 

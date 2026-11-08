@@ -7,6 +7,10 @@ Generated, no third-party content.
       ffmpeg -f lavfi -i testsrc2=size=320x180:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 4 \
           -c:v libx264 -pix_fmt yuv420p -g 25 -c:a aac -b:a 64k -movflags +faststart clip.mp4
 
+- `clip.ts`: the same clip in MPEG-TS, the segment of the fake server's HLS playlists:
+
+      ffmpeg -i clip.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts clip.ts
+
 - `one.vtt`: one WebVTT cue ("Bonjour", 0-3 s).
 - `tone.mp3`: 1.5 s stereo 440 Hz tone, the music tests' track:
 

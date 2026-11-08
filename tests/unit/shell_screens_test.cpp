@@ -1733,15 +1733,21 @@ TEST_CASE("a channel's own stream plays without the server's relay, and without 
     p.shell.application->push(app::makePlayer(p.shell.session, channel("Playfin Info"), 0));
     p.frames(10);
     REQUIRE(p.shell.application->videoSource() != nullptr);
+    // HLS: the player follows the playlist to its segment (references are refused for any other file)
+    for (int i = 0; i < 300 && p.server.count("/iptv/ch1/clip.ts") == 0; ++i) {
+        p.frames(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     int direct = 0;
     for (const auto& seen : p.server.requests()) {
-        if (seen.path == "/iptv/ch1") {
+        if (seen.path.rfind("/iptv/ch1/", 0) == 0) {
             ++direct;
             CHECK(seen.authorization.empty());  // the token never goes to the tuner's host
         }
         CHECK(seen.path.find("master.m3u8") == std::string::npos);  // no relay
     }
     CHECK(direct > 0);
+    CHECK(p.server.count("/iptv/ch1/clip.ts") > 0);
     p.shell.press(Action::Back);
     p.frames(5);
     CHECK(requestsTo(p.server, "POST", "/LiveStreams/Close") == 1);  // opened by PlaybackInfo, closed all the same
@@ -1759,6 +1765,15 @@ TEST_CASE("a channel whose own stream cannot be reached plays through the server
         relayed = relayed || seen.path.find("master.m3u8") != std::string::npos;
     }
     CHECK(relayed);
+    bool segment = false;  // the relay is HLS too: its segment is reached
+    for (int i = 0; i < 300 && !segment; ++i) {
+        p.frames(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        for (const auto& seen : p.server.requests()) {
+            segment = segment || seen.path.find("/clip.ts") != std::string::npos;
+        }
+    }
+    CHECK(segment);
     CHECK_FALSE(shows(*p.shell.application, "This video cannot be played"));
     p.shell.press(Action::Back);
 }

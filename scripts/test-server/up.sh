@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the test server: media (made once), the 3 live channel encoders (host ffmpeg, HLS into $DATA/hls), the
+# Starts the test server: media (made once), the 4 live channel encoders (host ffmpeg, HLS into $DATA/hls), the
 # Jellyfin and streams containers, then the set-up through the API. Jellyfin: http://<this PC>:8097.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -30,6 +30,7 @@ channel() {  # channel <n> <source> <name> <tone Hz>
 channel 1 testsrc2 "Playfin Info" 440
 channel 2 smptehdbars "Playfin Sport" 523
 channel 3 testsrc "Playfin Cinéma" 659
+channel 4 rgbtestsrc "Playfin Direct" 784
 
 docker compose -f "$HERE/compose.yml" up -d
 python3 "$HERE/setup.py" "http://127.0.0.1:8097"
