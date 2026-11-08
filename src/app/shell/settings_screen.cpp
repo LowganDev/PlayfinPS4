@@ -146,7 +146,7 @@ private:
             guide_->setValue(ui::tr("settings.tv_guide.loading"));
             break;
         case TvGuide::State::Ready:
-            guide_->setValue(ui::tr("settings.tv_guide.ready", {std::to_string(guide.channelCount())}));
+            guide_->setValue(ui::translator().plural("settings.tv_guide.ready", static_cast<long long>(guide.channelCount())));
             break;
         case TvGuide::State::Failed:
             guide_->setValue(ui::tr("settings.tv_guide.failed"));

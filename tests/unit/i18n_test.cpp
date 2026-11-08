@@ -60,6 +60,8 @@ TEST_CASE("the shipped files resolve exact tag, then language, then English") {
     REQUIRE(fr.load(dir, "fr-FR"));
     CHECK(fr.language() == "fr");
     CHECK(fr.tr("ui.cancel") == "Annuler");
+    CHECK(fr.plural("settings.tv_guide.ready", 1) == "1 cha\xC3\xAEne");  // seen as "1 chaînes" on the console
+    CHECK(fr.plural("settings.tv_guide.ready", 3) == "3 cha\xC3\xAEnes");
     Translator zh;
     REQUIRE(zh.load(dir, "zh-Hant"));
     CHECK(zh.language() == "zh-Hant");

@@ -61,6 +61,9 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
 
 - The local time is the console's time zone plus its summer time setting, as they are now: a programme after a
   summer time change within the guide's three days shows an hour off.
+
+## Player (mpv)
+
 - mpv's `access-references=no` refuses every HLS playlist ("Not opening '…m3u8' due to --access-references=no"):
   FFmpeg's HLS demuxer reopens the playlist and its segments as nested inputs. Seen on the console on 2026-11-08
   (Live TV, relayed or direct, failed since the 1.0.0 hardening); the player now allows references for HLS over

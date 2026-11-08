@@ -73,6 +73,8 @@ struct Shell {
         REQUIRE(session.load().ok());
         session.synchronous = true;
         session.discovery = false;
+        // downloads keep 512 MB free: the tests must not depend on this computer's disk (a test sets its own)
+        session.downloadsFreeSpace = [] { return std::int64_t{64} * 1024 * 1024 * 1024; };
         session.licensesDir = std::string(PLAYFIN_SOURCE_DIR) + "/resources/licenses";
         session.noticesFile = std::string(PLAYFIN_SOURCE_DIR) + "/THIRD_PARTY_LICENSES";
         application =

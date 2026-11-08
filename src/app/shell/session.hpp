@@ -40,6 +40,8 @@ public:
     MusicPlayer& music();
     // Films and episodes kept on the console (created on first use, its list read then).
     Downloads& downloads();
+    // The free space the downloads see (tests); unset: the console's (`Downloads::freeBytes`).
+    std::function<std::int64_t()> downloadsFreeSpace;
     // The TV guide read on the console (created on first use).
     TvGuide& tvGuide();
     // Every frame: updates the music when there is some; true when what it shows changed.

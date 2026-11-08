@@ -85,6 +85,9 @@ MusicPlayer& AppSession::music() {
 Downloads& AppSession::downloads() {
     if (!downloads_) {
         downloads_ = std::make_unique<Downloads>(*this);
+        if (downloadsFreeSpace) {
+            downloads_->freeSpace = downloadsFreeSpace;
+        }
         downloads_->load();
     }
     return *downloads_;
