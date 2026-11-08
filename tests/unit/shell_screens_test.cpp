@@ -1504,6 +1504,9 @@ TEST_CASE("now playing skips, goes back, pauses and jumps in the queue") {
     ui::View* upcoming = named(*shell.application->top(), "Rétroviseur");
     REQUIRE(upcoming != nullptr);
     REQUIRE(shell.application->focus().focus(upcoming));
+    shell.press(Action::Left);  // back to the controls from any track of the list (seen stuck on the console)
+    CHECK(focusedText(*shell.application).rfind("Volume", 0) == 0);
+    REQUIRE(shell.application->focus().focus(upcoming));
     shell.press(Action::Confirm);
     untilPlaying(shell);
     CHECK(shell.session.music().status().track->name == "Rétroviseur");

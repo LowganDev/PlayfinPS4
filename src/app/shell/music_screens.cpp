@@ -650,6 +650,8 @@ public:
         upNext_ = side->add<ui::Box>(ui::Axis::Column);
         upNext_->width = ui::SizeSpec::fill();
         upNext_->gap = 4;
+        // ← from any track of the list back to the controls (a track above them has nothing on its left)
+        upNext_->setNextFocus(ui::Direction::Left, volume_);
         bind(platform::Action::L1, ui::tr("music.previous"), [this] {
             music_.previous();
             return true;
