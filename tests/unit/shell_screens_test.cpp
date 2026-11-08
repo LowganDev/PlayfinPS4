@@ -1995,6 +1995,55 @@ TEST_CASE("library: \\u25b3 on a card opens a quick look; its details arrive; it
     CHECK_FALSE(p.shell.application->hasModal());
 }
 
+TEST_CASE("software update: a newer version shows in the settings, its package downloads and is checked") {
+    SettingsShell s;
+    test::FakeJellyfin github(test::TlsMode::CaSigned);
+    const std::string package(150000, 'k');
+    github.publishRelease("9.0.0", package);
+    s.shell.session.updateUrl = github.baseUrl() + "/github/latest";
+    core::setDataRoot(s.shell.dir.path);
+    s.shell.session.checkForUpdate();
+    CHECK(s.shell.session.update.has_value());
+    s.shell.application->replace(app::makeSettings(s.shell.session));
+    s.shell.frames(5);
+    CHECK(shows(*s.shell.application, "Version 9.0.0 available"));
+    pressAnywhere(s.shell, "Software update");
+    REQUIRE(s.shell.application->hasModal());
+    pressAnywhere(s.shell, "Download");
+    s.shell.frames(5);
+    CHECK(shows(*s.shell.application, "Ready to install"));
+    const std::string path = s.shell.dir.path + "/pkg/Playfin-9.0.0.pkg";
+    REQUIRE(std::filesystem::exists(path));
+    CHECK(std::filesystem::file_size(path) == package.size());
+    s.shell.press(Action::Back);
+    core::setDataRoot({});
+}
+
+TEST_CASE("software update: nothing newer, the settings say Playfin is up to date") {
+    SettingsShell s;
+    test::FakeJellyfin github(test::TlsMode::CaSigned);
+    github.publishRelease("0.9.0", "old");
+    s.shell.session.updateUrl = github.baseUrl() + "/github/latest";
+    s.shell.application->replace(app::makeSettings(s.shell.session));
+    s.shell.frames(5);
+    pressAnywhere(s.shell, "Software update");
+    s.shell.frames(3);
+    CHECK_FALSE(s.shell.session.update.has_value());
+    CHECK(shows(*s.shell.application, "Playfin is up to date"));
+}
+
+TEST_CASE("software update: GitHub out of reach, pressing the row says so") {
+    SettingsShell s;
+    s.shell.session.updateUrl = "https://127.0.0.1:9/github/latest";  // nothing listens there
+    s.shell.application->replace(app::makeSettings(s.shell.session));
+    s.shell.frames(5);
+    pressAnywhere(s.shell, "Software update");
+    s.shell.frames(3);
+    CHECK_FALSE(s.shell.session.update.has_value());
+    CHECK(s.shell.application->toastText() == ui::tr("settings.update.unreachable"));
+    CHECK(shows(*s.shell.application, "Check now"));  // may be asked again
+}
+
 TEST_CASE("home: the header shows the date and time; the libraries follow the order chosen in the settings") {
     SettingsShell s;
     s.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "jellyfin/json.hpp"
+#include "net/crypto.hpp"
 #include "support/files.hpp"
 
 namespace playfin::test {
@@ -343,6 +344,12 @@ void FakeJellyfin::showcase(std::string dir) {
     showcaseDir_ = std::move(dir);
 }
 
+void FakeJellyfin::publishRelease(std::string version, std::string package) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    releaseVersion_ = std::move(version);
+    releasePackage_ = std::move(package);
+}
+
 FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     : server_(mode), version_(std::move(version)) {
     httplib::Server& http = server_.http();
@@ -351,6 +358,24 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
                         R"({"Name":"Jazz","Id":"g-jazz","Type":"MusicGenre"}],"TotalRecordCount":2,"StartIndex":0})",
                         "application/json");
     }));
+    http.Get("/github/latest", [this](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (releaseVersion_.empty()) {
+            res.status = 404;
+            return;
+        }
+        net::Sha256Stream digest;
+        digest.update(releasePackage_.data(), releasePackage_.size());
+        res.set_content(R"({"tag_name":")" + releaseVersion_ + R"(","assets":[{"name":"IV0001-PLFN.pkg","size":)" +
+                            std::to_string(releasePackage_.size()) + R"(,"digest":"sha256:)" +
+                            net::hexLower(digest.finish()) + R"(","browser_download_url":")" + server_.baseUrl() +
+                            R"(/github/Playfin.pkg"}]})",
+                        "application/json");
+    });
+    http.Get("/github/Playfin.pkg", [this](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        res.set_content(releasePackage_, "application/octet-stream");
+    });
     http.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
         {
             std::lock_guard<std::mutex> lock(mutex_);

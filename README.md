@@ -90,7 +90,8 @@ The films in the screenshots are the Blender Foundation's open films; their artw
    address (for example `192.168.1.20:8096` or `https://media.example.com`).
 
 The app keeps its settings in `/data/Playfin/` on the console (servers, settings, downloads, the image cache and
-`playfin.log`). To update, install the newer package the same way.
+`playfin.log`). Updates: Settings › Mise à jour downloads the newer package to `/data/pkg` and checks it; install
+it from the Package Installer as above.
 
 ## Building
 

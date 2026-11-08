@@ -14,6 +14,8 @@
 - Libraries: ← in the first column jumps to a letter; △ gives a quick look (synopsis, quality, cast); pictures
   shimmer while they load.
 - Downloads: films, episodes and whole seasons kept on the console and played without the server.
+- Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
+  a dot on the settings tab when one is out.
 - Home: the date and time in the header, the order of the libraries chosen in the settings, the touchpad
   refreshes it; the downloads in a row.
 - Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the

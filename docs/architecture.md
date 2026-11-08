@@ -198,9 +198,13 @@ The screens of the app.
   before the main queue goes; the part file left is removed at the next start. The player plays a finished download from its file without the
   server (`engineOptionsLocal`, no PlaybackInfo, no report) and keeps where it was left in the list. Pictures of
   downloads are `file://` URLs that `AppSession::fetchImage` reads from `downloads/` only.
-- Software update: built in 2.0 then kept for 2.1 (branch `2.1`: `app/update.{hpp,cpp}`, the settings row, the
-  settings tab's dot, `core::packagePath` for `/data/pkg`); 2.0 ships without it (no Internet to test it on the
-  console before the release).
+- Software update (`app/update.{hpp,cpp}`): `fetchLatestRelease` (GitHub's API, a generic User-Agent),
+  `parseLatestRelease` (a `.pkg` asset with an https address, a size and a `sha256:` digest), `newerVersion`;
+  `downloadPackage` writes through a `FileSink`, hashing with `net::Sha256Stream` as it arrives, and keeps the
+  file only when size and digest match; it runs on the transfer thread too. `core::packagePath` is
+  `/data/pkg/Playfin-<version>.pkg` on the PS4 (the one write outside the data folder; the folder is created
+  when missing and never chmodded) and the data folder's `pkg/` on Linux. `AppSession::checkForUpdate` runs
+  once at start (not in test mode); the settings tab shows a dot (`NavTab::badge`).
 - PS4 accounts: `platform::consoleUserId()` (`sceUserServiceGetInitialUser`); `servers.json` keeps a
   `ConsoleProfile` (server, user) per account and an optional shared sign-in; `startTarget` starts each account on
   its own user, gives an installation from before 2.0 to the first account that starts it, else the shared

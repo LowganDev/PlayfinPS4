@@ -313,7 +313,10 @@ int run(const Options& options) {
         };
         refreshHalo();
         application.push(firstScreen(options.screen, session));
-        if (!testMode && options.screen != "gallery") {
+        if (testMode) {
+            session.updateUrl.clear();  // script tests never ask GitHub
+        } else if (options.screen != "gallery") {
+            session.checkForUpdate();  // the settings tab gets a dot when a newer Playfin is published
             session.tvGuide().refresh();  // the XMLTV guide of the settings, if any
         }
         PF_LOG_INFO("startup: first frame");
