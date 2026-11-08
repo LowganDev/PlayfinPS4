@@ -251,8 +251,6 @@
   "player.hint.pause": "Duraklat",
   "player.hint.play": "Oynat",
   "player.hint.seek": "10 sn",
-  "player.hint.minute": "1 dk",
-  "player.hint.skip": "5 dk",
   "player.hint.channel": "Kanal",
   "player.hint.volume": "Ses",
   "player.hint.options": "Seçenekler",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "Yenile",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Sekmeler",
-  "settings.library_order.move": "Taşı"
+  "settings.library_order.move": "Taşı",
+  "player.hint.hold_episode": "Basılı tut: bölüm",
+  "player.hint.hold_channel": "Basılı tut: kanal",
+  "player.hold.next_episode": "Sonraki bölüm",
+  "player.hold.previous_episode": "Önceki bölüm",
+  "player.hold.next_channel": "Sonraki kanal",
+  "player.hold.previous_channel": "Önceki kanal"
 }

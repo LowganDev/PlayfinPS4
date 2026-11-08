@@ -251,8 +251,6 @@
   "player.hint.pause": "Tạm dừng",
   "player.hint.play": "Phát",
   "player.hint.seek": "10 giây",
-  "player.hint.minute": "1 phút",
-  "player.hint.skip": "5 phút",
   "player.hint.channel": "Kênh",
   "player.hint.volume": "Âm lượng",
   "player.hint.options": "Tùy chọn",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "Làm mới",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Thẻ",
-  "settings.library_order.move": "Di chuyển"
+  "settings.library_order.move": "Di chuyển",
+  "player.hint.hold_episode": "Giữ: tập",
+  "player.hint.hold_channel": "Giữ: kênh",
+  "player.hold.next_episode": "Tập tiếp theo",
+  "player.hold.previous_episode": "Tập trước",
+  "player.hold.next_channel": "Kênh tiếp theo",
+  "player.hold.previous_channel": "Kênh trước"
 }

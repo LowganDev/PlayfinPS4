@@ -52,6 +52,11 @@ press Back
 wait 10
 press Back
 wait 20
+down R2
+wait 90
+screenshot player_hold
+up R2
+wait 10
 press Back
 wait 20
 press Back

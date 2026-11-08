@@ -251,8 +251,6 @@
   "player.hint.pause": "暂停",
   "player.hint.play": "播放",
   "player.hint.seek": "10 秒",
-  "player.hint.minute": "1 分钟",
-  "player.hint.skip": "5 分钟",
   "player.hint.channel": "频道",
   "player.hint.volume": "音量",
   "player.hint.options": "选项",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "刷新",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "标签页",
-  "settings.library_order.move": "移动"
+  "settings.library_order.move": "移动",
+  "player.hint.hold_episode": "按住：剧集",
+  "player.hint.hold_channel": "按住：频道",
+  "player.hold.next_episode": "下一集",
+  "player.hold.previous_episode": "上一集",
+  "player.hold.next_channel": "下一个频道",
+  "player.hold.previous_channel": "上一个频道"
 }

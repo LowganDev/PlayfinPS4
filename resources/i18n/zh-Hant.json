@@ -251,8 +251,6 @@
   "player.hint.pause": "暫停",
   "player.hint.play": "播放",
   "player.hint.seek": "10 秒",
-  "player.hint.minute": "1 分鐘",
-  "player.hint.skip": "5 分鐘",
   "player.hint.channel": "頻道",
   "player.hint.volume": "音量",
   "player.hint.options": "選項",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "重新整理",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "分頁",
-  "settings.library_order.move": "移動"
+  "settings.library_order.move": "移動",
+  "player.hint.hold_episode": "按住：集數",
+  "player.hint.hold_channel": "按住：頻道",
+  "player.hold.next_episode": "下一集",
+  "player.hold.previous_episode": "上一集",
+  "player.hold.next_channel": "下一個頻道",
+  "player.hold.previous_channel": "上一個頻道"
 }

@@ -10,7 +10,7 @@
   `glnvg__renderFlush`), never a whole library.
 - UI tests: `playfin --screen gallery --test-script <file> --test-output <dir>` plays a script and saves screenshots; no window and
   no display are needed (`SDL_VIDEODRIVER=offscreen`, `MESA_LOADER_DRIVER_OVERRIDE=llvmpipe` = CPU rendering,
-  identical on every run). Script commands: `wait <frames>`, `press <Action>`, `type <text>`, `screenshot <name>`, `quit`. Images load
+  identical on every run). Script commands: `wait <frames>`, `press <Action>`, `down <Action>` and `up <Action>` (held across frames), `type <text>`, `screenshot <name>`, `quit`. Images load
   synchronously in test mode. The gallery (`tests/ui/gallery.script`, references in `tests/ui/references/gallery/`)
   covers rows, grid, focus ring, dialog, text editing (CJK) and screen push/pop.
   The clock is fixed at 60 fps in test mode. `tests/ui/run.sh` compares each image of `tests/ui/references/`

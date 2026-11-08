@@ -5,7 +5,9 @@
 - Next episode: a card in the last 10 s with the episode's picture and title; ✕ plays it now, ◯ cancels, it plays
   on by itself when the countdown ends.
 - Player: the volume (kept), the picture whole, filling the screen, stretched or smaller (for TVs that cut the
-  edges), L2 / R2 five minutes back or on, when the video ends in the bar.
+  edges), when the video ends in the bar. ← → and L1 / R1 seek 10 s; held, they go faster (30 s after 2 s, 1 min
+  after 4 s, 2 min after 6 s). L2 / R2 held 3 s play the previous or next episode (a panel fills meanwhile; a
+  short press does nothing).
 - Details: the version's quality (4K, HDR10, Dolby Vision, codec, 5.1…), when it ends, the director, the cast and
   crew; a person's films and series; the version to play when there are several.
 - Libraries: ← in the first column jumps to a letter; △ gives a quick look (synopsis, quality, cast); pictures

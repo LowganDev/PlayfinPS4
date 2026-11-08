@@ -253,8 +253,6 @@
   "player.hint.pause": "Pozastavit",
   "player.hint.play": "Přehrát",
   "player.hint.seek": "10 s",
-  "player.hint.minute": "1 min",
-  "player.hint.skip": "5 min",
   "player.hint.channel": "Kanál",
   "player.hint.volume": "Hlasitost",
   "player.hint.options": "Možnosti",
@@ -262,5 +260,11 @@
   "shell.home.refresh": "Obnovit",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Karty",
-  "settings.library_order.move": "Posunout"
+  "settings.library_order.move": "Posunout",
+  "player.hint.hold_episode": "Podržet: díl",
+  "player.hint.hold_channel": "Podržet: kanál",
+  "player.hold.next_episode": "Další díl",
+  "player.hold.previous_episode": "Předchozí díl",
+  "player.hold.next_channel": "Další kanál",
+  "player.hold.previous_channel": "Předchozí kanál"
 }

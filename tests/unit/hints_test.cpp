@@ -102,6 +102,16 @@ TEST_CASE("hints: of two bindings of one button, the label shown is the first wh
     CHECK(hintItems(chainOf(player), false, false).front() == HintItem{{Action::Confirm}, "Play"});
 }
 
+TEST_CASE("hints: buttons that do the same share one entry, at the first one's place") {
+    const std::vector<ActionBinding> seek = {make(Action::Left, "10 s"), make(Action::Right, "10 s"),
+                                             make(Action::Confirm, "Pause"), make(Action::L1, "10 s"),
+                                             make(Action::R1, "10 s")};
+    const auto items = hintItems(chainOf(seek), false, false);
+    REQUIRE(items.size() == 2);
+    CHECK(items[0] == HintItem{{Action::Left, Action::Right, Action::L1, Action::R1}, "10 s"});
+    CHECK(items[1] == HintItem{{Action::Confirm}, "Pause"});
+}
+
 TEST_CASE("hints: navigating needs two views that can take the focus, and a scope that allows the hint") {
     Box root{Axis::Column};
     View* first = root.add<View>();

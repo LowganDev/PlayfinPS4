@@ -35,7 +35,7 @@ namespace playfin::app {
 namespace {
 
 constexpr std::int64_t kBarMs = 4000;          // the bar hides after 4 s without input
-constexpr std::int64_t kHoldGapMs = 300;       // presses closer than this are one held button
+constexpr std::int64_t kHoldGapMs = 450;       // presses closer than this are one held button (first repeat: 400)
 constexpr std::int64_t kStatsMs = 1000;
 
 struct Loaded {
@@ -60,6 +60,7 @@ void closeOnServer(const std::shared_ptr<const jellyfin::Client>& client, const 
 
 struct Extras {
     std::vector<jellyfin::MediaSegment> segments;
+    std::optional<jellyfin::Item> previous;
     std::optional<jellyfin::Item> next;
     std::vector<jellyfin::Item> channels;  // live: the channels to change to, with their programme on now
 };
@@ -135,6 +136,7 @@ private:
         bottom->gap = ui::theme().spacingL;
 
         buildNextCard(*bottom);
+        buildHoldPanel(*bottom);
 
         auto* skipRow = bottom->add<ui::Box>(ui::Axis::Row);
         skipRow->width = ui::SizeSpec::fill();
@@ -154,6 +156,22 @@ private:
         progress_->width = ui::SizeSpec::fill();
         time_ = bar_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         time_->color = ui::theme().textSecondary;
+    }
+
+    // L2 / R2 held: what comes after 3 s, filling up meanwhile
+    void buildHoldPanel(ui::Box& bottom) {
+        auto* row = bottom.add<ui::Box>(ui::Axis::Row);
+        row->width = ui::SizeSpec::fill();
+        row->align = ui::Align::Center;
+        holdPanel_ = row->add<ui::Box>(ui::Axis::Column);
+        holdPanel_->background = ui::withAlpha(ui::theme().surfaceRaised, 0xF0);
+        holdPanel_->cornerRadius = ui::theme().radius;
+        holdPanel_->padding = ui::Insets::all(ui::theme().spacingM);
+        holdPanel_->gap = ui::theme().spacingS;
+        holdPanel_->visible = false;
+        holdLabel_ = holdPanel_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
+        holdProgress_ = holdPanel_->add<ui::ProgressBar>();
+        holdProgress_->width = ui::SizeSpec::fixed(420);
     }
 
     // "Épisode suivant": its picture, its number and title, the seconds left; ✕ plays it now, ◯ cancels
@@ -274,16 +292,19 @@ private:
              [this] { return press([this] { live_ ? showBar() : seekBy(-1); }); }, video);
         bind(platform::Action::Right, ui::tr("player.hint.seek"),
              [this] { return press([this] { live_ ? showBar() : seekBy(1); }); }, video);
-        bind(platform::Action::L1, ui::tr("player.hint.minute"),
-             [this] { return press([this] { live_ ? zap(-1) : seekSeconds(-60); }); }, video);
+        // L1 / R1: as ← / → on a video (held: repeated, faster and faster); a channel: the previous or next one
+        bind(platform::Action::L1, ui::tr("player.hint.seek"), [this] { return press([this] { shoulder(-1); }); },
+             video);
         bind(platform::Action::L1, ui::tr("player.hint.channel"), nothing, channel);
-        bind(platform::Action::R1, ui::tr("player.hint.minute"),
-             [this] { return press([this] { live_ ? zap(1) : seekSeconds(60); }); }, video);
+        bind(platform::Action::R1, ui::tr("player.hint.seek"), [this] { return press([this] { shoulder(1); }); },
+             video);
         bind(platform::Action::R1, ui::tr("player.hint.channel"), nothing, channel);
-        bind(platform::Action::L2, ui::tr("player.hint.skip"),
-             [this] { return press([this] { live_ ? showBar() : seekSeconds(-300); }); }, video);
-        bind(platform::Action::R2, ui::tr("player.hint.skip"),
-             [this] { return press([this] { live_ ? showBar() : seekSeconds(300); }); }, video);
+        // L2 / R2 held 3 s: the previous or next episode (or channel)
+        const auto skippable = [this, bar] { return bar() && (previous_ || next_ || channels_.size() > 1); };
+        bind(platform::Action::L2, ui::tr(live_ ? "player.hint.hold_channel" : "player.hint.hold_episode"),
+             [this] { return press([this] { startHold(-1); }); }, skippable);
+        bind(platform::Action::R2, ui::tr(live_ ? "player.hint.hold_channel" : "player.hint.hold_episode"),
+             [this] { return press([this] { startHold(1); }); }, skippable);
         // a channel: ↑ / ↓ set the volume; a video: they show the bar
         bind(platform::Action::Up, ui::tr("player.hint.volume"),
              [this] { return press([this] { live_ ? stepVolume(10) : showBar(); }); }, channel);
@@ -321,6 +342,70 @@ private:
         lastDirection_ = direction;
         lastSeekPressMs_ = t;
         seekSeconds(direction * player::seekStep(t - holdStartMs_));
+    }
+
+    void shoulder(int direction) {
+        if (live_) {
+            zap(direction);
+            return;
+        }
+        seekBy(direction);
+        shoulderRepeat_.press(direction, now());
+    }
+
+    // L2 / R2 down: the panel fills for 3 s; released before, nothing happens
+    void startHold(int direction) {
+        const bool possible = live_ ? channels_.size() > 1 : (direction < 0 ? previous_.has_value() : next_.has_value());
+        if (!possible || leaving_) {
+            return;
+        }
+        hold_.press(direction, now());
+        const char* key = live_ ? (direction < 0 ? "player.hold.previous_channel" : "player.hold.next_channel")
+                                : (direction < 0 ? "player.hold.previous_episode" : "player.hold.next_episode");
+        holdLabel_->setText(ui::tr(key));
+        holdProgress_->value = 0;
+        holdPanel_->visible = true;
+        markDirty();
+    }
+
+    // every frame: the shoulder buttons held (repeat, hold) or released
+    void updateHeld(std::int64_t t) {
+        ui::Application* app = ui::Application::current();
+        if (app == nullptr) {
+            return;
+        }
+        if (shoulderRepeat_.direction() != 0) {
+            const auto button = shoulderRepeat_.direction() < 0 ? platform::Action::L1 : platform::Action::R1;
+            if (!app->held(button) || app->hasModal()) {
+                shoulderRepeat_.release();
+            } else if (const auto direction = shoulderRepeat_.poll(t)) {
+                seekBy(*direction);
+            }
+        }
+        if (hold_.direction() == 0) {
+            return;
+        }
+        const int direction = hold_.direction();
+        const auto button = direction < 0 ? platform::Action::L2 : platform::Action::R2;
+        if (!app->held(button) || app->hasModal()) {
+            hold_.release();
+            holdPanel_->visible = false;
+            markDirty();
+            return;
+        }
+        holdProgress_->value = static_cast<float>(hold_.progress(t));
+        holdProgress_->markDirty();
+        if (hold_.due(t)) {
+            holdPanel_->visible = false;
+            markDirty();
+            if (live_) {
+                zap(direction);
+            } else if (direction < 0) {
+                playItem(previous_);
+            } else {
+                playNext();
+            }
+        }
     }
 
     void seekSeconds(double delta) {
@@ -437,8 +522,14 @@ private:
                         const auto episodes = client->episodes(item.seriesId, item.seasonId, token);
                         if (episodes.ok()) {
                             const auto& list = episodes.value().items;
-                            for (std::size_t i = 0; i + 1 < list.size(); ++i) {
-                                if (list[i].id == item.id) {
+                            for (std::size_t i = 0; i < list.size(); ++i) {
+                                if (list[i].id != item.id) {
+                                    continue;
+                                }
+                                if (i > 0) {
+                                    extras.previous = list[i - 1];
+                                }
+                                if (i + 1 < list.size()) {
                                     extras.next = list[i + 1];
                                 }
                             }
@@ -448,6 +539,7 @@ private:
                 },
                 [this](Extras extras) {
                     segments_ = std::move(extras.segments);
+                    previous_ = std::move(extras.previous);
                     next_ = std::move(extras.next);
                     channels_ = std::move(extras.channels);
                     for (const auto& channel : channels_) {
@@ -597,6 +689,7 @@ private:
             lastPosition_ = state.position;
             lastDuration_ = state.duration;
         }
+        updateHeld(t);
         if (const auto target = seek_.due(t)) {
             engine_->seekTo(*target);
             reporter_.onSeek(t, playbackState());
@@ -727,13 +820,16 @@ private:
         });
     }
 
-    void playNext() {
-        if (!next_ || leaving_) {
+    void playNext() { playItem(next_); }
+
+    // another episode takes this screen's place
+    void playItem(const std::optional<jellyfin::Item>& item) {
+        if (!item || leaving_) {
             return;
         }
         leaving_ = true;
         AppSession* appSession = &session();
-        const jellyfin::Item next = *next_;
+        const jellyfin::Item next = *item;
         later([appSession, next] {
             if (ui::Application* app = ui::Application::current()) {
                 app->pop();
@@ -1010,6 +1106,7 @@ private:
     player::StreamChoice choice_;
     jellyfin::MediaSource source_;
     std::vector<jellyfin::MediaSegment> segments_;
+    std::optional<jellyfin::Item> previous_;
     std::optional<jellyfin::Item> next_;
     player::SeekAccumulator seek_;
     player::ButtonTimer buttonTimer_;
@@ -1038,6 +1135,11 @@ private:
     bool leaving_ = false;  // the next episode takes this screen's place
     bool local_ = false;    // a download, played from the console
     bool volumeUnsaved_ = false;
+    player::ButtonRepeat shoulderRepeat_;  // L1 / R1 held
+    player::HoldToSkip hold_;              // L2 / R2 held
+    ui::Box* holdPanel_ = nullptr;
+    ui::Label* holdLabel_ = nullptr;
+    ui::ProgressBar* holdProgress_ = nullptr;
     double lastPosition_ = 0;  // the last known position and length, for the end-of-file log line
     double lastDuration_ = 0;  // stepped by ↑/↓: saved when the player closes
     std::int64_t lastSeekPressMs_ = 0;

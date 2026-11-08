@@ -83,8 +83,46 @@ TEST_CASE("seeking stays inside the video") {
     player::SeekAccumulator back;
     back.press(-10, 0, 4, 3600);
     CHECK(back.target() == doctest::Approx(0));
-    CHECK(player::seekStep(500) == doctest::Approx(10));
-    CHECK(player::seekStep(2500) == doctest::Approx(30));
+}
+
+TEST_CASE("seek steps grow while the button is held: 10 s, 30 s after 2 s, 1 min after 4 s, 2 min after 6 s") {
+    CHECK(player::seekStep(0) == doctest::Approx(10));
+    CHECK(player::seekStep(1999) == doctest::Approx(10));
+    CHECK(player::seekStep(2000) == doctest::Approx(30));
+    CHECK(player::seekStep(4000) == doctest::Approx(60));
+    CHECK(player::seekStep(6000) == doctest::Approx(120));
+    CHECK(player::seekStep(60000) == doctest::Approx(120));
+}
+
+TEST_CASE("a held shoulder button repeats like the arrows: after 400 ms, then every 80 ms, never in a burst") {
+    player::ButtonRepeat repeat;
+    CHECK_FALSE(repeat.poll(1000).has_value());
+    repeat.press(-1, 1000);
+    CHECK_FALSE(repeat.poll(1399).has_value());
+    CHECK(repeat.poll(1400) == -1);
+    CHECK_FALSE(repeat.poll(1479).has_value());
+    CHECK(repeat.poll(1480) == -1);
+    CHECK(repeat.poll(3000) == -1);  // a late poll: one repeat
+    CHECK_FALSE(repeat.poll(3001).has_value());
+    repeat.release();
+    CHECK_FALSE(repeat.poll(9000).has_value());
+}
+
+TEST_CASE("hold to skip: due once after 3 s held, its progress meanwhile; a release before cancels it") {
+    player::HoldToSkip hold;
+    CHECK(hold.direction() == 0);
+    hold.press(1, 1000);
+    CHECK(hold.direction() == 1);
+    CHECK(hold.progress(2500) == doctest::Approx(0.5));
+    CHECK_FALSE(hold.due(3999));
+    hold.release();
+    CHECK(hold.direction() == 0);
+    CHECK_FALSE(hold.due(5000));
+    hold.press(-1, 6000);
+    CHECK(hold.due(9000));
+    CHECK(hold.direction() == 0);  // done: the button must be pressed again
+    CHECK_FALSE(hold.due(20000));
+    CHECK(hold.progress(20000) == doctest::Approx(0));
 }
 
 TEST_CASE("reporting: start once, progress every 10 s and on events, stop once") {

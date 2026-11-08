@@ -251,8 +251,6 @@
   "player.hint.pause": "Pause",
   "player.hint.play": "Wiedergabe",
   "player.hint.seek": "10 s",
-  "player.hint.minute": "1 Min.",
-  "player.hint.skip": "5 Min.",
   "player.hint.channel": "Sender",
   "player.hint.volume": "Lautstärke",
   "player.hint.options": "Optionen",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "Aktualisieren",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Tabs",
-  "settings.library_order.move": "Verschieben"
+  "settings.library_order.move": "Verschieben",
+  "player.hint.hold_episode": "Halten: Folge",
+  "player.hint.hold_channel": "Halten: Sender",
+  "player.hold.next_episode": "Nächste Folge",
+  "player.hold.previous_episode": "Vorherige Folge",
+  "player.hold.next_channel": "Nächster Sender",
+  "player.hold.previous_channel": "Vorheriger Sender"
 }

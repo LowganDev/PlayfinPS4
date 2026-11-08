@@ -72,8 +72,10 @@ Script parseScript(std::string_view text) {
         if (command == "wait") {
             step.kind = Step::Kind::Wait;
             valid = parseFrames(argument, step.frames);
-        } else if (command == "press") {
-            step.kind = Step::Kind::Press;
+        } else if (command == "press" || command == "down" || command == "up") {
+            step.kind = command == "press" ? Step::Kind::Press
+                        : command == "down" ? Step::Kind::Down
+                                            : Step::Kind::Up;
             const auto action = platform::actionFromName(argument);
             valid = action.has_value();
             if (valid) {

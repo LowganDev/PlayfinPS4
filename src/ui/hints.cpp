@@ -194,7 +194,9 @@ float drawGlyph(NVGcontext* vg, Action action, float x, float cy) {
     return kGlyph;
 }
 
-bool isPad(const HintItem& item) { return item.glyphs.size() == 4; }
+bool isPad(const HintItem& item) {
+    return item.glyphs.size() == 4 && item.glyphs[0] == Action::Up && item.glyphs[3] == Action::Right;
+}
 
 }  // namespace
 
@@ -219,7 +221,19 @@ std::vector<HintItem> hintItems(const std::vector<const ActionBinding*>& chain, 
     } else if (canGoBack) {
         items.push_back({{Action::Back}, tr("hints.back")});
     }
-    return items;
+    // buttons that do the same (← → and L1 R1 in the player): one entry
+    std::vector<HintItem> merged;
+    for (HintItem& item : items) {
+        auto same = std::find_if(merged.begin(), merged.end(), [&item](const HintItem& earlier) {
+            return earlier.label == item.label && earlier.glyphs.size() < 4 && item.glyphs.size() < 4;
+        });
+        if (same == merged.end()) {
+            merged.push_back(std::move(item));
+        } else {
+            same->glyphs.insert(same->glyphs.end(), item.glyphs.begin(), item.glyphs.end());
+        }
+    }
+    return merged;
 }
 
 bool navigable(const View* scope) {

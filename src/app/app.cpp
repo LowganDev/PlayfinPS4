@@ -127,6 +127,14 @@ public:
                 pendingUp_ = step.action;
                 waitUntil_ = frame + 1;
                 break;
+            case testing::Step::Kind::Down:
+            case testing::Step::Kind::Up:
+                injected.push_back(platform::actionEvent(step.kind == testing::Step::Kind::Down
+                                                             ? platform::Event::Type::ActionDown
+                                                             : platform::Event::Type::ActionUp,
+                                                         step.action));
+                waitUntil_ = frame + 1;
+                break;
             case testing::Step::Kind::Type: {
                 platform::Event text;
                 text.type = platform::Event::Type::Text;

@@ -255,8 +255,6 @@
   "player.hint.pause": "Пауза",
   "player.hint.play": "Воспроизвести",
   "player.hint.seek": "10 с",
-  "player.hint.minute": "1 мин",
-  "player.hint.skip": "5 мин",
   "player.hint.channel": "Канал",
   "player.hint.volume": "Громкость",
   "player.hint.options": "Параметры",
@@ -264,5 +262,11 @@
   "shell.home.refresh": "Обновить",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Вкладки",
-  "settings.library_order.move": "Переместить"
+  "settings.library_order.move": "Переместить",
+  "player.hint.hold_episode": "Удерживать: серия",
+  "player.hint.hold_channel": "Удерживать: канал",
+  "player.hold.next_episode": "Следующая серия",
+  "player.hold.previous_episode": "Предыдущая серия",
+  "player.hold.next_channel": "Следующий канал",
+  "player.hold.previous_channel": "Предыдущий канал"
 }

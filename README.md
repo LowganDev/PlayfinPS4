@@ -59,11 +59,12 @@ The films in the screenshots are the Blender Foundation's open films; their artw
 | A library | ← (first column) / △ | Jump to a letter / quick look |
 | Home | Touchpad | Refresh |
 | Player | ✕ | Pause, play |
-| Player | ← → (held: faster), L1 / R1, L2 / R2 | Seek, ±1 min, ±5 min |
+| Player | ← → or L1 / R1 (held: faster) | Seek 10 s, then 30 s, 1 min, 2 min while held |
+| Player | L2 / R2 held 3 s | Previous / next episode |
 | Player | △ / OPTIONS | Audio, subtitles, volume, picture |
 | Next-episode card | ✕ / ◯ | Play it now / cancel |
 | Live TV | L2 / R2, △, touchpad | Filter the channels, favourite, search |
-| Live TV player | L1 / R1, ↑ / ↓ | Change channel, volume |
+| Live TV player | L1 / R1 (or L2 / R2 held 3 s), ↑ / ↓ | Change channel, volume |
 | Music | L2 / R2 | Albums, artists, playlists, genres, songs |
 
 ## Requirements

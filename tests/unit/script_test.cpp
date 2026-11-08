@@ -19,6 +19,17 @@ TEST_CASE("a valid script is parsed in order, comments and blank lines skipped")
     CHECK(script.steps[3].kind == Kind::Quit);
 }
 
+TEST_CASE("down and up hold a button across frames") {
+    const auto script = parseScript("down R2\nwait 90\nup R2\n");
+    REQUIRE(script.ok());
+    REQUIRE(script.steps.size() == 3);
+    CHECK(script.steps[0].kind == Kind::Down);
+    CHECK(script.steps[0].action == Action::R2);
+    CHECK(script.steps[2].kind == Kind::Up);
+    CHECK(script.steps[2].action == Action::R2);
+    CHECK_FALSE(parseScript("down Nothing\n").ok());
+}
+
 TEST_CASE("errors report the line") {
     auto script = parseScript("wait 1\njump\n");
     CHECK_FALSE(script.ok());

@@ -255,8 +255,6 @@
   "player.hint.pause": "Пауза",
   "player.hint.play": "Відтворити",
   "player.hint.seek": "10 с",
-  "player.hint.minute": "1 хв",
-  "player.hint.skip": "5 хв",
   "player.hint.channel": "Канал",
   "player.hint.volume": "Гучність",
   "player.hint.options": "Параметри",
@@ -264,5 +262,11 @@
   "shell.home.refresh": "Оновити",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Вкладки",
-  "settings.library_order.move": "Перемістити"
+  "settings.library_order.move": "Перемістити",
+  "player.hint.hold_episode": "Утримувати: серія",
+  "player.hint.hold_channel": "Утримувати: канал",
+  "player.hold.next_episode": "Наступна серія",
+  "player.hold.previous_episode": "Попередня серія",
+  "player.hold.next_channel": "Наступний канал",
+  "player.hold.previous_channel": "Попередній канал"
 }

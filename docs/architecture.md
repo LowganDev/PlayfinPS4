@@ -132,7 +132,14 @@ The screens of the app.
   touchpad, then ◯: the screen's own Back binding when it has one, else "Back" when a screen or a dialog can be
   closed. A binding's optional `shown` predicate hides its label (the player's labels show with its bar, Pause or
   Play by state); a second binding of the same button with a `shown` and a handler that returns false gives that
-  button another label. `View::hidesHints` on the scope hides the bar (screensaver).
+  button another label. `View::hidesHints` on the scope hides the bar (screensaver). Entries with the same label
+  merge (← → and L1 R1 in the player).
+- Player buttons: `Application::held(action)` follows ActionDown / ActionUp (the platform repeats directions only).
+  L1 / R1 seek as ← / → and repeat through `player::ButtonRepeat` (400 ms, then every 80 ms) polled in the
+  player's tick while held; `seekStep` grows with the hold (10, 30, 60, 120 s). L2 / R2 go through
+  `player::HoldToSkip` (3 s; the hold panel shows its progress; released early, nothing): the previous or next
+  episode of the season (`Extras::previous` / `next`), or channel on Live TV. Test scripts hold a button with
+  `down <Action>` / `up <Action>`.
 
 - Details (`browse_screens.cpp`): `Item::people` and `Item::mediaSources` come with a single item
   (`/Items/{id}` answers every field); `qualityChips` (resolution, `VideoRangeType`, codec, channels),

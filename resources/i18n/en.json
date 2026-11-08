@@ -251,8 +251,6 @@
   "player.hint.pause": "Pause",
   "player.hint.play": "Play",
   "player.hint.seek": "10 s",
-  "player.hint.minute": "1 min",
-  "player.hint.skip": "5 min",
   "player.hint.channel": "Channel",
   "player.hint.volume": "Volume",
   "player.hint.options": "Options",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "Refresh",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "Tabs",
-  "settings.library_order.move": "Move"
+  "settings.library_order.move": "Move",
+  "player.hint.hold_episode": "Hold: episode",
+  "player.hint.hold_channel": "Hold: channel",
+  "player.hold.next_episode": "Next episode",
+  "player.hold.previous_episode": "Previous episode",
+  "player.hold.next_channel": "Next channel",
+  "player.hold.previous_channel": "Previous channel"
 }

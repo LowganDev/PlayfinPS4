@@ -251,8 +251,6 @@
   "player.hint.pause": "일시정지",
   "player.hint.play": "재생",
   "player.hint.seek": "10초",
-  "player.hint.minute": "1분",
-  "player.hint.skip": "5분",
   "player.hint.channel": "채널",
   "player.hint.volume": "음량",
   "player.hint.options": "옵션",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "새로 고침",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "탭",
-  "settings.library_order.move": "이동"
+  "settings.library_order.move": "이동",
+  "player.hint.hold_episode": "길게: 에피소드",
+  "player.hint.hold_channel": "길게: 채널",
+  "player.hold.next_episode": "다음 에피소드",
+  "player.hold.previous_episode": "이전 에피소드",
+  "player.hold.next_channel": "다음 채널",
+  "player.hold.previous_channel": "이전 채널"
 }

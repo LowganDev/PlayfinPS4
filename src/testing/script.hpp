@@ -11,11 +11,13 @@ namespace playfin::testing {
 // One line of a UI test script.
 //   wait <frames>        let 1..9999 frames go by
 //   press <Action>       action down this frame, up the next one
+//   down <Action>        action down (held until `up`)
+//   up <Action>          action up
 //   screenshot <name>    save the frame as <output>/<name>.png ([a-z0-9_-] only)
 //   quit                 end the run (exit code 0)
 //   type <text>          send the text to the focused text editor (rest of the line)
 struct Step {
-    enum class Kind { Wait, Press, Screenshot, Quit, Type };
+    enum class Kind { Wait, Press, Screenshot, Quit, Type, Down, Up };
     Kind kind = Kind::Quit;
     int frames = 0;
     platform::Action action = platform::Action::Confirm;

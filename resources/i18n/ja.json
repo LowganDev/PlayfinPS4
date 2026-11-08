@@ -251,8 +251,6 @@
   "player.hint.pause": "一時停止",
   "player.hint.play": "再生",
   "player.hint.seek": "10 秒",
-  "player.hint.minute": "1 分",
-  "player.hint.skip": "5 分",
   "player.hint.channel": "チャンネル",
   "player.hint.volume": "音量",
   "player.hint.options": "オプション",
@@ -260,5 +258,11 @@
   "shell.home.refresh": "更新",
   "shell.library.jump_hint": "A–Z",
   "music.tabs_hint": "タブ",
-  "settings.library_order.move": "移動"
+  "settings.library_order.move": "移動",
+  "player.hint.hold_episode": "長押し：エピソード",
+  "player.hint.hold_channel": "長押し：チャンネル",
+  "player.hold.next_episode": "次のエピソード",
+  "player.hold.previous_episode": "前のエピソード",
+  "player.hold.next_channel": "次のチャンネル",
+  "player.hold.previous_channel": "前のチャンネル"
 }

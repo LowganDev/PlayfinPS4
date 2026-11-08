@@ -328,6 +328,67 @@ TEST_CASE("next-episode card: a dialog over it gives the focus back to it when i
     p.shell.press(Action::Back);
 }
 
+namespace {
+
+void sendUp(Shell& shell, Action action) {
+    Event event;
+    event.type = Event::Type::ActionUp;
+    event.action = action;
+    shell.application->handle(event);
+}
+
+// an episode paused at its start, its next card dismissed: the shoulder buttons alone act
+void pausedEpisode(Playing& p) {
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    p.frames(10);
+    p.shell.press(Action::Back);  // the next card (the 4 s clip is all last 10 s)
+    sendUp(p.shell, Action::Back);
+    p.shell.press(Action::Confirm);  // pause
+    sendUp(p.shell, Action::Confirm);
+    p.frames(5);
+}
+
+}  // namespace
+
+TEST_CASE("player: R1 seeks as the right arrow does") {
+    Playing p;
+    pausedEpisode(p);
+    p.shell.press(Action::R1);
+    sendUp(p.shell, Action::R1);
+    p.frames(2);
+    CHECK(showsSomewhere(*p.shell.application, "0:03 / 0:04"));  // 10 s on, kept inside the clip
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("player: R2 held 3 s plays the next episode; a short press does nothing") {
+    Playing p;
+    pausedEpisode(p);
+    p.shell.press(Action::R2);  // pressed half a second
+    CHECK(showsSomewhere(*p.shell.application, "Next episode"));
+    p.frames(25);
+    sendUp(p.shell, Action::R2);
+    p.frames(240);
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 0);
+    CHECK(p.shell.application->depth() == 2);
+    p.shell.press(Action::R2);  // held
+    p.frames(190);
+    p.frames(10);
+    CHECK(p.server.count("/Items/e-2/PlaybackInfo") == 1);
+    sendUp(p.shell, Action::R2);
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("player: L2 on the first episode has nothing before it") {
+    Playing p;
+    pausedEpisode(p);
+    p.shell.press(Action::L2);
+    p.frames(200);
+    sendUp(p.shell, Action::L2);
+    CHECK_FALSE(showsSomewhere(*p.shell.application, "Previous episode"));
+    CHECK(p.shell.application->depth() == 2);
+    p.shell.press(Action::Back);
+}
+
 TEST_CASE("next-episode card: \u25cb cancels it, the episode ends and the player closes") {
     Playing p;
     p.shell.application->push(app::makePlayer(p.shell.session, episode(), 30000000));  // 3 s of 4

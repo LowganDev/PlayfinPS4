@@ -62,6 +62,8 @@ public:
     bool hasModal() const { return !modals_.empty(); }
 
     void toast(std::string text, float durationMs = 3000);
+    // A button down and not released yet (the player's shoulder buttons repeat and hold through it).
+    bool held(platform::Action action) const { return held_[static_cast<int>(action)]; }
     // The toast shown, empty when none.
     const std::string& toastText() const { return toastLeftMs_ > 0 ? toastText_ : kNoToast; }
     void requestText(const platform::TextInputRequest& request, std::function<void(std::optional<std::string>)> done);
@@ -114,6 +116,7 @@ private:
     std::vector<OpenModal> modals_;
 
     static inline const std::string kNoToast;
+    bool held_[platform::kActionCount] = {};
     std::string toastText_;
     float toastLeftMs_ = 0;
 
