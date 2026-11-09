@@ -54,12 +54,14 @@ TEST_CASE("settings round trip") {
     settings.pictureFit = "fill";
     settings.pictureSize = 90;
     settings.libraryOrder = {"tv", "movies"};
+    settings.playMethod = "transcode";
     REQUIRE(app::saveSettings(path, settings));
     const app::Settings loaded = app::loadSettings(path);
     CHECK(loaded.volume == 70);
     CHECK(loaded.pictureFit == "fill");
     CHECK(loaded.pictureSize == 90);
     CHECK(loaded.libraryOrder == std::vector<std::string>{"tv", "movies"});
+    CHECK(loaded.playMethod == "transcode");
     CHECK(loaded.accent == "red");
     CHECK(loaded.maxBitrate == 4000000);
     CHECK(loaded.language == "de");
@@ -97,12 +99,13 @@ TEST_CASE("out of range values fall back to the defaults") {
     {
         std::ofstream out(path);
         out << R"({"version":1,"accent":7,"maxBitrate":-5,"language":"xx-unknown","recentSearches":["a",3,"b"],)"
-               R"("volume":150,"pictureFit":"zoom","pictureSize":40})";
+               R"("volume":150,"pictureFit":"zoom","pictureSize":40,"playMethod":"fast"})";
     }
     const app::Settings settings = app::loadSettings(path);
     CHECK(settings.volume == 100);
     CHECK(settings.pictureFit == "fit");
     CHECK(settings.pictureSize == 100);
+    CHECK(settings.playMethod == "auto");
     CHECK(settings.accent == "playstation");
     CHECK(settings.maxBitrate == 40000000);
     CHECK(settings.recentSearches == std::vector<std::string>{"a", "b"});

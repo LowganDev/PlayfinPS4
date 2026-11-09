@@ -46,6 +46,11 @@ struct ItemQuery {
     bool recursive = true;
 };
 
+// Auto: the server plays the file as it is when the console can, else transcodes. DirectOnly: never a transcode (the
+// file is played as it is even when the server would convert it). TranscodeOnly: always converted by the server,
+// the video and audio re-encoded (for a file the console plays badly).
+enum class PlayMethod { Auto, DirectOnly, TranscodeOnly };
+
 struct PlaybackRequest {
     std::string mediaSourceId;      // empty: the server picks
     std::int64_t startTicks = 0;
@@ -54,6 +59,7 @@ struct PlaybackRequest {
     std::int64_t maxBitrate = 40000000;
     std::string deviceProfileJson;  // what the console can play (player::deviceProfileJson)
     bool liveTv = false;  // a channel: opens its live stream, relayed by the server (no direct play)
+    PlayMethod method = PlayMethod::Auto;
 };
 
 // What /Sessions/Playing* reports.

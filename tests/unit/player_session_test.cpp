@@ -61,6 +61,22 @@ TEST_CASE("stream choice: nothing playable is an error") {
     CHECK_FALSE(player::chooseStream(server(), "x", stuck).ok());
 }
 
+TEST_CASE("stream choice: direct play only plays the file as it is, even where the server would transcode") {
+    const auto direct = jellyfin::PlayMethod::DirectOnly;
+    const auto choice =
+        player::chooseStream(server(), "m-transcode", fixture("playbackinfo_transcode.json"), player::MediaKind::Video, direct);
+    REQUIRE(choice.ok());
+    CHECK_FALSE(choice.value().transcoding);
+    CHECK(choice.value().url.rfind("https://h:8920/Videos/m-transcode/stream?static=true", 0) == 0);
+    jellyfin::PlaybackInfo refused = fixture("playbackinfo_transcode.json");
+    refused.errorCode = "NoCompatibleStream";  // nothing the profile allows: the file is tried anyway
+    CHECK(player::chooseStream(server(), "x", refused, player::MediaKind::Video, direct).ok());
+    jellyfin::PlaybackInfo notAllowed = fixture("playbackinfo_transcode.json");
+    notAllowed.errorCode = "NotAllowed";  // the user may not play it: still an error
+    CHECK_FALSE(player::chooseStream(server(), "x", notAllowed, player::MediaKind::Video, direct).ok());
+    CHECK_FALSE(player::chooseStream(server(), "x", jellyfin::PlaybackInfo{}, player::MediaKind::Video, direct).ok());
+}
+
 TEST_CASE("seeking: a burst of presses is one seek, 300 ms after the last") {
     player::SeekAccumulator seek;
     for (int i = 0; i < 5; ++i) {
@@ -267,9 +283,11 @@ TEST_CASE("a live channel's own source is played directly only over http or http
     source.isInfiniteStream = true;
     source.protocol = "Http";
     source.path = "https://iptv.example/live/1.m3u8?user=a";
-    CHECK(player::directSourceUrl(source) == "https://iptv.example/live/1.m3u8?user=a");
+    CHECK(player::directSourceUrl(source, true) == "https://iptv.example/live/1.m3u8?user=a");
+    CHECK(player::directSourceUrl(source, false).empty());  // the console: https through the server
     source.path = "http://192.168.1.20:8000/ch1";
-    CHECK(player::directSourceUrl(source) == "http://192.168.1.20:8000/ch1");
+    CHECK(player::directSourceUrl(source, true) == "http://192.168.1.20:8000/ch1");
+    CHECK(player::directSourceUrl(source, false) == "http://192.168.1.20:8000/ch1");
     for (const char* path : {"udp://239.0.0.1:1234", "rtsp://cam/1", "file:///etc/passwd", "/media/live.ts", ""}) {
         source.path = path;
         CHECK(player::directSourceUrl(source).empty());

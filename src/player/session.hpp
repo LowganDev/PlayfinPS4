@@ -27,14 +27,25 @@ struct StreamChoice {
     std::vector<ExternalSubtitle> externalSubtitles;
 };
 
-// A live channel's stream address when it can be played without the server: an endless http or https stream
-// (an M3U tuner's), else empty. It is played with no Jellyfin header (another host).
-std::string directSourceUrl(const jellyfin::MediaSource& source);
+// The console's FFmpeg got no answer within 8 s from any https host it opened itself (France 24, Arte, Euronews
+// and TV5Monde's own streams, 2026-11-09, docs/ps4-notes.md): there, an https source goes straight through the
+// server's relay instead of costing 8 s at every channel change.
+#ifdef PLAYFIN_PS4
+constexpr bool kDirectHttps = false;
+#else
+constexpr bool kDirectHttps = true;
+#endif
+
+// A live channel's stream address when it can be played without the server: an endless http stream (an M3U
+// tuner's), https too when `https`, else empty. It is played with no Jellyfin header (another host).
+std::string directSourceUrl(const jellyfin::MediaSource& source, bool https = kDirectHttps);
 
 // The first media source: played directly when the server allows it, else through its transcoding URL (joined to
-// the server address, api key removed). An error when the server refused or offers neither.
+// the server address, api key removed). An error when the server refused or offers neither. DirectOnly plays the
+// file as it is whatever the server says of it, unless the server refused it for another reason than the format.
 core::Result<StreamChoice> chooseStream(const jellyfin::Session& session, const std::string& itemId,
-                                        const jellyfin::PlaybackInfo& info, MediaKind kind = MediaKind::Video);
+                                        const jellyfin::PlaybackInfo& info, MediaKind kind = MediaKind::Video,
+                                        jellyfin::PlayMethod method = jellyfin::PlayMethod::Auto);
 
 constexpr double kTicksPerSecond = 10000000.0;  // Jellyfin positions are in ticks of 100 ns
 

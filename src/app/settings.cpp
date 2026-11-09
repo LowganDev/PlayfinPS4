@@ -78,6 +78,10 @@ Settings loadSettings(const std::string& path) {
     if (visualizer == "bars" || visualizer == "mirror" || visualizer == "wave" || visualizer == "off") {
         settings.visualizer = visualizer;
     }
+    const std::string method = jellyfin::json::string(root, "playMethod");
+    if (method == "auto" || method == "direct" || method == "transcode") {
+        settings.playMethod = method;
+    }
     const std::string xmltv = jellyfin::json::string(root, "xmltvUrl");
     if (validGuideUrl(xmltv)) {
         settings.xmltvUrl = xmltv;
@@ -104,6 +108,7 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     writer.key("pictureSize").value(settings.pictureSize);
     writer.key("xmltvUrl").value(settings.xmltvUrl);
     writer.key("visualizer").value(settings.visualizer);
+    writer.key("playMethod").value(settings.playMethod);
     writer.key("recentChannels").array();
     for (const std::string& id : settings.recentChannels) {
         writer.value(id);

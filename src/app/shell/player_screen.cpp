@@ -41,6 +41,13 @@ constexpr std::int64_t kStatsMs = 1000;
 constexpr std::int64_t kDirectStartMs = 8000;  // a channel's own stream: no picture by then, the server's relay
 constexpr std::int64_t kStallMs = 15000;       // a channel without a new picture this long is opened again
 
+jellyfin::PlayMethod playMethod(const std::string& setting) {
+    if (setting == "direct") {
+        return jellyfin::PlayMethod::DirectOnly;
+    }
+    return setting == "transcode" ? jellyfin::PlayMethod::TranscodeOnly : jellyfin::PlayMethod::Auto;
+}
+
 struct Loaded {
     core::Result<jellyfin::PlaybackInfo> info = core::makeError(core::ErrorKind::Cancelled, "");
     core::Result<player::StreamChoice> choice = core::makeError(core::ErrorKind::Cancelled, "");
@@ -237,6 +244,16 @@ private:
         }
     }
 
+    // □: the bar (and its hints) away at once, even paused, to see the whole picture; again, it comes back
+    void toggleBar() {
+        if (!bar_->visible) {
+            showBar();
+            return;
+        }
+        bar_->visible = false;
+        markDirty();
+    }
+
     void refreshBar(const player::Engine::State& state) {
         if (live_) {
             refreshLiveBar();
@@ -316,6 +333,8 @@ private:
         bind(platform::Action::Options, ui::tr("player.hint.options"), [this] { return press([this] { openTracks(); }); },
              bar);
         bind(platform::Action::Menu, "", [this] { return press([this] { openTracks(); }); });
+        bind(platform::Action::Context, ui::tr("player.hint.hide"), [this] { return press([this] { toggleBar(); }); },
+             bar);
         // ◯ leaves (the application's back); its hint while the bar shows
         bind(platform::Action::Back, ui::tr("player.hint.stop"), [] { return false; }, bar);
     }
@@ -488,6 +507,9 @@ private:
         request.subtitleIndex = subtitleIndex_;
         request.maxBitrate = session().settings().maxBitrate;
         request.liveTv = live_;
+        if (!live_) {  // a channel is the server's relay or its own stream, whatever the setting
+            request.method = playMethod(session().settings().playMethod);
+        }
         player::DirectPlayLimits limits;
         limits.maxBitrate = request.maxBitrate;
         request.deviceProfileJson = player::deviceProfileJson(limits);
@@ -500,7 +522,8 @@ private:
                 if (!loaded.info.ok()) {
                     return loaded;
                 }
-                loaded.choice = player::chooseStream(client->session(), item.id, loaded.info.value());
+                loaded.choice = player::chooseStream(client->session(), item.id, loaded.info.value(),
+                                                     player::MediaKind::Video, request.method);
                 const auto& sources = loaded.info.value().sources;
                 const std::string opened = sources.empty() ? std::string() : sources.front().liveStreamId;
                 if (!opened.empty()) {

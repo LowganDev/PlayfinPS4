@@ -405,3 +405,27 @@ TEST_CASE("Live TV: a channel's live stream is opened by PlaybackInfo and closed
     CHECK(server.last().method == "POST");
     CHECK(server.last().target == "/LiveStreams/Close?liveStreamId=ls-1");
 }
+
+TEST_CASE("PlaybackInfo: direct play only asks for no transcode; a transcode only, for nothing as it is") {
+    FakeJellyfin server;
+    const auto httpClient = http();
+    const Client client = signedIn(httpClient, server);
+    jellyfin::PlaybackRequest request;
+    REQUIRE(client.playbackInfo("e-1", request).ok());
+    std::string body = server.playbackInfoBody();
+    CHECK(body.find(R"("EnableDirectPlay":true)") != std::string::npos);
+    CHECK(body.find(R"("EnableTranscoding":true)") != std::string::npos);
+    request.method = jellyfin::PlayMethod::DirectOnly;
+    REQUIRE(client.playbackInfo("e-1", request).ok());
+    body = server.playbackInfoBody();
+    CHECK(body.find(R"("EnableDirectPlay":true)") != std::string::npos);
+    CHECK(body.find(R"("EnableTranscoding":false)") != std::string::npos);
+    request.method = jellyfin::PlayMethod::TranscodeOnly;
+    REQUIRE(client.playbackInfo("e-1", request).ok());
+    body = server.playbackInfoBody();
+    CHECK(body.find(R"("EnableDirectPlay":false)") != std::string::npos);
+    CHECK(body.find(R"("EnableDirectStream":false)") != std::string::npos);
+    CHECK(body.find(R"("EnableTranscoding":true)") != std::string::npos);
+    CHECK(body.find(R"("AllowVideoStreamCopy":false)") != std::string::npos);
+    CHECK(body.find(R"("AllowAudioStreamCopy":false)") != std::string::npos);
+}

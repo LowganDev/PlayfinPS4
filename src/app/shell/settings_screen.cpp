@@ -39,6 +39,14 @@ std::string bitrateName(std::int64_t bitrate) {
     return bitrate == bitrateChoices().front() ? ui::tr("settings.quality.auto", {mbps}) : mbps;
 }
 
+// the play methods of the settings ("auto", "direct", "transcode"), in their order in the list
+const std::vector<std::string>& playMethods() {
+    static const std::vector<std::string> methods{"auto", "direct", "transcode"};
+    return methods;
+}
+
+std::string playMethodName(const std::string& method) { return ui::tr("settings.play_method." + method); }
+
 std::string languageName(const std::string& tag) {
     for (const auto& language : uiLanguages()) {
         if (language.first == tag) {
@@ -78,6 +86,9 @@ public:
         addHeading(*column, ui::tr("settings.playback"));
         quality_ = column->add<ui::ValueRow>(ui::tr("settings.quality"), bitrateName(session_.settings().maxBitrate),
                                              [this] { chooseQuality(); });
+        playMethod_ = column->add<ui::ValueRow>(ui::tr("settings.play_method"),
+                                                playMethodName(session_.settings().playMethod),
+                                                [this] { choosePlayMethod(); });
 
         column->add<ui::ValueRow>(ui::tr("downloads.title"), "", [this] {
             ui::Application::current()->push(makeDownloads(session_));
@@ -224,6 +235,23 @@ private:
         }));
     }
 
+    void choosePlayMethod() {
+        std::vector<std::string> names;
+        int selected = 0;
+        for (std::size_t i = 0; i < playMethods().size(); ++i) {
+            names.push_back(playMethodName(playMethods()[i]));
+            if (session_.settings().playMethod == playMethods()[i]) {
+                selected = static_cast<int>(i);
+            }
+        }
+        ui::Application::current()->showModal(
+            ui::makeChoiceDialog(ui::tr("settings.play_method"), names, selected, [this](int index) {
+                session_.settings().playMethod = playMethods()[static_cast<std::size_t>(index)];
+                session_.saveSettings();
+                playMethod_->setValue(playMethodName(session_.settings().playMethod));
+            }));
+    }
+
     void chooseLanguage() {
         std::vector<std::string> names{ui::tr("settings.language.system")};
         std::vector<std::string> tags{""};
@@ -254,6 +282,7 @@ private:
     ui::ValueRow* accent_;
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
+    ui::ValueRow* playMethod_;
     ui::ValueRow* guide_ = nullptr;
     ui::ValueRow* share_ = nullptr;
     ui::ValueRow* server_;

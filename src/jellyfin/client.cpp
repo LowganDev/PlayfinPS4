@@ -473,11 +473,12 @@ core::Result<PlaybackInfo> Client::playbackInfo(const std::string& itemId, const
     if (!playback.mediaSourceId.empty()) {
         body.key("MediaSourceId").value(playback.mediaSourceId);
     }
-    body.key("EnableDirectPlay").value(!playback.liveTv);
-    body.key("EnableDirectStream").value(true);
-    body.key("EnableTranscoding").value(true);
-    body.key("AllowVideoStreamCopy").value(true);
-    body.key("AllowAudioStreamCopy").value(true);
+    const bool transcodeOnly = playback.method == PlayMethod::TranscodeOnly;
+    body.key("EnableDirectPlay").value(!playback.liveTv && !transcodeOnly);
+    body.key("EnableDirectStream").value(!transcodeOnly);
+    body.key("EnableTranscoding").value(playback.method != PlayMethod::DirectOnly);
+    body.key("AllowVideoStreamCopy").value(!transcodeOnly);
+    body.key("AllowAudioStreamCopy").value(!transcodeOnly);
     body.key("AutoOpenLiveStream").value(playback.liveTv);
     if (!playback.deviceProfileJson.empty()) {
         body.key("DeviceProfile").raw(playback.deviceProfileJson);
