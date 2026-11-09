@@ -11,6 +11,9 @@ std::vector<std::uint8_t> verticalFadeImage(int width, int height, int ramp, Col
                                             std::uint8_t to) {
     width = std::max(width, 0);
     height = std::max(height, 0);
+    if (width == 0 || height == 0) {
+        return {};
+    }
     std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
     for (int y = 0; y < height; ++y) {
         const float t =
