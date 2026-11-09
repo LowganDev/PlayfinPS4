@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 (2026-11-09)
+
+- A new look on the PS4 home screen: two play triangles in Jellyfin's purple-to-blue gradient, with "Playfin."
+  and "Jellyfin client for PS4".
+
 ## 2.0.0 (2026-11-09)
 
 Playfin 2.0 brings Playfin close to the Jellyfin experience on a PS4: a home laid out as in Jellyfin, a
@@ -47,10 +52,6 @@ smoother interface, downloads, a much richer player, and Live TV that works with
 - Live TV channels and transcoded videos did not play since 1.0.0 ("This video cannot be played").
 - Host names are resolved at once on the console (they took 5 s behind some routers).
 - A long title no longer pushes a duration out of its row.
-
-#### Known limit
-- On the console, a channel whose own stream is https plays through the server (Playfin cannot open https
-  streams itself yet).
 
 ## 1.0.1 (2026-10-17)
 
