@@ -1,13 +1,13 @@
-<h1>
+<h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-on-dark.png">
     <img alt="Playfin" src="docs/images/logo-on-light.png" width="300">
   </picture>
 </h1>
 
-A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN).
+<p align="center">A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN).</p>
 
-<p>
+<p align="center">
   <a href="https://github.com/LowganDev/PlayfinPS4/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/LowganDev/PlayfinPS4?label=release&color=0070d1"></a>
   <img alt="PS4 with GoldHEN" src="https://img.shields.io/badge/PS4-GoldHEN-003791">
   <img alt="Jellyfin 10.10 and later" src="https://img.shields.io/badge/Jellyfin-10.10%2B-aa5cc3">
@@ -15,10 +15,18 @@ A Jellyfin client for the PlayStation 4, for consoles running homebrew (GoldHEN)
   <a href="LICENSE"><img alt="Licence GPL-3.0" src="https://img.shields.io/badge/licence-GPL--3.0-blue"></a>
 </p>
 
-<a href="https://github.com/LowganDev/PlayfinPS4/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
+<p align="center">
+  <a href="https://github.com/LowganDev/PlayfinPS4/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
+</p>
 
-The latest version's package; earlier versions are on the [Releases](https://github.com/LowganDev/PlayfinPS4/releases)
-page. Once installed, Playfin updates itself from its settings.
+- **Direct play** of H.264, HEVC, VP9 and AV1 up to 1080p; the server transcodes the rest.
+- **A home laid out as in Jellyfin**, a smooth interface made for the controller, its buttons shown on screen.
+- **Series made easy:** resume, intro and credits skipping, the next episode at the end, subtitles in every script.
+- **Downloads:** films, episodes and whole seasons kept on the console and played without the server.
+- **Live TV:** channels on now, a programme guide, recordings, M3U channels and XMLTV guides.
+- **Music:** a queue that keeps playing while you browse, with a visualizer.
+- **For the whole household:** several servers and users, Quick Connect, a Jellyfin user per PS4 account,
+  14 languages.
 
 ![Home](docs/images/screens/home.jpg)
 
@@ -26,50 +34,8 @@ page. Once installed, Playfin updates itself from its settings.
 |---|---|
 | ![Details](docs/images/screens/details.jpg) | ![A library](docs/images/screens/library.jpg) |
 | ![Quick look](docs/images/screens/peek.jpg) | ![Search](docs/images/screens/search.jpg) |
-
-The films in the screenshots are the Blender Foundation's open films; their artwork is free to use
-([credits](scripts/showcase/CREDITS.md)).
-
-## What it does
-
-- **Servers and users:** several servers and several users per server, found on your network or added by
-  address; sign-in with a password or Quick Connect; self-signed HTTPS servers trusted on first use (their key is
-  then pinned). Each PS4 account starts on its own Jellyfin user, and a sign-in can be shared with the others.
-- **Home:** laid out as in Jellyfin: your libraries first (in the order you choose), then Resume, Next up, what is
-  on TV, your downloads and the latest additions, on larger cards; the date and time in the header.
-- **Libraries:** sorted and filtered, an A–Z jump bar, a quick look at any title (△).
-- **Details:** the version's quality (4K, HDR10, Dolby Vision, 5.1…), when it ends, the director and the cast
-  (each person's films and series), seasons and episodes, favourites and watched marks, the version to play.
-- **Video:** direct play of H.264, HEVC, VP9 and AV1 up to 1080p, or the server's transcode otherwise; audio and
-  subtitle tracks (text and picture subtitles, every script including Japanese, Korean and Chinese); resume;
-  intro and credits skipping; the next episode in a card at the end; the volume and the picture's size.
-- **Downloads:** films, episodes and whole seasons kept on the console and played without the server.
-- **Music:** albums, artists, playlists, genres and songs; a queue that keeps playing while you browse, shuffle
-  and repeat.
-- **Music visualizer:** the track's spectrum behind Now Playing, as bars, mirrored bars or a wave (□).
-- **Live TV:** channels on now with favourites, categories and a search, a programme guide, recordings
-  (scheduling and cancelling), channel change. M3U channels play straight from their source (the server as the
-  fallback) and reopen by themselves when the picture stops; an XMLTV guide can be read on the console for
-  servers without one.
-- **Search:** results while you type on the on-screen keyboard; films, series, episodes, people, music and
-  channels, narrowed to one kind with L2 / R2.
-- **And:** 14 languages, an accent colour of your choice, a screensaver, updates from the settings.
-
-### Controls
-
-| Where | Button | Action |
-|---|---|---|
-| Everywhere | ✕ / ◯ | Open, play / back |
-| A library | ← (first column) / △ | Jump to a letter / quick look |
-| Home | Touchpad | Refresh |
-| Player | ✕ | Pause, play |
-| Player | ← → or L1 / R1 (held: faster) | Seek 10 s, then 30 s, 1 min, 2 min while held |
-| Player | L2 / R2 held 3 s | Previous / next episode |
-| Player | △ / OPTIONS | Audio, subtitles, volume, picture |
-| Next-episode card | ✕ / ◯ | Play it now / cancel |
-| Live TV | L2 / R2, △, touchpad | Filter the channels, favourite, search |
-| Live TV player | L1 / R1 (or L2 / R2 held 3 s), ↑ / ↓ | Change channel, volume |
-| Music | L2 / R2 | Albums, artists, playlists, genres, songs |
+| ![The player](docs/images/screens/player.jpg) | ![Now playing, with the visualizer](docs/images/screens/now_playing.jpg) |
+| ![Live TV](docs/images/screens/livetv.jpg) | ![Music](docs/images/screens/music.jpg) |
 
 ## Requirements
 

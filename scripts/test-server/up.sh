@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Starts the test server: media (made once), the 4 live channel encoders (host ffmpeg, HLS into $DATA/hls), the
 # Jellyfin and streams containers, then the set-up through the API. Jellyfin: http://<this PC>:8097.
+# SHOWCASE=1: real albums and TV channels instead (make-showcase.py), in their own data folder; stop the other one
+# first (down.sh with the same SHOWCASE).
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-export DATA=${DATA:-$HOME/.local/share/playfin-testserver}
+export SHOWCASE=${SHOWCASE:-}
+if [ -n "$SHOWCASE" ]; then
+    export DATA=${DATA:-$HOME/.local/share/playfin-showcase}
+else
+    export DATA=${DATA:-$HOME/.local/share/playfin-testserver}
+fi
 export UID GID
 GID=$(id -g)
 FONT="$HERE/../../resources/fonts/Sora-Bold.ttf"
 mkdir -p "$DATA/config" "$DATA/cache" "$DATA/recordings" "$DATA/hls" "$DATA/run"
+if [ -n "$SHOWCASE" ]; then
+    python3 "$HERE/make-showcase.py" "$DATA"
+    docker compose -f "$HERE/compose.yml" up -d
+    python3 "$HERE/setup.py" "http://127.0.0.1:8097"
+    exit 0
+fi
 "$HERE/make-media.sh"
 
 # one live channel: a test pattern with its name and the clock, a tone; 720p H.264 + AAC in 2 s HLS segments

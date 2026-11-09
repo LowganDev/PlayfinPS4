@@ -312,6 +312,18 @@ bool FakeJellyfin::serveShowcase(const httplib::Request& req, httplib::Response&
         json(R"({"Items":[)" + items + R"(],"TotalRecordCount":)" + std::to_string(count) + R"(,"StartIndex":0})");
         return true;
     }
+    // a film's video: its artwork as a still picture (made by readme-shots.sh), else the test clip
+    const std::string videos = "/Videos/";
+    if (path.rfind(videos, 0) == 0 && path.size() > videos.size() + 7 &&
+        path.compare(path.size() - 7, 7, "/stream") == 0) {
+        const std::string id = path.substr(videos.size(), path.size() - videos.size() - 7);
+        std::ifstream in(dir + "/" + id + ".mp4", std::ios::binary);
+        if (!in || id.find('/') != std::string::npos) {
+            return false;
+        }
+        res.set_content(std::string(std::istreambuf_iterator<char>(in), {}), "video/mp4");
+        return true;
+    }
     const std::string prefix = "/Items/";
     if (path.rfind(prefix, 0) == 0) {
         const std::string rest = path.substr(prefix.size());

@@ -2,6 +2,7 @@
 """Configures the test Jellyfin through its API (idempotent): startup wizard, user "playfin", the music library,
 the M3U tuner and the XMLTV guide, the recordings folder, a playlist. Usage: setup.py http://127.0.0.1:8097"""
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -11,7 +12,9 @@ BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8097"
 USER = "playfin"
 PASSWORD = "playfin-test"  # local test server only (docs/testing.md)
 CLIENT = 'MediaBrowser Client="Playfin test setup", Device="setup", DeviceId="playfin-setup", Version="1.0"'
-EXPECTED_TRACKS = 30
+SHOWCASE = bool(os.environ.get("SHOWCASE"))  # the real albums and channels (make-showcase.py), in English
+SERVER_NAME = "Playfin Showcase" if SHOWCASE else "Playfin Test"
+EXPECTED_TRACKS = 100 if SHOWCASE else 30
 token = None
 
 
@@ -39,6 +42,8 @@ def call(method, path, body=None, ok_missing=False, ok_unauthorized=False):
             if ok_unauthorized and error.code == 401:
                 return UNAUTHORIZED
             raise SystemExit(f"{method} {path}: HTTP {error.code} {error.read()[:300]!r}")
+        except (urllib.error.URLError, ConnectionError):  # a fresh server resets its first connections
+            time.sleep(1)
     raise SystemExit(f"{method} {path}: the server stayed unavailable")
 
 
@@ -59,6 +64,7 @@ def wizard():
     if call("GET", "/Startup/Configuration", ok_unauthorized=True) is UNAUTHORIZED:
         return
     call("POST", "/Startup/Configuration",
+         {"UICulture": "en-US", "MetadataCountryCode": "US", "PreferredMetadataLanguage": "en"} if SHOWCASE else
          {"UICulture": "fr-FR", "MetadataCountryCode": "FR", "PreferredMetadataLanguage": "fr"})
     call("GET", "/Startup/User")
     call("POST", "/Startup/User", {"Name": USER, "Password": PASSWORD})
@@ -81,10 +87,10 @@ def sign_in():
 
 def server_and_user(user_id):
     config = call("GET", "/System/Configuration")
-    if config.get("ServerName") != "Playfin Test":
-        config["ServerName"] = "Playfin Test"
+    if config.get("ServerName") != SERVER_NAME:
+        config["ServerName"] = SERVER_NAME
         call("POST", "/System/Configuration", config)
-        print("server named Playfin Test")
+        print("server named " + SERVER_NAME)
     user = call("GET", f"/Users/{user_id}")
     policy = user["Policy"]
     if policy.get("IsHidden", True):
@@ -97,14 +103,15 @@ def music_library():
     folders = call("GET", "/Library/VirtualFolders") or []
     if any(f.get("CollectionType") == "music" for f in folders):
         return
-    call("POST", "/Library/VirtualFolders?name=Musique&collectionType=music&refreshLibrary=true",
+    name = "Music" if SHOWCASE else "Musique"
+    call("POST", f"/Library/VirtualFolders?name={name}&collectionType=music&refreshLibrary=true",
          {"LibraryOptions": {"PathInfos": [{"Path": "/media/music"}], "EnableRealtimeMonitor": False}})
     print("music library added")
 
 
 def films_library():
     folders = call("GET", "/Library/VirtualFolders") or []
-    if any(f.get("CollectionType") == "movies" for f in folders):
+    if SHOWCASE or any(f.get("CollectionType") == "movies" for f in folders):
         return
     call("POST", "/Library/VirtualFolders?name=Films&collectionType=movies&refreshLibrary=true",
          {"LibraryOptions": {"PathInfos": [{"Path": "/media/films"}], "EnableRealtimeMonitor": False}})
@@ -115,8 +122,9 @@ def live_tv():
     options = call("GET", "/System/Configuration/livetv")
     if not options.get("TunerHosts"):
         call("POST", "/LiveTv/TunerHosts",
-             {"Type": "m3u", "Url": "/media/livetv/channels.m3u", "FriendlyName": "Playfin test",
+             {"Type": "m3u", "Url": "/media/livetv/channels.m3u",
               "ImportFavoritesOnly": False, "AllowHWTranscoding": False, "EnableStreamLooping": False,
+              "FriendlyName": "Free channels" if SHOWCASE else "Playfin test",
               "TunerCount": 0, "Source": "", "UserAgent": ""})
         print("tuner added")
     if not options.get("ListingProviders"):
@@ -152,7 +160,7 @@ def playlist(user_id):
         return
     tracks = call("GET", f"/Items?userId={user_id}&includeItemTypes=Audio&recursive=true&sortBy=Random&limit=8")
     ids = [item["Id"] for item in tracks["Items"]]
-    call("POST", "/Playlists", {"Name": "Soirée tests", "Ids": ids, "UserId": user_id, "MediaType": "Audio"})
+    call("POST", "/Playlists", {"Name": "Evening mix" if SHOWCASE else "Soirée tests", "Ids": ids, "UserId": user_id, "MediaType": "Audio"})
     print("playlist added")
 
 
