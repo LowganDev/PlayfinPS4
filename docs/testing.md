@@ -41,9 +41,17 @@
   JPEG code shifts negative values (upstream, harmless).
 - Command-line checks (`tests/cli/`, CTest): a test script needs `--test-output`; a startup failure (SDL `dummy`
   driver, no OpenGL) must exit 1 and be written to `playfin.log`.
-- README screenshots: `scripts/readme-shots.sh` fetches the open films' artwork (`scripts/showcase/fetch-art.py`,
-  credits in `scripts/showcase/CREDITS.md`), runs `fake_jellyfin --showcase` and the shell on
-  `scripts/showcase/showcase.script`, and writes `docs/images/screens/*.jpg` (review them before committing).
+- README screenshots: `scripts/readme-shots.sh` runs the shell in English. Films: without an argument,
+  `fake_jellyfin --showcase` (the open films' artwork, `scripts/showcase/fetch-art.py`, credits in
+  `scripts/showcase/CREDITS.md`; the player plays Sintel's artwork as a still 15-minute video made with ffmpeg) and
+  `scripts/showcase/showcase.script`; with a data folder signed in to a real server (sign in once with
+  `build/linux-debug/playfin --data-dir DIR`), a copy of it and `scripts/showcase/server-*.script` (written for the
+  author's library: Apocalypse Now first in the second library, Barry found by a search). Music and Live TV
+  (`livetv`, `music`, `now_playing`) come from the showcase server when it runs (`scripts/showcase/media.script`,
+  signed in as playfin, its own clock; `--media` makes only those); without it they are kept. Writes `docs/images/screens/*.jpg` (review them
+  before committing). In a test script the player and the music stay paused until ✕ (the visualizer is flat
+  before); a resumed title is reported where it was, but it comes first in Continue watching. A Quick Connect
+  sign-in cannot run in a test script: the script waits for the requests in flight, and its polling never ends.
 - Script tests run with the clock fixed (`--fixed-time 2026-10-16T19:45:00Z --utc-offset 120`): the header's
   time and the player's "Se termine à" are the same on every run.
 - Changing the look on purpose: `scripts/update-ui-refs.sh`, then review the new images before committing. The
@@ -95,6 +103,13 @@ PC with generated content, for testing music and Live TV:
   pattern with the clock into live HLS (`$DATA/hls/chN`), served by an nginx container on the Docker network as
   `http://streams/chN/index.m3u8` (no port opened on the PC: the PC's ufw stays as it is; Docker publishes 8097
   itself). An M3U tuner and an XMLTV guide (3 days from the day of `up.sh`, remade on each start).
+- Showcase (`SHOWCASE=1 up.sh`, `SHOWCASE=1 down.sh`; data in `~/.local/share/playfin-showcase`, the same ports,
+  so stop the other first): `make-showcase.py` fetches real content once instead: 5 free albums from the Internet
+  Archive (109 tracks, one VBR MP3 per original file, retagged, their covers), 4 channels streamed for free by their
+  broadcasters (France 24, Arte, Euronews, TV5Monde Info; M3U entries with their own HTTPS addresses, so the
+  console plays them directly) with Wikimedia Commons logos on a white tile, and their real programmes cut from
+  xmltvfr.fr's guide (fetched again after 6 h). The server is "Playfin Showcase", in English, library "Music", no
+  films. Credits in `scripts/showcase/CREDITS.md`. It is what the README's music and Live TV screenshots show.
 - The console reaches it at `<PC address>:8097` (the PC's own Jellyfin, if any, keeps 8096). On the PS4 keyboard
   ":" is on the symbols page (L2+△ key, "@#:").
 - `setup.py` (idempotent) names it "Playfin Test", lists its user on the sign-in screen, completes the wizard, creates the user `playfin` / `playfin-test`, adds the library,

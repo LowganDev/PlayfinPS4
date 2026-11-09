@@ -143,3 +143,17 @@ TEST_CASE("a choice dialog focuses the current choice and reports the one chosen
     CHECK(chosen == 10);
     CHECK_FALSE(rig.app->hasModal());
 }
+
+TEST_CASE("a value row's long label is cut to leave its value inside the row") {
+    Rig rig;
+    auto* screen = rig.app->push(std::make_unique<Screen>());
+    auto* row = screen->add<ValueRow>(std::string(200, 'x'), "5:47", [] {});
+    row->width = SizeSpec::fixed(500);
+    rig.app->update(16);
+    const auto* value = dynamic_cast<const Label*>(row->children().back().get());
+    REQUIRE(value != nullptr);
+    CHECK(value->text() == "5:47");
+    CHECK(value->frame.x + value->frame.width <= row->frame.width - row->padding.right + 0.5f);
+    const auto* label = labelOf(*row);
+    CHECK(label->frame.x + label->frame.width <= value->frame.x);
+}

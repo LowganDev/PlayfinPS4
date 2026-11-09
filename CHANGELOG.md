@@ -1,44 +1,61 @@
 # Changelog
 
-## 2.0.0 (unreleased)
+## 2.1.0 (unreleased)
 
-- Next episode: a card in the last 10 s with the episode's picture and title; ✕ plays it now, ◯ cancels, it plays
-  on by itself when the countdown ends. The last episode of a season goes on to the next season (specials are
-  skipped); the details page's previous / next episode cross seasons too.
-- Player: the volume (kept), the picture whole, filling the screen, stretched or smaller (for TVs that cut the
-  edges), when the video ends in the bar. ← → and L1 / R1 seek 10 s; held, they go faster (30 s after 2 s, 1 min
-  after 4 s, 2 min after 6 s). L2 / R2 held 3 s play the previous or next episode (a panel fills meanwhile; a
-  short press does nothing).
-- Details: the version's quality (4K, HDR10, Dolby Vision, codec, 5.1…), when it ends, the director, the cast and
-  crew; a person's films and series; the version to play when there are several.
-- Libraries: ← in the first column jumps to a letter; △ gives a quick look (synopsis, quality, cast); pictures
-  shimmer while they load.
-- Downloads: films, episodes and whole seasons kept on the console and played without the server.
 - Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
   a dot on the settings tab when one is out.
-- Home: laid out as in Jellyfin (the libraries first, then Resume, Next up, what is on TV, the downloads, the latest
-  additions) on larger cards: 3.5 wide cards to a row, 5 posters to a row in the libraries. The date and time in
-  the header, the order of the libraries chosen in the settings, the touchpad
-  refreshes it; the downloads in a row.
-- Search: an on-screen keyboard that searches while you type (0.4 s after the last key; □ deletes a letter), the
-  system keyboard still on the field for accents; people, music and channels too; L2 / R2 narrow the results to
-  one kind. A search typed key by key is kept in the recent ones once a result is opened.
-- Music: genres and songs (L2 / R2 between the tabs), a genre's albums, the volume; a visualizer behind Now
-  Playing (bars, mirrored bars or a wave in the accent colour; □ changes it, or turns it off).
-- Live TV: a channel from an M3U tuner plays straight from its source (without the server, without the Jellyfin
-  token), through the server when its source cannot be reached; a channel whose picture stops is opened again by
-  itself; a TV guide read on the console from an XMLTV address (Settings › Guide TV; plain or gzip, at start and
-  when the address changes) for the channels the server has no guide for; favourite channels (△), channels filtered by L2 / R2 (favourites, recently watched, films, sport,
-  news, kids, radios), a channel search.
+
+## 2.0.0 (2026-11-09)
+
+Playfin 2.0 brings Playfin close to the Jellyfin experience on a PS4: a home laid out as in Jellyfin, a
+smoother interface, downloads, a much richer player, and Live TV that works with M3U lists and XMLTV guides.
+
+#### Highlights
+- **Home as in Jellyfin:** your libraries first (in the order you choose), then Resume, Next up, what is on TV,
+  your downloads and the latest additions, on larger cards. The date and time in the header.
+- **Smoother:** the interface runs at a steady 30 frames a second on the console (12 to 15 before on the home
+  screen and the details pages).
+- **Downloads:** films, episodes and whole seasons kept on the console and played without the server.
+- **Next episode:** a card at the end of an episode plays the next one, across seasons. L2 / R2 held 3 s play
+  the previous or next episode.
+- **Button hints:** what each button does on the current screen, at the bottom left.
+
+#### Player
+- Seeking with ← → or L1 / R1: 10 s, faster while held.
+- Volume, picture size and fit (whole, fill, stretch, smaller for TVs that cut the edges), the time it ends.
+- □ hides the bar, even when paused.
+- Play method in the settings: automatic, always direct play, or always the server's transcode.
+
+#### Browsing
+- Details: the version's quality (4K, HDR10, Dolby Vision, 5.1…), the cast and crew, each person's films and
+  series, the version to play.
+- Libraries: an A–Z jump (← in the first column) and a quick look at any title (△).
+- Search: an on-screen keyboard that searches while you type; people, music and channels too; L2 / R2 narrow
+  the results to one kind.
+
+#### Music
+- Genres and songs, a genre's albums, the volume.
+- A visualizer behind Now Playing: bars, mirrored bars or a wave (□ changes it).
+
+#### Live TV
+- M3U channels play straight from their source, through the server when their source cannot be reached; a
+  channel that stops is reopened by itself.
+- An XMLTV guide read on the console (Settings › TV guide) for servers without one.
+- Favourite channels, filters (favourites, recently watched, films, sport, news, kids, radios), a channel
+  search.
+
+#### Also
 - Each PS4 account starts on its own Jellyfin user; a sign-in can be shared with the accounts that have none.
-- Fixed: Live TV and other HLS streams (the server's relay of a channel, a transcode) did not play on the console
-  since 1.0.0 ("This video cannot be played"): the player refused to follow the playlist to its segments.
-- A screensaver after five idle minutes: the server's films and series full screen, with the time.
-- Smoother: the interface draws 30 frames a second, evenly (12-15 before on the home screen and details pages,
-  whose fades are now drawn from pictures), and every screen keeps that pace on the console.
-- The controller's buttons and what they do now, at the bottom left of every screen: navigate, select, the
-  screen's own actions (A–Z, quick look, filters, tabs, refresh), back; in the player with its bar (pause, 10 s,
-  1 min, 5 min, options, stop; volume and channel on Live TV).
+- A screensaver after five idle minutes, with your films and series and the time.
+
+#### Fixes
+- Live TV channels and transcoded videos did not play since 1.0.0 ("This video cannot be played").
+- Host names are resolved at once on the console (they took 5 s behind some routers).
+- A long title no longer pushes a duration out of its row.
+
+#### Known limit
+- On the console, a channel whose own stream is https plays through the server (Playfin cannot open https
+  streams itself yet).
 
 ## 1.0.1 (2026-10-17)
 

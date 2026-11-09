@@ -1,0 +1,15 @@
+# README screenshots from a signed-in server (scripts/readme-shots.sh DATA_DIR): a search for "r"
+wait 150
+press Up
+wait 20
+press Right
+press Confirm
+wait 30
+press Up
+press Confirm
+wait 5
+type r
+press Confirm
+wait 120
+screenshot search
+quit

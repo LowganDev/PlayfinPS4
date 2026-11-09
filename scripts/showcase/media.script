@@ -1,0 +1,43 @@
+# README screenshots of music and Live TV (scripts/readme-shots.sh), against the showcase server (SHOWCASE=1
+# scripts/test-server/up.sh: real free albums and channels): sign in as playfin, Live TV on now, Music, Now Playing
+wait 20
+press Confirm
+wait 10
+press Confirm
+wait 5
+type http://127.0.0.1:8097
+press Confirm
+wait 5
+press Down
+press Confirm
+wait 60
+press Confirm
+wait 20
+press Confirm
+wait 5
+type playfin-test
+press Confirm
+wait 5
+press Down
+press Confirm
+wait 120
+press Confirm
+wait 90
+screenshot livetv
+press Back
+wait 30
+press Right
+wait 5
+press Confirm
+wait 60
+screenshot music
+press Right
+wait 10
+press Confirm
+wait 60
+press Confirm
+wait 90
+press Confirm
+wait 240
+screenshot now_playing
+quit

@@ -1,0 +1,18 @@
+# README screenshots from a signed-in server (scripts/readme-shots.sh DATA_DIR): Home, a library, a quick look, details
+# (the first film of the second library)
+wait 150
+screenshot home
+press Right
+wait 5
+press Confirm
+wait 120
+screenshot library
+press Options
+wait 60
+screenshot peek
+press Back
+wait 20
+press Confirm
+wait 120
+screenshot details
+quit

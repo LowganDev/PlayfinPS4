@@ -203,9 +203,11 @@ target_link_libraries(playfin PRIVATE playfin_core)
 playfin_set_warnings(playfin)
 if(PLATFORM_PS4)
     # in the executable itself (not an archive): it must win over libkernel's clock_gettime
-    target_sources(playfin PRIVATE src/platform/ps4/clock_ps4.cpp src/platform/ps4/socket_ps4.cpp)
-    # every socket()/socketpair() call of the executable (curl included) goes through socket_ps4.cpp
-    target_link_options(playfin PRIVATE --wrap=socket --wrap=socketpair)
+    target_sources(playfin PRIVATE src/platform/ps4/clock_ps4.cpp src/platform/ps4/socket_ps4.cpp
+                                   src/platform/ps4/resolver_ps4.cpp)
+    # every socket()/socketpair() call of the executable (curl included) goes through socket_ps4.cpp, every
+    # getaddrinfo() call (FFmpeg's included) through resolver_ps4.cpp
+    target_link_options(playfin PRIVATE --wrap=socket --wrap=socketpair --wrap=getaddrinfo)
     include(cmake/ps4_pkg.cmake)
     playfin_add_ps4_pkg(playfin)
 endif()

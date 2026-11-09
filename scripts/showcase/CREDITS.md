@@ -20,3 +20,27 @@ Playfin.
 | Spring-concept art-Autumn 02.png | Uploaded by Andy Goralczyk/Blender Foundation | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Spring-concept_art-Autumn_02.png |
 | Spring2019AlphaPosterBlender.jpg | Blender Foundation | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Spring2019AlphaPosterBlender.jpg |
 | Tos-poster.png | (CC) Blender Foundation / Project Mango | CC BY 3.0 | https://commons.wikimedia.org/wiki/File:Tos-poster.png |
+
+## Music and Live TV
+
+The music and Live TV screenshots come from the showcase server (`SHOWCASE=1 scripts/test-server/up.sh`), which
+`scripts/test-server/make-showcase.py` fills with these. Only their pictures are in this repository (in the
+screenshots); the albums, the logos and the guide are downloaded on the PC that runs the server.
+
+| Album | Artist | Licence | Source |
+|---|---|---|---|
+| Ghosts I–IV | Nine Inch Nails | CC BY-NC-SA 3.0 US | https://archive.org/details/nineinchnails_ghosts_I_IV |
+| The Slip | Nine Inch Nails | CC BY-NC-SA 3.0 US | https://archive.org/details/nine_inch_nails_the_slip |
+| The Open Goldberg Variations | Kimiko Ishizaka | CC0 1.0 | https://archive.org/details/OpenGoldbergVariations |
+| The Art of the Fugue | Kimiko Ishizaka | CC0 1.0 | https://archive.org/details/pandacd-715-js-bach-the-art-of-the-fugue-kunst-der-fuge-bwv-1080 |
+| Ashes | Josh Woodward | CC BY 4.0 | https://archive.org/details/JoshWoodward-Ashes |
+
+| Channel | Stream | Logo (Wikimedia Commons) |
+|---|---|---|
+| France 24 | the broadcaster's free stream (live.france24.com) | File:France 24 logo (2013).svg |
+| Arte | the broadcaster's free stream (artesimulcast.akamaized.net) | File:Arte Logo 2017.svg |
+| Euronews | the broadcaster's free stream (wurl.com) | File:Euronews 2022.svg |
+| TV5Monde Info | the broadcaster's free stream (ott.tv5monde.com) | File:Logo TV5Monde 2025.svg |
+
+The channels' names and logos are their owners' trademarks; the programmes come from the xmltvfr.fr guide
+(https://xmltvfr.fr).

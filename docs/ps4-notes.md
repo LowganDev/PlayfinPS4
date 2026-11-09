@@ -27,6 +27,15 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
 - musl's resolver reads the DNS servers with `sceNetGetDnsInfo`: libSceNet must be loaded
   (`ORBIS_SYSMODULE_INTERNAL_NET`, `sceNetInit` in `backend::postInit`), otherwise the first host name lookup
   calls an unresolved stub and the system kills the app.
+- musl asks for the A and AAAA records together and waits for both; behind a router that does not answer AAAA,
+  every host name took musl's whole timeout (5 s) in FFmpeg (a channel's own stream, measured 2026-11-09; curl
+  was spared by `CURLOPT_IPRESOLVE_V4`). The executable is linked with `--wrap=getaddrinfo`
+  (`resolver_ps4.cpp`): a caller without a preference gets IPv4 only (43 ms instead of 5 s). It also removed a 2 s
+  UI freeze: an engine destroyed while its resolver waited held the main thread.
+- FFmpeg's own HTTPS (mbedTLS) got no answer within 8 s from France 24, Arte, Euronews and TV5Monde's CDNs
+  (2026-11-09: "Opening https://…" then nothing, with the resolver fixed; plain HTTP to the same hosts answers at
+  once). Not solved: a channel's https source goes through the server's relay on the console
+  (`player::kDirectHttps`); http sources still play directly. To look at for 2.1 (the FFmpeg/mbedTLS recipes).
 
 ## Graphics
 

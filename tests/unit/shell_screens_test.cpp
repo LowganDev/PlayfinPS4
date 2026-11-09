@@ -353,6 +353,35 @@ void pausedEpisode(Playing& p) {
 
 }  // namespace
 
+TEST_CASE("player: □ hides the bar, even paused, and shows it again") {
+    Playing p;
+    pausedEpisode(p);
+    CHECK(showsSomewhere(*p.shell.application, " / 0:04"));
+    p.shell.press(Action::Context);
+    sendUp(p.shell, Action::Context);
+    p.frames(5);
+    CHECK_FALSE(showsSomewhere(*p.shell.application, " / 0:04"));  // paused, it stays hidden
+    p.shell.press(Action::Context);
+    sendUp(p.shell, Action::Context);
+    p.frames(2);
+    CHECK(showsSomewhere(*p.shell.application, " / 0:04"));
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("the player asks for the play method chosen in the settings") {
+    Playing p;
+    p.shell.session.settings().playMethod = "transcode";
+    jellyfin::Item film = episode();
+    film.id = "m-transcode";
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 0));
+    p.frames(10);
+    CHECK(p.server.playbackInfoBody().find(R"("EnableDirectPlay":false)") != std::string::npos);
+    CHECK(p.server.playbackInfoBody().find(R"("AllowVideoStreamCopy":false)") != std::string::npos);
+    p.shell.press(Action::Back);
+    sendUp(p.shell, Action::Back);
+    p.frames(5);
+}
+
 TEST_CASE("player: R1 seeks as the right arrow does") {
     Playing p;
     pausedEpisode(p);
@@ -1057,6 +1086,19 @@ TEST_CASE("the playback quality is saved") {
     CHECK(s.shell.session.settings().maxBitrate == 1500000);
     CHECK(shows(*s.shell.application, "1.5 Mbit/s"));
     CHECK(app::loadSettings(s.shell.dir.path + "/settings.json").maxBitrate == 1500000);
+}
+
+TEST_CASE("the play method is saved") {
+    SettingsShell s;
+    CHECK(shows(*s.shell.application, "Automatic"));
+    pressAnywhere(s.shell, "Play method");
+    pressAnywhere(s.shell, "Direct play");
+    CHECK(s.shell.session.settings().playMethod == "direct");
+    CHECK(shows(*s.shell.application, "Direct play"));
+    CHECK(app::loadSettings(s.shell.dir.path + "/settings.json").playMethod == "direct");
+    pressAnywhere(s.shell, "Play method");
+    pressAnywhere(s.shell, "Server transcoding");
+    CHECK(s.shell.session.settings().playMethod == "transcode");
 }
 
 TEST_CASE("a new language is saved and applies at the next start") {

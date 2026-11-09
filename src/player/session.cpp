@@ -28,20 +28,22 @@ std::string absolute(const jellyfin::Session& session, const std::string& path) 
 
 }  // namespace
 
-std::string directSourceUrl(const jellyfin::MediaSource& source) {
+std::string directSourceUrl(const jellyfin::MediaSource& source, bool https) {
     if (!source.isInfiniteStream || source.protocol != "Http") {
         return {};
     }
     const std::string& path = source.path;
-    if (path.rfind("http://", 0) != 0 && path.rfind("https://", 0) != 0) {
+    if (path.rfind("http://", 0) != 0 && !(https && path.rfind("https://", 0) == 0)) {
         return {};
     }
     return path;
 }
 
 core::Result<StreamChoice> chooseStream(const jellyfin::Session& session, const std::string& itemId,
-                                        const jellyfin::PlaybackInfo& info, MediaKind kind) {
-    if (!info.errorCode.empty() || info.sources.empty()) {
+                                        const jellyfin::PlaybackInfo& info, MediaKind kind, jellyfin::PlayMethod method) {
+    const bool forceDirect = method == jellyfin::PlayMethod::DirectOnly;
+    const bool refused = !info.errorCode.empty() && !(forceDirect && info.errorCode == "NoCompatibleStream");
+    if (refused || info.sources.empty()) {
         return core::makeError(core::ErrorKind::BadResponse,
                                info.errorCode.empty() ? "no media source" : info.errorCode);
     }
@@ -51,7 +53,7 @@ core::Result<StreamChoice> chooseStream(const jellyfin::Session& session, const 
     choice.playSessionId = info.playSessionId;
     choice.liveStreamId = source.liveStreamId;
     choice.sourceUrl = directSourceUrl(source);
-    if (source.supportsDirectPlay) {
+    if (source.supportsDirectPlay || forceDirect) {
         choice.url = directStreamUrl(session, itemId, source.id, info.playSessionId, kind);
     } else if (!source.transcodingUrl.empty() && !absolute(session, source.transcodingUrl).empty()) {
         choice.transcoding = true;

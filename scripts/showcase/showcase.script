@@ -1,4 +1,5 @@
-# README screenshots (scripts/readme-shots.sh): sign in, then Home, a library, a quick look, details, search
+# README screenshots (scripts/readme-shots.sh): sign in, then Home, details, the player, a library, a quick look,
+# search
 wait 20
 press Confirm
 wait 10
@@ -28,6 +29,11 @@ press Down
 press Confirm
 wait 60
 screenshot details
+press Confirm
+wait 90
+screenshot player
+press Back
+wait 30
 press Back
 wait 20
 press Up

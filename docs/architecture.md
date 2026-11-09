@@ -157,7 +157,7 @@ The screens of the app.
   `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with
   `down <Action>` / `up <Action>`.
 - Live TV direct (`player_screen.cpp`): `chooseStream` keeps `sourceUrl` (`directSourceUrl`: endless, Protocol
-  Http, an http(s) Path); the player tries it first on an engine of its own (`engineOptionsDirect`: no Jellyfin
+  Http, an http Path, or https except on the console: `player::kDirectHttps`, docs/ps4-notes.md); the player tries it first on an engine of its own (`engineOptionsDirect`: no Jellyfin
   header, FFmpeg reconnect options), falls back to the server's relay on an engine error or with no picture after
   8 s, and opens a live stream again after 15 s without a new picture (`watchLive`). The live stream PlaybackInfo
   opened is closed as before.
@@ -304,7 +304,10 @@ The screens of the app.
 - Jellyfin: `Client::playbackInfo` (device profile from `player::deviceProfileJson`), `mediaSegments` (404 =
   none), `reportStart/Progress/Stopped`. `player::chooseStream` picks direct play
   (`/Videos/{id}/stream?static=true`) or the server's HLS transcode (`api_key` removed); external subtitles are
-  added with `sub-add`.
+  added with `sub-add`. The play method of the settings (`PlaybackRequest::method`, videos only, never a channel):
+  `DirectOnly` sends `EnableTranscoding: false` and plays the file as it is even when the server answers
+  `NoCompatibleStream` (another refusal stays an error); `TranscodeOnly` turns off direct play, direct stream and
+  the stream copies, so the server re-encodes video and audio.
 - Session logic is pure and unit-tested: `SeekAccumulator` (one seek 300 ms after a burst, clamped), `Reporter`
   (start, progress every 10 s and on events, stop once), `buttonAt` + `ButtonTimer` (skip intro / credits, 8 s
   on screen), `NextCard` (the next episode in the last 10 s, cancelled until sought back, plays on at the end),

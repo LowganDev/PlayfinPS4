@@ -171,6 +171,7 @@ ValueRow::ValueRow(std::string label, std::string value, std::function<void()> o
     crossAlign = CrossAlign::Center;
     gap = theme().spacingL;
     label_ = add<Label>(std::move(label), FontStyle{theme().fontBody, FontWeight::Regular});
+    label_->width = SizeSpec::fill();  // what the value leaves: a long label is cut, the value stays in the row
     value_ = add<Label>(std::move(value), FontStyle{theme().fontBody, FontWeight::Regular});
     refresh();
     if (onPress) {

@@ -1,0 +1,34 @@
+# README screenshots from a signed-in server (scripts/readme-shots.sh DATA_DIR): the player, on the first episode a
+# search for "barry" finds, resumed where it was and left paused
+wait 150
+press Up
+wait 20
+press Right
+press Confirm
+wait 30
+press Up
+press Confirm
+wait 5
+type barry
+press Confirm
+wait 120
+press Down
+wait 10
+press Down
+wait 10
+press Down
+wait 10
+press Down
+wait 10
+press Down
+wait 30
+press Down
+wait 30
+press Confirm
+wait 120
+press Confirm
+wait 240
+screenshot player
+press Back
+wait 60
+quit
