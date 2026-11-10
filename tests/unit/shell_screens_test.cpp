@@ -22,10 +22,12 @@
 #include "app/shell/screensaver.hpp"
 #include "app/shell/session.hpp"
 #include "app/shell/tv_guide.hpp"
+#include "app/shell/usb.hpp"
 #include "app/settings.hpp"
 #include "core/data_dir.hpp"
 #include "core/task.hpp"
 #include "core/version.hpp"
+#include "support/fake_ftp.hpp"
 #include "support/fake_jellyfin.hpp"
 #include "support/files.hpp"
 #include "support/fixed_metrics.hpp"
@@ -263,6 +265,18 @@ TEST_CASE("the intro skip button shows at the start of an episode with an intro 
     p.shell.press(Action::Confirm);
     p.frames(30);
     CHECK_FALSE(shows(*p.shell.application, "Skip intro"));
+}
+
+TEST_CASE("without the server's markers, a chapter named Opening gives the intro skip button") {
+    Playing p;
+    jellyfin::Item film = episode();
+    film.id = "m-chapters";
+    film.type = jellyfin::ItemType::Movie;
+    film.seriesId.clear();
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 0));
+    p.frames(10);
+    CHECK(shows(*p.shell.application, "Skip intro"));
+    p.shell.press(Action::Back);
 }
 
 TEST_CASE("the track menu lists the audio and subtitle choices") {
@@ -2088,6 +2102,43 @@ TEST_CASE("software update: a newer version shows in the settings, its package d
     core::setDataRoot({});
 }
 
+TEST_CASE("software update: a banner at the top of the settings, focused first, downloads the package") {
+    SettingsShell s;
+    test::FakeJellyfin github(test::TlsMode::CaSigned);
+    github.publishRelease("9.0.0", std::string(150000, 'k'));
+    s.shell.session.updateUrl = github.baseUrl() + "/github/latest";
+    core::setDataRoot(s.shell.dir.path);
+    s.shell.session.checkForUpdate();
+    s.shell.application->replace(app::makeSettings(s.shell.session));
+    s.shell.frames(5);
+    CHECK(shows(*s.shell.application, "Playfin 9.0.0 is available"));
+    const ui::View* focused = s.shell.application->focus().focused();
+    REQUIRE(focused != nullptr);
+    CHECK(focused->name == "update banner");
+    s.shell.press(Action::Confirm);
+    s.shell.frames(3);
+    REQUIRE(s.shell.application->hasModal());
+    pressAnywhere(s.shell, "Download");
+    s.shell.frames(5);
+    REQUIRE(s.shell.application->hasModal());  // how to install it
+    s.shell.press(Action::Confirm);
+    s.shell.frames(3);
+    CHECK(shows(*s.shell.application, ui::tr("settings.update.banner_ready")));
+    CHECK(std::filesystem::exists(s.shell.dir.path + "/pkg/Playfin-9.0.0.pkg"));
+    s.shell.press(Action::Confirm);  // the banner again: how to install it, nothing downloaded twice
+    s.shell.frames(3);
+    CHECK(s.shell.application->hasModal());
+    CHECK(shows(*s.shell.application, "OK"));
+    s.shell.press(Action::Back);
+    core::setDataRoot({});
+}
+
+TEST_CASE("software update: no banner when Playfin is up to date") {
+    SettingsShell s;
+    CHECK_FALSE(s.shell.session.update.has_value());
+    CHECK_FALSE(showsSomewhere(*s.shell.application, "is available"));
+}
+
 TEST_CASE("software update: nothing newer, the settings say Playfin is up to date") {
     SettingsShell s;
     test::FakeJellyfin github(test::TlsMode::CaSigned);
@@ -2488,4 +2539,137 @@ TEST_CASE("TV guide: an address that is not one is refused, the guide stays off"
     s.shell.frames(3);
     CHECK(s.shell.session.settings().xmltvUrl.empty());
     CHECK(s.shell.application->toastText() == ui::tr("settings.tv_guide.invalid"));
+}
+
+namespace {
+
+// A USB drive at /mnt/usb0 of a fake FTP server: a film with its subtitle file, a folder of music
+struct UsbDrive {
+    TempDir root;
+    std::unique_ptr<test::FakeFtp> ftp;
+    UsbDrive() {
+        std::filesystem::create_directories(root.path + "/mnt/usb0/Films");
+        std::filesystem::create_directories(root.path + "/mnt/usb0/Music");
+        std::filesystem::copy_file(test::fixturePath("media/clip.mp4"), root.path + "/mnt/usb0/Films/Clip.mp4");
+        std::ofstream(root.path + "/mnt/usb0/Films/Clip.fr.srt") << "1\n00:00:00,000 --> 00:00:04,000\nBonjour\n";
+        std::ofstream(root.path + "/mnt/usb0/Films/notes.txt") << "not shown";
+        std::filesystem::copy_file(test::fixturePath("media/tone.mp3"), root.path + "/mnt/usb0/Music/01 Tone.mp3");
+        std::filesystem::copy_file(test::fixturePath("media/tone.mp3"), root.path + "/mnt/usb0/Music/02 Tone.mp3");
+        ftp = std::make_unique<test::FakeFtp>(root.path);
+    }
+    std::shared_ptr<const net::FtpClient> client() const { return std::make_shared<const net::FtpClient>(ftp->base()); }
+};
+
+}  // namespace
+
+TEST_CASE("a USB drive: its folders browsed, a video played from it with the subtitle file beside it") {
+    UsbDrive drive;
+    Playing p;
+    p.shell.session.usbFtp = drive.client();
+    p.shell.application->push(app::makeUsbBrowser(p.shell.session, "/mnt/usb0", "USB drive"));
+    p.frames(5);
+    CHECK(shows(*p.shell.application, "Films"));
+    CHECK(shows(*p.shell.application, "Music"));
+    pressAnywhere(p.shell, "Films");
+    p.frames(5);
+    CHECK(shows(*p.shell.application, "Clip.mp4"));
+    CHECK_FALSE(shows(*p.shell.application, "notes.txt"));  // only videos and music
+    CHECK_FALSE(shows(*p.shell.application, "Clip.fr.srt"));
+    const int asked = p.server.count("/PlaybackInfo");
+    pressAnywhere(p.shell, "Clip.mp4");
+    p.frames(20);
+    REQUIRE(p.shell.application->videoSource() != nullptr);
+    CHECK(p.shell.application->videoSource()->videoLayer().width == 320);  // read through FTP
+    CHECK(p.server.count("/PlaybackInfo") == asked);  // no server involved
+    for (int i = 0; i < 20; ++i) {  // mpv adds the subtitle file on its own thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        p.frames(1);
+    }
+    p.shell.press(Action::Options);  // the subtitle file is offered
+    p.frames(2);
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "Subtitles");
+    p.frames(2);
+    CHECK(showsSomewhere(*p.shell.application, "Clip.fr.srt"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    p.shell.press(Action::Back);
+    p.frames(2);
+    p.shell.press(Action::Back);
+    p.frames(5);
+}
+
+TEST_CASE("a USB drive: music plays from its folder without the server") {
+    UsbDrive drive;
+    Playing p;
+    p.shell.session.usbFtp = drive.client();
+    p.shell.application->push(app::makeUsbBrowser(p.shell.session, "/mnt/usb0/Music", "Music"));
+    p.frames(5);
+    pressAnywhere(p.shell, "02 Tone.mp3");
+    p.frames(10);
+    const app::MusicPlayer& music = p.shell.session.music();
+    REQUIRE(music.active());
+    REQUIRE(music.status().track != nullptr);
+    CHECK(music.queue().items().size() == 2);
+    // once loaded, its own tags replace the file name (the test tone is tagged "tone")
+    for (int i = 0; i < 50 && music.status().track->name == "02 Tone"; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        p.shell.frames(1);  // with the music's own update
+    }
+    CHECK(music.status().track->name == "tone");
+    p.shell.session.music().stop();
+}
+
+TEST_CASE("downloads: to a USB drive's Playfin folder, played from there, deleted from it") {
+    UsbDrive drive;
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.usbFtp = drive.client();
+    p.shell.session.settings().downloadTarget = "usb";
+    jellyfin::Item movie;
+    movie.id = "m-1";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    for (int i = 0; i < 200 && p.shell.session.downloads().find("m-1")->state != app::Downloads::State::Done; ++i) {
+        p.frames(1);
+    }
+    const auto* entry = p.shell.session.downloads().find("m-1");
+    REQUIRE(entry != nullptr);
+    REQUIRE(entry->state == app::Downloads::State::Done);
+    CHECK(entry->drive == "/mnt/usb0");
+    const std::string onDrive = drive.root.path + "/mnt/usb0/Playfin/" + entry->file;
+    REQUIRE(std::filesystem::exists(onDrive));
+    CHECK(std::filesystem::file_size(onDrive) == std::filesystem::file_size(test::fixturePath("media/clip.mp4")));
+    CHECK_FALSE(std::filesystem::exists(onDrive + ".part"));
+    CHECK_FALSE(std::filesystem::exists(p.shell.dir.path + "/downloads/" + entry->file));  // not on the console
+    const auto file = p.shell.session.downloads().localFile("m-1");
+    REQUIRE(file.has_value());
+    CHECK(*file == "pfusb:///mnt/usb0/Playfin/" + entry->file);
+    p.shell.application->push(app::makeDownloads(p.shell.session));
+    p.frames(5);
+    CHECK(showsSomewhere(*p.shell.application, "USB drive"));  // where it is, and where the next ones go
+    p.shell.application->push(app::makePlayer(p.shell.session, entry->item, 0));
+    p.frames(20);
+    REQUIRE(p.shell.application->videoSource() != nullptr);
+    CHECK(p.shell.application->videoSource()->videoLayer().width == 320);
+    p.shell.press(Action::Back);
+    p.frames(5);
+    p.shell.session.downloads().remove("m-1");
+    CHECK_FALSE(std::filesystem::exists(onDrive));
+}
+
+TEST_CASE("downloads: to a USB drive that is not there, a clear failure") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.usbFtp = std::make_shared<const net::FtpClient>("ftp://127.0.0.1:1");
+    p.shell.session.settings().downloadTarget = "usb";
+    jellyfin::Item movie;
+    movie.id = "m-1";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    p.frames(5);
+    const auto* entry = p.shell.session.downloads().find("m-1");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Failed);
+    CHECK(entry->error == "the USB drive is not plugged in");
 }

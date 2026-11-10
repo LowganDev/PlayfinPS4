@@ -10,15 +10,18 @@
 #include <vector>
 
 #include "core/task.hpp"
+#include "jellyfin/client.hpp"
 #include "jellyfin/models.hpp"
+#include "net/ftp.hpp"
 
 namespace playfin::app {
 
 class AppSession;
 
-// Films and episodes kept on the console (in the data folder's downloads/, never elsewhere), played without the
-// server. One file at a time, in the order asked; the list is kept in downloads.json. Owned by the AppSession;
-// main thread.
+// Films and episodes kept on the console (in the data folder's downloads/) or on a USB drive (in its Playfin/ folder,
+// through the console's FTP server; their pictures stay on the console), played without the server. One file at a
+// time, in the order asked; the list is kept in downloads.json. Where a download goes is the settings'
+// downloadTarget when it starts. Owned by the AppSession; main thread.
 class Downloads {
 public:
     enum class State { Queued, Running, Done, Failed };
@@ -31,6 +34,7 @@ public:
         State state = State::Queued;
         std::string error;         // why it failed, for the user
         std::int64_t positionTicks = 0;  // where it was left, played offline
+        std::string drive;               // "" on the console, else the USB drive it is on ("/mnt/usb0")
     };
 
     explicit Downloads(AppSession& session);
@@ -43,7 +47,7 @@ public:
 
     const std::vector<Entry>& entries() const { return entries_; }
     const Entry* find(const std::string& id) const;
-    // the file of a finished download (absolute), else nullopt
+    // the file of a finished download (absolute, or "pfusb://…" on a USB drive), else nullopt
     std::optional<std::string> localFile(const std::string& id) const;
     // "file://…" of its picture, empty without one (AppSession::fetchImage reads it)
     std::string localImageUrl(const std::string& id) const;
@@ -69,8 +73,19 @@ public:
     std::function<std::int64_t()> freeSpace = &Downloads::freeBytes;
 
 private:
+    struct Outcome {
+        core::Result<core::Unit> result = core::Unit{};
+        std::int64_t received = 0;
+        std::string drive;  // the USB drive it went to, empty on the console
+    };
     void startNext();
-    void finished(const std::string& id, core::Result<core::Unit> result, std::int64_t received);
+    void finished(const std::string& id, Outcome outcome);
+    // the item's file to `fileName` in the first USB drive's Playfin/ folder (through `.part`, renamed when complete)
+    static core::Result<core::Unit> toDrive(const jellyfin::Client& client, const net::FtpClient& ftp,
+                                            const std::string& id, const std::string& fileName,
+                                            const std::function<void(long long, long long)>& progress,
+                                            const core::CancelToken& token, std::string& drive,
+                                            std::int64_t& received);
     void progress(const std::string& id, std::int64_t received, std::int64_t total);
     void save() const;
     void notify();

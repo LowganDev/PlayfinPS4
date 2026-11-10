@@ -1,5 +1,8 @@
 #include "player/session.hpp"
 
+#include <cctype>
+#include <cstring>
+
 #include "core/log.hpp"
 #include "net/url.hpp"
 #include "player/stream_url.hpp"
@@ -99,6 +102,75 @@ void Reporter::stop(const jellyfin::PlaybackState& state) {
     }
     stopped_ = true;
     send_(ReportKind::Stopped, state);
+}
+
+namespace {
+
+// lower case, ASCII letters only (accents dropped: "Générique" -> "gnrique" would lose letters, so é/è/ê -> e)
+std::string folded(const std::string& name) {
+    std::string out;
+    for (std::size_t i = 0; i < name.size(); ++i) {
+        const unsigned char c = static_cast<unsigned char>(name[i]);
+        if (c == 0xC3 && i + 1 < name.size()) {  // Latin-1 letters in UTF-8
+            const unsigned char next = static_cast<unsigned char>(name[++i]);
+            if ((next >= 0xA8 && next <= 0xAB) || (next >= 0x88 && next <= 0x8B)) {
+                out += 'e';
+            }
+            continue;
+        }
+        if (std::isalpha(c)) {
+            out += static_cast<char>(std::tolower(c));
+        } else {
+            out += ' ';
+        }
+    }
+    return " " + out + " ";
+}
+
+bool has(const std::string& folded, const char* word) {
+    return folded.find(std::string(" ") + word + " ") != std::string::npos;
+}
+
+bool hasPart(const std::string& folded, const char* part) { return folded.find(part) != std::string::npos; }
+
+}  // namespace
+
+std::vector<jellyfin::MediaSegment> segmentsFromChapters(const std::vector<jellyfin::Chapter>& chapters,
+                                                         std::int64_t runTicks) {
+    std::vector<jellyfin::MediaSegment> out;
+    if (runTicks <= 0) {
+        return out;
+    }
+    for (std::size_t i = 0; i < chapters.size(); ++i) {
+        const std::int64_t start = chapters[i].startTicks;
+        const std::int64_t end = i + 1 < chapters.size() ? chapters[i + 1].startTicks : runTicks;
+        if (start < 0 || end <= start || start >= runTicks) {
+            continue;
+        }
+        const std::string name = folded(chapters[i].name);
+        const bool firstHalf = start < runTicks / 2;
+        const bool either = hasPart(name, "generique") || hasPart(name, "abspann") || hasPart(name, "vorspann");
+        const bool intro = has(name, "intro") || has(name, "introduction") || has(name, "opening") ||
+                           has(name, "op") || hasPart(name, "recap") || has(name, "previously") ||
+                           hasPart(name, "resume") || has(name, "cold open") || has(name, "ouverture");
+        const bool credits = hasPart(name, "credit") || has(name, "ending") || has(name, "ed") ||
+                             has(name, "outro") || has(name, "end") || has(name, "fin");
+        jellyfin::SegmentType type = jellyfin::SegmentType::Other;
+        if ((intro || either) && firstHalf) {
+            type = jellyfin::SegmentType::Intro;
+        } else if ((credits || either) && !firstHalf) {
+            type = jellyfin::SegmentType::Outro;
+        }
+        if (type == jellyfin::SegmentType::Other) {
+            continue;
+        }
+        if (!out.empty() && out.back().type == type && out.back().endTicks == start) {
+            out.back().endTicks = end;  // a recap then an opening: one intro
+        } else {
+            out.push_back({type, start, end});
+        }
+    }
+    return out;
 }
 
 SegmentButton buttonAt(double position, const std::vector<jellyfin::MediaSegment>& segments) {

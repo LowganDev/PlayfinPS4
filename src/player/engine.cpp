@@ -2,11 +2,13 @@
 
 #include <mpv/client.h>
 #include <mpv/render.h>
+#include <mpv/stream_cb.h>
 
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <strings.h>
 
 #include "core/log.hpp"
 
@@ -21,6 +23,7 @@ struct Engine::Impl {
     bool shownFirst = false;  // FirstFrame sent for the current file
     std::string error;
     double renderMs = 0;
+    StreamOpener usb;  // kept until mpv_terminate_destroy() has closed every stream it opened
 
     ~Impl() {
         if (render != nullptr) {
@@ -83,6 +86,44 @@ bool followsReferences(const std::string& url) {
     return web && path.size() > extension.size() &&
            path.compare(path.size() - extension.size(), extension.size(), extension) == 0;
 }
+
+namespace {
+
+// "pfusb://" streams for mpv (stream_cb): a StreamReader behind each one
+int64_t usbRead(void* cookie, char* buffer, uint64_t size) {
+    return static_cast<StreamReader*>(cookie)->read(buffer, static_cast<std::size_t>(size));
+}
+int64_t usbSeek(void* cookie, int64_t offset) {
+    return static_cast<StreamReader*>(cookie)->seek(offset) ? offset : MPV_ERROR_GENERIC;
+}
+int64_t usbSize(void* cookie) {
+    const long long size = static_cast<StreamReader*>(cookie)->size();
+    return size >= 0 ? size : MPV_ERROR_UNSUPPORTED;
+}
+void usbClose(void* cookie) { delete static_cast<StreamReader*>(cookie); }
+void usbCancel(void* cookie) { static_cast<StreamReader*>(cookie)->cancel(); }
+
+int usbOpen(void* user, char* uri, mpv_stream_cb_info* info) {
+    const auto* opener = static_cast<const StreamOpener*>(user);
+    const std::string url = uri != nullptr ? uri : "";
+    const std::string scheme = kUsbScheme;
+    if (url.compare(0, scheme.size(), scheme) != 0 || !*opener) {
+        return MPV_ERROR_LOADING_FAILED;
+    }
+    std::unique_ptr<StreamReader> reader = (*opener)(url.substr(scheme.size()));
+    if (!reader) {
+        return MPV_ERROR_LOADING_FAILED;
+    }
+    info->cookie = reader.release();
+    info->read_fn = usbRead;
+    info->seek_fn = usbSeek;
+    info->size_fn = usbSize;
+    info->close_fn = usbClose;
+    info->cancel_fn = usbCancel;
+    return 0;
+}
+
+}  // namespace
 
 std::vector<std::pair<const char*, const char*>> hardeningOptions() {
     return {{"config", "no"},
@@ -158,6 +199,12 @@ std::unique_ptr<Engine> Engine::create(const EngineOptions& options, std::functi
         }
     }
     mpv_request_log_messages(mpv, "warn");
+    if (options.usb) {
+        impl->usb = options.usb;
+        if (mpv_stream_cb_add_ro(mpv, "pfusb", &impl->usb, usbOpen) < 0) {
+            PF_LOG_WARN("mpv: USB files cannot be opened");
+        }
+    }
     const int rc = mpv_initialize(mpv);
     if (rc < 0) {
         PF_LOG_ERROR("mpv: initialisation failed: %s", mpv_error_string(rc));
@@ -236,6 +283,11 @@ std::vector<EngineEvent> Engine::drainEvents() {
             break;
         }
         switch (event->event_id) {
+        case MPV_EVENT_COMMAND_REPLY:
+            if (event->error < 0) {
+                PF_LOG_WARN("mpv: a command failed: %s", mpv_error_string(event->error));
+            }
+            break;
         case MPV_EVENT_LOG_MESSAGE: {
             const auto* message = static_cast<mpv_event_log_message*>(event->data);
             std::string line = message->text != nullptr ? message->text : "";
@@ -316,6 +368,74 @@ Engine::Stats Engine::stats() const {
     s.outputDrops = static_cast<long>(impl_->integer("frame-drop-count"));
     s.renderMs = impl_->renderMs;
     return s;
+}
+
+std::string Engine::tag(const char* name) const {
+    // the file's tags, the key compared without case ("title", "Title", "TITLE")
+    std::string out;
+    mpv_node node;
+    if (mpv_get_property(impl_->mpv, "metadata", MPV_FORMAT_NODE, &node) < 0) {
+        return out;
+    }
+    if (node.format == MPV_FORMAT_NODE_MAP && node.u.list != nullptr) {
+        for (int i = 0; i < node.u.list->num && out.empty(); ++i) {
+            const char* key = node.u.list->keys[i];
+            const mpv_node& value = node.u.list->values[i];
+            if (key != nullptr && value.format == MPV_FORMAT_STRING && value.u.string != nullptr &&
+                strcasecmp(key, name) == 0) {
+                out = value.u.string;
+            }
+        }
+    }
+    mpv_free_node_contents(&node);
+    return out.size() > 512 ? out.substr(0, 512) : out;
+}
+
+std::vector<Engine::Track> Engine::tracks() const {
+    std::vector<Track> out;
+    mpv_node node;
+    if (mpv_get_property(impl_->mpv, "track-list", MPV_FORMAT_NODE, &node) < 0) {
+        return out;
+    }
+    if (node.format == MPV_FORMAT_NODE_ARRAY && node.u.list != nullptr) {
+        for (int i = 0; i < node.u.list->num && out.size() < 256; ++i) {
+            const mpv_node& entry = node.u.list->values[i];
+            if (entry.format != MPV_FORMAT_NODE_MAP || entry.u.list == nullptr) {
+                continue;
+            }
+            Track track;
+            std::string type;
+            std::string file;
+            for (int k = 0; k < entry.u.list->num; ++k) {
+                const char* key = entry.u.list->keys[k];
+                const mpv_node& value = entry.u.list->values[k];
+                if (std::strcmp(key, "type") == 0 && value.format == MPV_FORMAT_STRING) {
+                    type = value.u.string;
+                } else if (std::strcmp(key, "id") == 0 && value.format == MPV_FORMAT_INT64) {
+                    track.id = static_cast<int>(value.u.int64);
+                } else if (std::strcmp(key, "title") == 0 && value.format == MPV_FORMAT_STRING) {
+                    track.title = value.u.string;
+                } else if (std::strcmp(key, "lang") == 0 && value.format == MPV_FORMAT_STRING) {
+                    track.language = value.u.string;
+                } else if (std::strcmp(key, "selected") == 0 && value.format == MPV_FORMAT_FLAG) {
+                    track.selected = value.u.flag != 0;
+                } else if (std::strcmp(key, "external-filename") == 0 && value.format == MPV_FORMAT_STRING) {
+                    file = value.u.string;
+                }
+            }
+            if (type != "audio" && type != "sub") {
+                continue;
+            }
+            track.audio = type == "audio";
+            if (track.title.empty() && !file.empty()) {
+                const std::size_t slash = file.rfind('/');
+                track.title = slash == std::string::npos ? file : file.substr(slash + 1);
+            }
+            out.push_back(std::move(track));
+        }
+    }
+    mpv_free_node_contents(&node);
+    return out;
 }
 
 std::string Engine::describe() const {

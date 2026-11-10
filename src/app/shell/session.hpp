@@ -14,6 +14,7 @@
 #include "core/task.hpp"
 #include "jellyfin/client.hpp"
 #include "jellyfin/store.hpp"
+#include "net/ftp.hpp"
 #include "net/http.hpp"
 
 namespace playfin::app {
@@ -103,6 +104,11 @@ public:
     bool updateChecked = false;
     // Asks once (on the worker pool) whether a newer Playfin is published; `done` on the main thread.
     void checkForUpdate(std::function<void()> done = {});
+
+    // USB drives through the console's FTP server (GoldHEN's): kConsoleFtp on the PS4, $PLAYFIN_USB_FTP elsewhere
+    // (none without it); tests give their own.
+    std::shared_ptr<const net::FtpClient> usbFtp = defaultUsbFtp();
+    static std::shared_ptr<const net::FtpClient> defaultUsbFtp();
 
     bool synchronous = false;     // test mode: network jobs run inline (deterministic screenshots)
     bool frozenPlayback = false;  // script tests: music pauses at its first moment (deterministic screenshots)

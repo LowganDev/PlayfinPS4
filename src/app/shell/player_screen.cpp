@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -9,6 +10,7 @@
 #include <vector>
 
 #include "app/shell/downloads.hpp"
+#include "app/shell/usb.hpp"
 #include "app/shell/tv_guide.hpp"
 #include "app/shell/engine_options.hpp"
 #include "app/shell/format.hpp"
@@ -483,6 +485,11 @@ private:
     // ---- loading
 
     void start(std::int64_t startTicks) {
+        if (!item_.localUrl.empty()) {  // a file on a USB drive
+            startLocal(item_.localUrl, startTicks);
+            findUsbSubtitles(item_.localUrl);
+            return;
+        }
         if (!live_) {  // a download plays from the console, server or not
             if (const auto file = session().downloads().localFile(item_.id)) {
                 startLocal(*file, startTicks);
@@ -555,6 +562,21 @@ private:
                     if (segments.ok()) {
                         extras.segments = std::move(segments.value());
                     }
+                    // without the server's markers: the chapters named as an intro or credits
+                    if (extras.segments.empty()) {
+                        std::vector<jellyfin::Chapter> chapters = item.chapters;
+                        std::int64_t runTicks = item.runTimeTicks;
+                        if (chapters.empty()) {
+                            if (auto details = client->item(item.id, token); details.ok()) {
+                                chapters = std::move(details.value().chapters);
+                                runTicks = details.value().runTimeTicks > 0 ? details.value().runTimeTicks : runTicks;
+                            }
+                        }
+                        extras.segments = player::segmentsFromChapters(chapters, runTicks);
+                        if (!extras.segments.empty()) {
+                            PF_LOG_INFO("player: %zu segments from the chapters", extras.segments.size());
+                        }
+                    }
                     // the episodes around this one, across seasons (the last of a season goes on to the next)
                     if (item.type == jellyfin::ItemType::Episode && !item.seriesId.empty()) {
                         const auto episodes = client->episodes(item.seriesId, "", token);
@@ -586,7 +608,8 @@ private:
     void startLocal(const std::string& file, std::int64_t startTicks) {
         local_ = true;
         if (!engine_) {
-            engine_ = player::Engine::create(engineOptionsLocal(session().synchronous), [] {});
+            engine_ = player::Engine::create(
+                engineOptionsLocal(session().synchronous, usbOpener(session().usbFtp)), [] {});
             if (!engine_) {
                 showError();
                 return;
@@ -594,7 +617,9 @@ private:
             engine_->setVolume(session().settings().volume);
         }
         session().music().stop();
-        PF_LOG_INFO("player: %s from the console", item_.id.c_str());
+        PF_LOG_INFO("player: %s from %s", item_.id.c_str(),
+                    file.compare(0, std::strlen(player::kUsbScheme), player::kUsbScheme) == 0 ? "a USB drive"
+                                                                                               : "the console");
         engine_->load(file, static_cast<double>(startTicks) / player::kTicksPerSecond);
         if (session().synchronous) {
             showFirstPictureNow();
@@ -760,6 +785,8 @@ private:
     // External subtitles in order (their mpv ids follow the embedded ones), then the chosen tracks.
     void applyTracks() {
         if (local_) {
+            fileLoaded_ = true;
+            addUsbSubtitles();
             return;  // the file's own default tracks
         }
         for (const player::ExternalSubtitle& subtitle : choice_.externalSubtitles) {
@@ -777,6 +804,52 @@ private:
             }
         }
         engine_->setSubtitleTrack(sid);
+    }
+
+    // ---- subtitle files beside a video on a USB drive ("Film.fr.srt" for "Film.mkv"), offered in the track menu
+
+    void findUsbSubtitles(const std::string& url) {
+        const std::string scheme = player::kUsbScheme;
+        const auto ftp = session().usbFtp;
+        if (!ftp || url.compare(0, scheme.size(), scheme) != 0) {
+            return;
+        }
+        const std::string path = url.substr(scheme.size());
+        const std::size_t slash = path.rfind('/');
+        if (slash == std::string::npos) {
+            return;
+        }
+        const std::string dir = path.substr(0, slash);
+        const std::string name = path.substr(slash + 1);
+        const core::CancelToken token = cancelToken();
+        run<std::vector<std::string>>(
+            [ftp, dir, name, token] {
+                std::vector<std::string> urls;
+                const auto entries = ftp->list(dir, token);
+                if (entries.ok()) {
+                    for (const std::string& subtitle : usbSubtitlesFor(name, entries.value())) {
+                        urls.push_back(usbUrl(dir + "/" + subtitle));
+                    }
+                }
+                return urls;
+            },
+            [this](std::vector<std::string> urls) {
+                usbSubtitles_ = std::move(urls);
+                if (fileLoaded_) {
+                    addUsbSubtitles();
+                }
+            });
+    }
+
+    void addUsbSubtitles() {
+        if (!engine_ || usbSubtitles_.empty()) {
+            return;
+        }
+        for (const std::string& url : usbSubtitles_) {
+            engine_->addSubtitle(url, false);
+        }
+        PF_LOG_INFO("player: %zu subtitle files beside the video", usbSubtitles_.size());
+        usbSubtitles_.clear();
     }
 
     // ---- per frame
@@ -1018,13 +1091,23 @@ private:
         if (!engine_) {
             return;
         }
-        if (source_.id.empty()) {  // a download: its tracks are not known here, its sound and picture are
-            ui::Application::current()->showModal(ui::makeDialog(
-                barTitle(), "",
-                {{ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
-                  [this] { later([this] { chooseVolume(); }); }},
-                 {ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); }},
-                 {ui::tr("ui.cancel"), {}}}));
+        if (source_.id.empty()) {  // a file without the server (a download, a USB drive's): the tracks mpv found
+            std::vector<std::pair<std::string, std::function<void()>>> buttons;
+            const auto tracks = engine_->tracks();
+            const auto count = [&tracks](bool audio) {
+                return std::count_if(tracks.begin(), tracks.end(), [audio](const auto& t) { return t.audio == audio; });
+            };
+            if (count(true) > 1) {
+                buttons.emplace_back(ui::tr("player.audio"), [this] { later([this] { chooseLocalTrack(true); }); });
+            }
+            if (count(false) > 0) {
+                buttons.emplace_back(ui::tr("player.subtitles"), [this] { later([this] { chooseLocalTrack(false); }); });
+            }
+            buttons.emplace_back(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
+                                 [this] { later([this] { chooseVolume(); }); });
+            buttons.emplace_back(ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); });
+            buttons.emplace_back(ui::tr("ui.cancel"), std::function<void()>{});
+            ui::Application::current()->showModal(ui::makeDialog(barTitle(), "", std::move(buttons)));
             return;
         }
         std::string audioName;
@@ -1044,6 +1127,48 @@ private:
               [this] { later([this] { chooseVolume(); }); }},
              {ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); }},
              {ui::tr("ui.cancel"), {}}}));
+    }
+
+    // a file's own audio or subtitle tracks (mpv's ids), subtitles with "Off" first
+    void chooseLocalTrack(bool audio) {
+        if (!engine_) {
+            return;
+        }
+        std::vector<std::string> names;
+        std::vector<int> ids;
+        int selected = 0;
+        if (!audio) {
+            names.push_back(ui::tr("player.subtitles_off"));
+            ids.push_back(0);
+        }
+        for (const auto& track : engine_->tracks()) {
+            if (track.audio != audio) {
+                continue;
+            }
+            std::string name = track.title;
+            if (!track.language.empty()) {
+                name = name.empty() ? track.language : name + " (" + track.language + ")";
+            }
+            if (name.empty()) {
+                name = std::to_string(track.id);
+            }
+            if (track.selected) {
+                selected = static_cast<int>(names.size());
+            }
+            names.push_back(name);
+            ids.push_back(track.id);
+        }
+        ui::Application::current()->showModal(ui::makeChoiceDialog(
+            ui::tr(audio ? "player.audio" : "player.subtitles"), names, selected, [this, audio, ids](int index) {
+                if (!engine_ || index < 0 || static_cast<std::size_t>(index) >= ids.size()) {
+                    return;
+                }
+                if (audio) {
+                    engine_->setAudioTrack(ids[static_cast<std::size_t>(index)]);
+                } else {
+                    engine_->setSubtitleTrack(ids[static_cast<std::size_t>(index)]);
+                }
+            }));
     }
 
     // ---- volume and picture (kept in the settings for the next videos)
@@ -1236,6 +1361,8 @@ private:
     std::int64_t barUntil_ = 0;
     bool leaving_ = false;  // the next episode takes this screen's place
     bool local_ = false;    // a download, played from the console
+    bool fileLoaded_ = false;                // a local file is loaded (subtitle files can be added)
+    std::vector<std::string> usbSubtitles_;  // found beside a USB file, added once it is loaded
     bool volumeUnsaved_ = false;
     bool direct_ = false;               // playing a channel's own stream, not the server's relay
     std::int64_t directSinceMs_ = 0;

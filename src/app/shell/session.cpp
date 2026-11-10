@@ -1,5 +1,9 @@
 #include "app/shell/session.hpp"
 
+#include <cstdlib>
+
+#include "app/shell/usb.hpp"
+
 #include <algorithm>
 #include <ctime>
 
@@ -336,6 +340,15 @@ StartTarget startTarget(AppSession& session) {
         }
     }
     return StartTarget::Servers;
+}
+
+std::shared_ptr<const net::FtpClient> AppSession::defaultUsbFtp() {
+#ifdef PLAYFIN_PS4
+    return std::make_shared<const net::FtpClient>(kConsoleFtp);
+#else
+    const char* base = std::getenv("PLAYFIN_USB_FTP");
+    return base != nullptr && *base != '\0' ? std::make_shared<const net::FtpClient>(base) : nullptr;
+#endif
 }
 
 void AppSession::checkForUpdate(std::function<void()> done) {

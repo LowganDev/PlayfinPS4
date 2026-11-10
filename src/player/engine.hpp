@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -17,6 +18,20 @@ struct VideoFrame {
     std::uint64_t serial = 0;  // grows with every new picture
 };
 
+// A file Playfin reads itself for the player (a file on a USB drive, through the console's FTP server): blocking
+// reads from mpv's threads, a seek, its size (-1 unknown); cancel() (any thread) makes a waiting read give up.
+class StreamReader {
+public:
+    virtual ~StreamReader() = default;
+    virtual long long size() = 0;
+    virtual long long read(char* buffer, std::size_t size) = 0;  // 0 at the end, -1 on a failure
+    virtual bool seek(long long offset) = 0;
+    virtual void cancel() = 0;
+};
+// "pfusb://<path>" opened: the reader of <path>, else null.
+using StreamOpener = std::function<std::unique_ptr<StreamReader>(const std::string& path)>;
+constexpr const char* kUsbScheme = "pfusb://";
+
 struct EngineOptions {
     std::string audioOutput;    // mpv "ao": "sdl" on the PS4, "null" in tests, empty for mpv's default
     std::string fontsDir;       // subtitles: Noto Sans and Noto Sans CJK
@@ -26,6 +41,7 @@ struct EngineOptions {
     int decoderThreads = 0;     // 0: FFmpeg's count of the CPUs (it finds only 1 on the PS4)
     bool audioOnly = false;     // music: no video track (album art included), nothing to render
     bool reconnect = false;     // live: FFmpeg reconnects an http stream that drops
+    StreamOpener usb;           // "pfusb://" files (a USB drive), none without it
 };
 
 // Options every player gets before anything else: no configuration files, scripts or key bindings of mpv, and a
@@ -86,6 +102,18 @@ public:
 
     // mpv's description of the stream ("h264 1920x1080 mkv"), for the log
     std::string describe() const;
+
+    // The file's audio and subtitle tracks as mpv sees them (those of a file added with addSubtitle() too).
+    struct Track {
+        int id = 0;            // mpv's id within its type
+        bool audio = false;    // else a subtitle
+        std::string title;     // the track's title, else its file's name for an added file
+        std::string language;  // "fre", "en"…
+        bool selected = false;
+    };
+    std::vector<Track> tracks() const;
+    // A tag of the file playing ("title", "artist", "album"), empty without it.
+    std::string tag(const char* name) const;
 
 private:
     struct Impl;

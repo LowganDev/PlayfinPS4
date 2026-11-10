@@ -26,6 +26,23 @@ const jellyfin::Item* Queue::current() const {
     return position_ < order_.size() ? &items_[order_[position_]] : nullptr;
 }
 
+void Queue::describeCurrent(const std::string& name, const std::string& artist, const std::string& album) {
+    if (current() == nullptr) {
+        return;
+    }
+    jellyfin::Item& item = items_[order_[position_]];
+    if (!name.empty()) {
+        item.name = name;
+    }
+    if (!artist.empty()) {
+        item.artists = {artist};
+        item.albumArtist = artist;
+    }
+    if (!album.empty()) {
+        item.album = album;
+    }
+}
+
 bool Queue::next(bool userAction) {
     if (order_.empty()) {
         return false;

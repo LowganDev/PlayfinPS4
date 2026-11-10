@@ -1,4 +1,7 @@
+#include <nanovg.h>
+
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -17,6 +20,7 @@
 #include "core/log.hpp"
 #include "core/strings.hpp"
 #include "core/version.hpp"
+#include "ui/draw.hpp"
 #include "ui/i18n.hpp"
 #include "ui/scroll.hpp"
 #include "ui/widgets.hpp"
@@ -58,6 +62,78 @@ std::string languageName(const std::string& tag) {
     return ui::tr("settings.language.system");
 }
 
+// The banner at the top of the settings while a newer Playfin is published: accent fill, the version, what to do,
+// and the download's state on the right; ✕ does what the update row does.
+class UpdateBanner : public ui::Box {
+public:
+    explicit UpdateBanner(std::function<void()> onPress) : ui::Box(ui::Axis::Row) {
+        name = "update banner";
+        focusable = true;
+        drawsOwnFocus = true;
+        width = ui::SizeSpec::fixed(1100);
+        padding = {ui::theme().spacingL, ui::theme().spacingL, ui::theme().spacingL, ui::theme().spacingL};
+        cornerRadius = ui::theme().radius;
+        crossAlign = ui::CrossAlign::Center;
+        gap = ui::theme().spacingL;
+        auto* texts = add<ui::Box>(ui::Axis::Column);
+        texts->width = ui::SizeSpec::fill();
+        texts->gap = ui::theme().spacingS / 2;
+        title_ = texts->add<ui::Label>("", ui::FontStyle{ui::theme().fontTitle, ui::FontWeight::SemiBold});
+        title_->width = ui::SizeSpec::fill();
+        text_ = texts->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
+        text_->width = ui::SizeSpec::fill();
+        text_->maxLines = 2;
+        state_ = add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::SemiBold});
+        refresh();
+        bind(platform::Action::Confirm, ui::tr("ui.select"), [onPress = std::move(onPress)] {
+            onPress();
+            return true;
+        });
+    }
+    void set(const std::string& title, const std::string& text, const std::string& state) {
+        title_->setText(title);
+        text_->setText(text);
+        state_->setText(state);
+    }
+    void onFocusChanged(bool focused) override {
+        focused_ = focused;
+        refresh();
+    }
+    void onThemeChanged() override {
+        refresh();
+        ui::Box::onThemeChanged();
+    }
+    // focused: a white line inside its edge (the fill stays the accent, as the focused rows' is)
+    void draw(NVGcontext* vg) const override {
+        ui::Box::draw(vg);
+        if (!focused_) {
+            return;
+        }
+        const float inset = ui::theme().focusRingWidth / 2 + 2;
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, inset, inset, frame.width - 2 * inset, frame.height - 2 * inset, cornerRadius - inset);
+        nvgStrokeColor(vg, ui::nvgColor(ui::theme().onAccent));
+        nvgStrokeWidth(vg, ui::theme().focusRingWidth);
+        nvgStroke(vg);
+    }
+
+private:
+    void refresh() {
+        background = ui::theme().accent;
+        title_->color = ui::theme().onAccent;
+        text_->color = ui::withAlpha(ui::theme().onAccent, 0xD8);
+        state_->color = ui::theme().onAccent;
+        title_->markDirty();
+        text_->markDirty();
+        state_->markDirty();
+        markDirty();
+    }
+    bool focused_ = false;
+    ui::Label* title_;
+    ui::Label* text_;
+    ui::Label* state_;
+};
+
 ui::Label* addHeading(ui::Box& column, const std::string& text) {
     auto* heading = column.add<ui::Label>(text, ui::FontStyle{ui::theme().fontHeading, ui::FontWeight::SemiBold});
     heading->margin = {ui::theme().spacingL, 0, 0, 0};
@@ -74,6 +150,8 @@ public:
         content->gap = ui::theme().spacingM;
         ui::Box* column = content.get();
         column->add<NavBar>(session_, Tab::Settings);
+        banner_ = column->add<UpdateBanner>([this] { pressUpdate(); });
+        banner_->margin = {ui::theme().spacingS, 0, 0, 0};
 
         addHeading(*column, ui::tr("settings.display"));
         accent_ = column->add<ui::ValueRow>(ui::tr("settings.accent"), accentName(session_.settings().accent),
@@ -92,9 +170,6 @@ public:
                                                 playMethodName(session_.settings().playMethod),
                                                 [this] { choosePlayMethod(); });
 
-        column->add<ui::ValueRow>(ui::tr("downloads.title"), "", [this] {
-            ui::Application::current()->push(makeDownloads(session_));
-        });
         // an XMLTV address for servers without a guide (Live TV)
         guide_ = column->add<ui::ValueRow>(ui::tr("settings.tv_guide"), "", [this] { pressGuide(); });
         session_.tvGuide().listen(this, [this] { refreshGuide(); });
@@ -129,6 +204,9 @@ public:
         column->add<ui::ValueRow>(ui::tr("settings.version"), core::version(), nullptr);
         update_ = column->add<ui::ValueRow>(ui::tr("settings.update"), "", [this] { pressUpdate(); });
         refreshUpdate();
+        if (session_.update) {
+            remembered = banner_;  // the screen opens on the banner
+        }
         server_ = column->add<ui::ValueRow>(ui::tr("settings.server"), serverName, nullptr);
         column->add<ui::ValueRow>(ui::tr("settings.licenses"), "", [shared] {
             ui::Application::current()->push(makeLicenses(*shared));
@@ -138,6 +216,7 @@ public:
     ~SettingsScreen() override { session_.tvGuide().unlisten(this); }
 
     void onShow() override {
+        refreshUpdate();  // the check at start may have answered since
         if (!loaded_) {
             loaded_ = true;
             later([this] { loadServer(); });
@@ -194,7 +273,16 @@ private:
         if (downloading_) {
             return;  // the progress shows there
         }
+        banner_->visible = session_.update.has_value();
         if (session_.update) {
+            banner_->set(ui::tr("settings.update.banner", {session_.update->version}),
+                         ui::tr(ready_ ? "settings.update.banner_ready" : "settings.update.banner_text"),
+                         ui::tr(ready_ ? "settings.update.ready" : "settings.update.download"));
+        }
+        banner_->markDirty();
+        if (ready_) {
+            update_->setValue(ui::tr("settings.update.ready"));
+        } else if (session_.update) {
             update_->setValue(ui::tr("settings.update.available", {session_.update->version}));
         } else if (session_.updateChecked) {
             update_->setValue(ui::tr("settings.update.latest"));
@@ -222,6 +310,10 @@ private:
             return;
         }
         const Release release = *session_.update;
+        if (ready_) {
+            showInstall(release);
+            return;
+        }
         const std::string megabytes = std::to_string((release.size + 999999) / 1000000);
         ui::Application::current()->showModal(ui::makeDialog(
             ui::tr("settings.update.title", {release.version}), ui::tr("settings.update.explain", {megabytes}),
@@ -237,7 +329,7 @@ private:
             return;
         }
         downloading_ = true;
-        update_->setValue(ui::tr("settings.update.progress", {"0"}));
+        showProgress(0);
         const net::HttpClient* http = &session_.http();
         const std::string target = *path;
         const core::CancelToken token = token_;
@@ -252,7 +344,7 @@ private:
                         if (now != percent->exchange(now) && app != nullptr) {
                             app->mainQueue().post([this, token, now] {
                                 if (!token.cancelled() && downloading_) {
-                                    update_->setValue(ui::tr("settings.update.progress", {std::to_string(now)}));
+                                    showProgress(now);
                                 }
                             });
                         }
@@ -267,12 +359,26 @@ private:
                     ui::Application::current()->toast(ui::tr("settings.update.failed"));
                     return;
                 }
-                update_->setValue(ui::tr("settings.update.ready"));
-                ui::Application::current()->showModal(
-                    ui::makeDialog(ui::tr("settings.update.title", {release.version}),
-                                   ui::tr("settings.update.install", {packageFileName(release.version)}),
-                                   {{ui::tr("ui.ok"), {}}}));
+                ready_ = true;
+                refreshUpdate();
+                showInstall(release);
             });
+    }
+
+    void showInstall(const Release& release) {
+        ui::Application::current()->showModal(
+            ui::makeDialog(ui::tr("settings.update.title", {release.version}),
+                           ui::tr("settings.update.install", {packageFileName(release.version)}),
+                           {{ui::tr("ui.ok"), {}}}));
+    }
+
+    void showProgress(int percent) {
+        const std::string progress = ui::tr("settings.update.progress", {std::to_string(percent)});
+        update_->setValue(progress);
+        if (session_.update) {
+            banner_->set(ui::tr("settings.update.banner", {session_.update->version}),
+                         ui::tr("settings.update.banner_text"), progress);
+        }
     }
 
     void loadServer() {
@@ -378,6 +484,8 @@ private:
     ui::ValueRow* guide_ = nullptr;
     ui::ValueRow* share_ = nullptr;
     bool downloading_ = false;
+    bool ready_ = false;  // the package is in /data/pkg
+    UpdateBanner* banner_ = nullptr;
     ui::ValueRow* server_;
     bool loaded_ = false;
 };

@@ -5,6 +5,7 @@
 #include "app/shell/library_query.hpp"
 #include "app/shell/music_player.hpp"
 #include "app/shell/nav_bar.hpp"
+#include "app/shell/usb.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
 #include "player/session.hpp"
@@ -31,7 +32,22 @@ struct HomeData {
     core::Result<jellyfin::ItemPage> libraries = jellyfin::ItemPage{};
     std::vector<std::pair<jellyfin::Item, jellyfin::ItemPage>> latest;
     core::Result<jellyfin::ItemPage> airing = jellyfin::ItemPage{};  // when the server has Live TV
+    std::vector<std::string> drives;  // USB drives plugged in ("/mnt/usb0")
 };
+
+// A USB drive as a library card: "Clé USB" ("Clé USB 2" for the second one)
+std::vector<jellyfin::Item> driveCards(const std::vector<std::string>& drives) {
+    std::vector<jellyfin::Item> cards;
+    for (std::size_t i = 0; i < drives.size(); ++i) {
+        jellyfin::Item card;
+        card.id = "usb:" + drives[i];
+        card.name = ui::tr("usb.drive") + (i == 0 ? std::string() : " " + std::to_string(i + 1));
+        card.type = jellyfin::ItemType::Folder;
+        card.collectionType = "usb";
+        cards.push_back(std::move(card));
+    }
+    return cards;
+}
 
 class HomeScreen : public ShellScreen {
 public:
@@ -99,9 +115,16 @@ private:
         const auto client = session_.client();
         const core::CancelToken token = token_;
         const std::vector<std::string> order = session_.settings().libraryOrder;
+        const auto usb = session_.usbFtp;
         run<HomeData>(
-            [client, token, order] {
+            [client, token, order, usb] {
                 HomeData data;
+                if (usb) {  // the console's FTP server answers at once, or refuses at once
+                    auto drives = usbDrives(*usb, token);
+                    if (drives.ok()) {
+                        data.drives = std::move(drives.value());
+                    }
+                }
                 // an unreachable server fails every call: stop at the first one (2 workers on PS4)
                 auto unreachable = [](const auto& result) {
                     return !result.ok() && (result.error().kind == core::ErrorKind::Network ||
@@ -160,8 +183,11 @@ private:
             });
             if (!session_.downloads().entries().empty()) {  // offline: what is on the console still plays
                 column_->add<ui::Button>(ui::tr("downloads.title"), [this] {
-                    ui::Application::current()->push(makeDownloads(session_));
+                    openTab(session_, Tab::Downloads);
                 });
+            }
+            for (const jellyfin::Item& card : driveCards(data.drives)) {  // and what is on a USB drive
+                column_->add<ui::Button>(card.name, [this, card] { openItem(session_, card); });
             }
             focusContent(retry, navBar_->currentTab());
             return;
@@ -170,8 +196,12 @@ private:
         const std::size_t firstRow = column_->children().size();
         bool any = false;
         // in Jellyfin's order: the libraries, Resume, Next up, what is on TV, the downloads, the latest additions
-        if (!data.libraries.value().items.empty()) {
-            addItemRow(*column_, ui::tr("shell.home.libraries"), session_, data.libraries.value().items, true, open);
+        std::vector<jellyfin::Item> libraries = data.libraries.value().items;
+        for (jellyfin::Item& card : driveCards(data.drives)) {
+            libraries.push_back(std::move(card));
+        }
+        if (!libraries.empty()) {
+            addItemRow(*column_, ui::tr("shell.home.libraries"), session_, libraries, true, open);
             any = true;
         }
         if (data.resume.ok() && !data.resume.value().items.empty()) {
@@ -701,7 +731,7 @@ private:
         } else if (entry->state == Downloads::State::Failed) {
             downloads.retry(item_.id);
         } else {
-            ui::Application::current()->push(makeDownloads(session_));
+            openTab(session_, Tab::Downloads);
         }
         refreshDownload();
     }
@@ -953,6 +983,10 @@ void openItem(AppSession& session, const jellyfin::Item& item) {
     case jellyfin::ItemType::UserView:
     case jellyfin::ItemType::Folder:
     case jellyfin::ItemType::BoxSet:  // a collection: its films and series, like a library
+        if (item.collectionType == "usb" && item.id.compare(0, 4, "usb:") == 0) {
+            app->push(makeUsbBrowser(session, item.id.substr(4), item.name));
+            break;
+        }
         app->push(item.collectionType == "music"    ? makeMusicLibrary(session, item)
                   : item.collectionType == "livetv" ? makeLiveTv(session, item)
                                                     : makeLibrary(session, item));

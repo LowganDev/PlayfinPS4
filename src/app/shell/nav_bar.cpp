@@ -81,7 +81,10 @@ NavBar::NavBar(AppSession& session, Tab current) : ui::Box(ui::Axis::Row) {
     spacer->width = ui::SizeSpec::fixed(ui::theme().spacingXl);
     AppSession* shared = &session;
     const std::pair<Tab, const char*> tabs[] = {
-        {Tab::Home, "shell.tab.home"}, {Tab::Search, "shell.tab.search"}, {Tab::Settings, "shell.tab.settings"}};
+        {Tab::Home, "shell.tab.home"},
+        {Tab::Search, "shell.tab.search"},
+        {Tab::Downloads, "shell.tab.downloads"},
+        {Tab::Settings, "shell.tab.settings"}};
     for (const auto& tab : tabs) {
         const Tab which = tab.first;
         std::function<void()> press;
@@ -225,6 +228,9 @@ void openTab(AppSession& session, Tab tab) {
         break;
     case Tab::Search:
         app->replace(makeSearch(session));
+        break;
+    case Tab::Downloads:
+        app->replace(makeDownloads(session));
         break;
     case Tab::Settings:
         app->replace(makeSettings(session));

@@ -1,5 +1,7 @@
 #include "app/shell/music_player.hpp"
 
+#include "app/shell/usb.hpp"
+
 #include <algorithm>
 #include <chrono>
 #include <thread>
@@ -68,13 +70,19 @@ void MusicPlayer::startCurrent() {
     }
     const jellyfin::Item* track = queue_.current();
     const auto client = session_.client();
-    if (track == nullptr || !client) {
+    const bool local = track != nullptr && !track->localUrl.empty();  // a file on a USB drive, no server
+    if (track == nullptr || (!local && !client)) {
         stop();
         return;
     }
+    if (engine_ && engineLocal_ != local) {
+        engine_.reset();  // a server's engine sends its header; a local one reads USB files
+    }
     if (!engine_) {
-        player::EngineOptions options = engineOptionsFor(*client, session_.synchronous);
+        player::EngineOptions options = local ? engineOptionsLocal(session_.synchronous, usbOpener(session_.usbFtp))
+                                              : engineOptionsFor(*client, session_.synchronous);
         options.audioOnly = true;
+        engineLocal_ = local;
         engine_ = player::Engine::create(options, [] {});  // update() polls it every frame
         if (engine_) {
             engine_->setVolume(session_.settings().volume);
@@ -90,10 +98,15 @@ void MusicPlayer::startCurrent() {
     stream_ = player::StreamChoice{};
     analysis_.reset();  // the previous track's visualizer decoding stops
     analysisFor_.clear();
-    reporter_ = std::make_unique<player::Reporter>(
-        [this](player::ReportKind kind, const jellyfin::PlaybackState& state) { send(kind, state); });
     loading_ = true;
     ++changes_;
+    if (local) {  // nothing to ask a server, nothing to report to it
+        engine_->load(track->localUrl, 0);
+        engine_->setPaused(false);
+        return;
+    }
+    reporter_ = std::make_unique<player::Reporter>(
+        [this](player::ReportKind kind, const jellyfin::PlaybackState& state) { send(kind, state); });
     jellyfin::PlaybackRequest request;
     request.maxBitrate = session_.settings().maxBitrate;
     player::DirectPlayLimits limits;
@@ -265,6 +278,7 @@ void MusicPlayer::updateEngine() {
             if (reporter_) {
                 reporter_->onFirstFrame(now(), playbackState());
             }
+            tagsPending_ = queue_.current() != nullptr && !queue_.current()->localUrl.empty();
             ++changes_;
             break;
         case player::EngineEvent::EndOfFile:
@@ -279,6 +293,15 @@ void MusicPlayer::updateEngine() {
         }
         if (!engine_) {
             return;  // stopped by the event
+        }
+    }
+    if (tagsPending_ && !loading_) {
+        // a file of a USB drive: its own tags rather than its file name (mpv may read them after the file is loaded)
+        const std::string title = engine_->tag("title");
+        if (!title.empty() || engine_->state().position > 3) {
+            tagsPending_ = false;
+            queue_.describeCurrent(title, engine_->tag("artist"), engine_->tag("album"));
+            ++changes_;
         }
     }
     const player::Engine::State state = engine_->state();

@@ -284,7 +284,8 @@ TEST_CASE("a live channel's own source is played directly only over http or http
     source.protocol = "Http";
     source.path = "https://iptv.example/live/1.m3u8?user=a";
     CHECK(player::directSourceUrl(source, true) == "https://iptv.example/live/1.m3u8?user=a");
-    CHECK(player::directSourceUrl(source, false).empty());  // the console: https through the server
+    CHECK(player::directSourceUrl(source, false).empty());  // https left out on request
+    CHECK(player::kDirectHttps);  // https sources play directly everywhere (2.1)
     source.path = "http://192.168.1.20:8000/ch1";
     CHECK(player::directSourceUrl(source, true) == "http://192.168.1.20:8000/ch1");
     CHECK(player::directSourceUrl(source, false) == "http://192.168.1.20:8000/ch1");
@@ -298,4 +299,43 @@ TEST_CASE("a live channel's own source is played directly only over http or http
     source.protocol = "Http";
     source.isInfiniteStream = false;  // a recording: through the server
     CHECK(player::directSourceUrl(source).empty());
+}
+
+TEST_CASE("chapters named as an intro or credits give the segments to skip") {
+    const auto t = [](int seconds) { return static_cast<std::int64_t>(seconds) * 10000000; };
+    const std::vector<jellyfin::Chapter> chapters = {
+        {"Recap", t(0)}, {"Opening", t(60)}, {"Chapter 3", t(150)}, {"Part B", t(900)},
+        {"Ending", t(1300)}, {"Preview", t(1390)}};
+    const auto segments = player::segmentsFromChapters(chapters, t(1420));
+    REQUIRE(segments.size() == 2);
+    CHECK(segments[0].type == jellyfin::SegmentType::Intro);
+    CHECK(segments[0].startTicks == t(0));  // the recap and the opening that follows it: one intro
+    CHECK(segments[0].endTicks == t(150));
+    CHECK(segments[1].type == jellyfin::SegmentType::Outro);
+    CHECK(segments[1].startTicks == t(1300));
+    CHECK(segments[1].endTicks == t(1390));
+}
+
+TEST_CASE("chapter names in other languages, and a générique by where it is") {
+    const auto t = [](int seconds) { return static_cast<std::int64_t>(seconds) * 10000000; };
+    const std::vector<jellyfin::Chapter> chapters = {
+        {"Générique", t(30)}, {"Épisode", t(120)}, {"Générique", t(2500)}};
+    const auto segments = player::segmentsFromChapters(chapters, t(2600));
+    REQUIRE(segments.size() == 2);
+    CHECK(segments[0].type == jellyfin::SegmentType::Intro);
+    CHECK(segments[0].endTicks == t(120));
+    CHECK(segments[1].type == jellyfin::SegmentType::Outro);
+    CHECK(segments[1].endTicks == t(2600));  // the last chapter runs to the end of the video
+    CHECK(player::segmentsFromChapters({{"Chapter 1", 0}, {"Chapter 2", t(300)}}, t(600)).empty());
+    CHECK(player::segmentsFromChapters({{"Intro", 0}}, 0).empty());  // no length: nothing guessed
+}
+
+TEST_CASE("an item's chapters are read from the server's answer") {
+    const auto item = jellyfin::parseItem(
+        R"({"Id":"e-9","Name":"Pilot","Type":"Episode","RunTimeTicks":600000000,)"
+        R"("Chapters":[{"StartPositionTicks":0,"Name":"Intro"},{"StartPositionTicks":300000000,"Name":"Act 1"}]})");
+    REQUIRE(item.ok());
+    REQUIRE(item.value().chapters.size() == 2);
+    CHECK(item.value().chapters[0].name == "Intro");
+    CHECK(item.value().chapters[1].startTicks == 300000000);
 }

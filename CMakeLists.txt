@@ -76,6 +76,7 @@ add_library(playfin_jellyfin STATIC
     src/jellyfin/json.cpp
     src/jellyfin/models.cpp
     src/net/http.cpp
+    src/net/ftp.cpp
     src/jellyfin/client.cpp
     src/jellyfin/store.cpp
     src/jellyfin/discovery.cpp
@@ -194,6 +195,8 @@ add_library(playfin_core STATIC
     src/app/shell/search_screen.cpp
     src/app/shell/settings_screen.cpp
     src/app/shell/session.cpp
+    src/app/shell/usb.cpp
+    src/app/shell/usb_screen.cpp
 )
 target_link_libraries(playfin_core PUBLIC playfin_ui playfin_jellyfin playfin_player)
 playfin_set_warnings(playfin_core)

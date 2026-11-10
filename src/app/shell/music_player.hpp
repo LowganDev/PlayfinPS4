@@ -73,6 +73,8 @@ private:
 
     AppSession& session_;
     std::unique_ptr<player::Engine> engine_;
+    bool engineLocal_ = false;  // engine_ plays USB files (no server header)
+    bool tagsPending_ = false;  // a USB file's tags not read yet
     std::unique_ptr<player::AudioAnalysis> analysis_;  // the current track's, for the visualizer
     std::string analysisFor_;
     player::Queue queue_;

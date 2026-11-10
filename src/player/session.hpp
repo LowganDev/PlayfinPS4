@@ -27,14 +27,9 @@ struct StreamChoice {
     std::vector<ExternalSubtitle> externalSubtitles;
 };
 
-// The console's FFmpeg got no answer within 8 s from any https host it opened itself (France 24, Arte, Euronews
-// and TV5Monde's own streams, 2026-11-09, docs/ps4-notes.md): there, an https source goes straight through the
-// server's relay instead of costing 8 s at every channel change.
-#ifdef PLAYFIN_PS4
-constexpr bool kDirectHttps = false;
-#else
+// https sources are played directly on the console too (2.0 sent them through the server after a test made
+// without Internet access; retested with it on 2026-11-10, docs/ps4-notes.md).
 constexpr bool kDirectHttps = true;
-#endif
 
 // A live channel's stream address when it can be played without the server: an endless http stream (an M3U
 // tuner's), https too when `https`, else empty. It is played with no Jellyfin header (another host).
@@ -82,6 +77,12 @@ struct SegmentButton {
     enum Kind { None, SkipIntro, SkipOutro } kind = None;
     double seekTo = 0;  // seconds
 };
+
+// For a video the server has no segments for: its chapters named as an intro (intro, opening, recap, générique…,
+// in the first half) or as credits (credits, ending, outro, générique…, in the second half), each up to the next
+// chapter (the last one to `runTicks`); next to each other, they make one segment. Empty without a length.
+std::vector<jellyfin::MediaSegment> segmentsFromChapters(const std::vector<jellyfin::Chapter>& chapters,
+                                                         std::int64_t runTicks);
 
 // The button for this moment: Passer l'intro inside an Intro, Passer le générique inside an Outro.
 SegmentButton buttonAt(double position, const std::vector<jellyfin::MediaSegment>& segments);

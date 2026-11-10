@@ -10,7 +10,7 @@
 
 namespace playfin::app {
 
-enum class Tab { Home, Search, Settings };
+enum class Tab { Home, Search, Downloads, Settings };
 
 // A tab of the navigation bar: focused, it fills with the accent; the current tab is underlined with it.
 class NavTab : public ui::Box {
@@ -29,7 +29,7 @@ private:
     ui::Label* label_;
 };
 
-// The top line of the tab screens (home, search, settings): the logo, the three tabs, then "server · user" and
+// The top line of the tab screens (home, search, downloads, settings): the logo, the four tabs, then "server · user" and
 // the user's avatar. ✕ on a tab replaces the screen stack with that tab's screen.
 class NavBar : public ui::Box {
 public:

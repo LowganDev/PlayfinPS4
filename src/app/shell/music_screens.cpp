@@ -679,12 +679,13 @@ private:
         }
         const MusicPlayer::Status status = music_.status();
         const jellyfin::Item& track = *status.track;
+        // the texts as they are now (a USB drive's track gets its own tags once it plays)
+        title_->setText(track.name);
+        artist_->setText(!track.artists.empty() ? track.artists.front() : track.albumArtist);
+        album_->setText(track.album);
         if (track.id != trackId_) {
             trackId_ = track.id;
-            title_->setText(track.name);
-            artist_->setText(!track.artists.empty() ? track.artists.front() : track.albumArtist);
-            album_->setText(track.album);
-            if (const auto client = session_.client()) {
+            if (const auto client = track.localUrl.empty() ? session_.client() : nullptr) {
                 const int size = static_cast<int>(kNowPlayingCover);
                 // the album's cover (tracks rarely have their own)
                 cover_->setUrl(!track.albumId.empty() && !track.images.albumPrimary.empty()

@@ -89,6 +89,7 @@ screenshot search_results
 press Up
 wait 10
 press Right
+press Right
 press Confirm
 wait 30
 screenshot settings
@@ -97,7 +98,6 @@ wait 15
 screenshot settings_accent
 press Back
 wait 10
-press Down
 press Down
 press Down
 press Down
@@ -129,8 +129,8 @@ press Up
 press Up
 press Up
 press Up
-press Up
 wait 20
+press Left
 press Left
 press Left
 press Confirm

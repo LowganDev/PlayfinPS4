@@ -127,6 +127,18 @@ Item parseItemValue(yyjson_val* value, int depth = 0) {
             }
         }
     }
+    if (yyjson_val* chapters = json::array(value, "Chapters")) {
+        yyjson_arr_iter iter = yyjson_arr_iter_with(chapters);
+        yyjson_val* entry = nullptr;
+        while ((entry = yyjson_arr_iter_next(&iter)) != nullptr && item.chapters.size() < kMaxChapters) {
+            if (yyjson_is_obj(entry)) {
+                const std::int64_t start = json::integer(entry, "StartPositionTicks");
+                if (start >= 0) {
+                    item.chapters.push_back({json::string(entry, "Name"), start});
+                }
+            }
+        }
+    }
     return item;
 }
 

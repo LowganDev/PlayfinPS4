@@ -4,7 +4,7 @@
 
 namespace playfin::app {
 
-player::EngineOptions engineOptionsLocal(bool synchronous) {
+player::EngineOptions engineOptionsLocal(bool synchronous, player::StreamOpener usb) {
     const std::string resources = platform::resourceDir();
     player::EngineOptions options;
 #ifdef PLAYFIN_PS4
@@ -16,6 +16,7 @@ player::EngineOptions engineOptionsLocal(bool synchronous) {
     }
     options.fontsDir = resources + "/fonts";
     options.caFile = resources + "/certs/cacert.pem";
+    options.usb = std::move(usb);
     return options;
 }
 

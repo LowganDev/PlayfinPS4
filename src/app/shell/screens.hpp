@@ -35,6 +35,8 @@ std::unique_ptr<ui::Screen> makeLiveTv(AppSession& session, jellyfin::Item view)
 std::unique_ptr<ui::Screen> makeSearch(AppSession& session);
 // The films and episodes kept on the console: their state, played offline (pushed).
 std::unique_ptr<ui::Screen> makeDownloads(AppSession& session);
+// A folder of a USB drive ("/mnt/usb0", "/mnt/usb0/Films"): its folders, videos and music, played without the server.
+std::unique_ptr<ui::Screen> makeUsbBrowser(AppSession& session, std::string path, std::string title);
 // The order of the libraries on Home (pushed from the settings).
 std::unique_ptr<ui::Screen> makeLibraryOrder(AppSession& session);
 // Accent colour, playback quality, language, account, about.

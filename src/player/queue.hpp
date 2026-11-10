@@ -20,6 +20,8 @@ public:
     void set(std::vector<jellyfin::Item> items, int start, bool shuffle);
     bool empty() const { return items_.empty(); }
     const jellyfin::Item* current() const;
+    // The current track's name, artist and album (what a file's own tags say once it plays); nothing without one.
+    void describeCurrent(const std::string& name, const std::string& artist, const std::string& album);
     const std::vector<jellyfin::Item>& items() const { return items_; }
 
     // The next track: false at the end (repeat off). Repeat one keeps the track when it ended by itself, a user's

@@ -104,6 +104,14 @@ struct Person {
     std::string imageTag;
 };
 
+// A chapter of a video, as the file names it ("Intro", "Opening", "Générique de fin"…).
+struct Chapter {
+    std::string name;
+    std::int64_t startTicks = 0;
+};
+
+constexpr std::size_t kMaxChapters = 256;
+
 struct Item {
     std::string id;
     std::string name;
@@ -152,6 +160,9 @@ struct Item {
     // a single item's details (/Items/{id}): its people and versions
     std::vector<Person> people;
     std::vector<MediaSource> mediaSources;
+    std::vector<Chapter> chapters;  // in the order of the file
+    // a file played without the server: a USB drive's ("pfusb:///mnt/usb0/Films/x.mkv"); never from a server
+    std::string localUrl;
 };
 
 // A scheduled recording.

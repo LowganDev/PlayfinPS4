@@ -5,7 +5,7 @@ target_include_directories(playfin_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(playfin_tests PRIVATE PLAYFIN_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
     PLAYFIN_PROJECT_VERSION="${PROJECT_VERSION}")
 playfin_set_warnings(playfin_tests)
-add_library(playfin_test_support STATIC support/fake_server.cpp support/fake_jellyfin.cpp)
+add_library(playfin_test_support STATIC support/fake_server.cpp support/fake_jellyfin.cpp support/fake_ftp.cpp)
 target_link_libraries(playfin_test_support PUBLIC playfin_jellyfin httplib stb)
 target_include_directories(playfin_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(playfin_test_support PUBLIC PLAYFIN_TEST_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

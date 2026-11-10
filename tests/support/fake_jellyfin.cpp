@@ -574,6 +574,11 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
             res.set_content(readFixture("jellyfin/item_episode.json"), "application/json");
         } else if (id == "s-1") {
             res.set_content(readFixture("jellyfin/item_series.json"), "application/json");
+        } else if (id == "m-chapters") {  // no media segments; an intro chapter over the 4 s clip's first 3 s
+            res.set_content(R"({"Id":"m-chapters","Name":"Chaptered","Type":"Movie","RunTimeTicks":40000000,)"
+                            R"("Chapters":[{"StartPositionTicks":0,"Name":"Opening"},)"
+                            R"({"StartPositionTicks":30000000,"Name":"Chapter 2"}]})",
+                            "application/json");
         } else {
             res.status = 404;
         }

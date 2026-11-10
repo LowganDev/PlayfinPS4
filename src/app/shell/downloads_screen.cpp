@@ -9,9 +9,11 @@
 #include "app/shell/chrome.hpp"
 #include "app/shell/downloads.hpp"
 #include "app/shell/format.hpp"
+#include "app/shell/nav_bar.hpp"
 #include "app/shell/screen.hpp"
 #include "app/shell/screens.hpp"
 #include "player/session.hpp"
+#include "ui/application.hpp"
 #include "ui/i18n.hpp"
 #include "ui/scroll.hpp"
 #include "ui/widgets.hpp"
@@ -38,7 +40,9 @@ std::string sizeText(std::int64_t bytes) {
 std::string stateText(const Downloads::Entry& entry) {
     switch (entry.state) {
     case Downloads::State::Done:
-        return ui::tr("downloads.done", {sizeText(entry.size)});
+        return entry.drive.empty() ? ui::tr("downloads.done", {sizeText(entry.size)})
+                                   : ui::tr("downloads.done", {sizeText(entry.size)}) + " \xC2\xB7 " +
+                                         ui::tr("downloads.target.usb");
     case Downloads::State::Running:
         return entry.size > 0 ? ui::tr("downloads.progress", {std::to_string(entry.received * 100 / entry.size)})
                               : ui::tr("downloads.progress_bytes", {sizeText(entry.received)});
@@ -50,86 +54,160 @@ std::string stateText(const Downloads::Entry& entry) {
     return {};
 }
 
-// "Téléchargements": each film or episode with its state; ✕ plays one (or tries a failed one again), △ removes it.
+// The "Téléchargements" tab: what is on its way (waiting, downloading, failed), then what is downloaded, each film
+// or episode with its state; ✕ plays one (or tries a failed one again), OPTIONS removes it.
 class DownloadsScreen : public ShellScreen {
 public:
     explicit DownloadsScreen(AppSession& session) : ShellScreen(session), downloads_(session.downloads()) {
-        column_ = addPage(*this, ui::tr("downloads.title"));
+        auto* scroll = add<ui::VScroll>();
+        scroll->policy = ui::VScroll::Policy::Nearest;
+        auto content = std::make_unique<ui::Box>(ui::Axis::Column);
+        content->padding = pagePadding();
+        content->gap = ui::theme().spacingM;
+        column_ = content.get();
+        navBar_ = column_->add<NavBar>(session_, Tab::Downloads);
+        if (session_.usbFtp) {  // where the next downloads go: the console or a USB drive
+            target_ = column_->add<ui::ValueRow>(ui::tr("downloads.target"), targetName(), [this] { chooseTarget(); });
+            target_->margin = {ui::theme().spacingL, 0, 0, 0};
+        }
         space_ = column_->add<ui::Label>("", bodyText());
         space_->color = ui::theme().textSecondary;
-        auto* scroll = column_->add<ui::VScroll>();
-        scroll->policy = ui::VScroll::Policy::Nearest;
-        scroll->width = ui::SizeSpec::fill();
-        scroll->height = ui::SizeSpec::fill();
-        auto list = std::make_unique<ui::Box>(ui::Axis::Column);
-        list->width = ui::SizeSpec::fill();
-        list->gap = ui::theme().spacingS;
-        list->padding = {ui::theme().spacingS, 0, 120, 0};
-        list_ = list.get();
-        scroll->setContent(std::move(list));
+        space_->margin = {ui::theme().spacingL, 0, 0, 0};
+        runningHeading_ = addSection(ui::tr("downloads.section_running"));
+        running_ = column_->add<ui::Box>(ui::Axis::Column);
+        running_->width = ui::SizeSpec::fill();
+        running_->gap = ui::theme().spacingS;
+        doneHeading_ = addSection(ui::tr("downloads.section_done"));
+        done_ = column_->add<ui::Box>(ui::Axis::Column);
+        done_->width = ui::SizeSpec::fill();
+        done_->gap = ui::theme().spacingS;
+        empty_ = column_->add<ui::Label>(ui::tr("downloads.empty"), bodyText());
+        empty_->color = ui::theme().textSecondary;
+        empty_->margin = {ui::theme().spacingL, 0, 0, 0};
+        auto* bottom = column_->add<ui::View>();  // room for the hints bar under the last row
+        bottom->height = ui::SizeSpec::fixed(120);
+        scroll->setContent(std::move(content));
         downloads_.listen(this, [this] { refresh(); });
         rebuild();
     }
     ~DownloadsScreen() override { downloads_.unlisten(this); }
 
+    void onShow() override {
+        ShellScreen::onShow();
+        refreshSpace();
+    }
+
 private:
-    // rows rebuilt when the list changes; only their texts when a download moves on
+    std::string targetName() const {
+        return ui::tr(session_.settings().downloadTarget == "usb" ? "downloads.target.usb" : "downloads.target.console");
+    }
+
+    void chooseTarget() {
+        const bool usb = session_.settings().downloadTarget == "usb";
+        ui::Application::current()->showModal(ui::makeChoiceDialog(
+            ui::tr("downloads.target"), {ui::tr("downloads.target.console"), ui::tr("downloads.target.usb")}, usb ? 1 : 0,
+            [this](int index) {
+                session_.settings().downloadTarget = index == 1 ? "usb" : "console";
+                session_.saveSettings();
+                target_->setValue(targetName());
+                refreshSpace();
+            }));
+    }
+
+    ui::Label* addSection(const std::string& text) {
+        auto* heading =
+            column_->add<ui::Label>(text, ui::FontStyle{ui::theme().fontHeading, ui::FontWeight::SemiBold});
+        heading->margin = {ui::theme().spacingL, 0, 0, 0};
+        return heading;
+    }
+
+    // rows rebuilt when the list or a state changes; only their texts when a download moves on
     void refresh() {
-        std::string signature;
-        for (const auto& entry : downloads_.entries()) {
-            signature += entry.item.id + ",";
-        }
-        if (signature != signature_) {
+        if (signature() != signature_) {
             rebuild();
             return;
         }
-        for (std::size_t i = 0; i < rows_.size() && i < downloads_.entries().size(); ++i) {
-            rows_[i]->setValue(stateText(downloads_.entries()[i]));
+        for (const auto& entry : downloads_.entries()) {
+            for (const auto& row : rows_) {
+                if (row.first == entry.item.id) {
+                    row.second->setValue(stateText(entry));
+                }
+            }
         }
         refreshSpace();
     }
 
+    std::string signature() const {
+        std::string text;
+        for (const auto& entry : downloads_.entries()) {
+            text += entry.item.id + (entry.state == Downloads::State::Done ? "+" : "-") + ",";
+        }
+        return text;
+    }
+
+    // the console's free space; none shown for a USB drive (GoldHEN's FTP server cannot tell a drive's)
     void refreshSpace() {
-        const std::int64_t free = Downloads::freeBytes();
+        const std::int64_t free = session_.settings().downloadTarget == "usb" ? 0 : Downloads::freeBytes();
         space_->setText(free > 0 ? ui::tr("downloads.free", {sizeText(free)}) : std::string());
+        space_->visible = free > 0;
+        markDirty();
     }
 
     void rebuild() {
-        signature_.clear();
         ui::Application* app = ui::Application::current();
-        int focused = -1;
-        for (std::size_t i = 0; i < rows_.size(); ++i) {
-            if (app != nullptr && app->focus().focused() == rows_[i]) {
-                focused = static_cast<int>(i);
+        std::string focusedId;
+        for (const auto& row : rows_) {
+            if (app != nullptr && app->focus().focused() == row.second) {
+                focusedId = row.first;
             }
         }
-        if (app != nullptr && list_->isAncestorOf(app->focus().focused())) {
+        const bool hadFocus = app != nullptr && app->focus().focused() != nullptr &&
+                              (running_->isAncestorOf(app->focus().focused()) ||
+                               done_->isAncestorOf(app->focus().focused()));
+        if (hadFocus) {
             app->focus().focus(this);
         }
-        list_->clearChildren();
+        running_->clearChildren();
+        done_->clearChildren();
         rows_.clear();
+        signature_ = signature();
+        ui::ValueRow* first = nullptr;
+        ui::ValueRow* again = nullptr;
         for (const auto& entry : downloads_.entries()) {
-            signature_ += entry.item.id + ",";
             const std::string id = entry.item.id;
             std::string title = cardTitle(entry.item);
             if (entry.item.type == jellyfin::ItemType::Episode) {
                 title += " \xC2\xB7 " + cardSubtitle(entry.item);
             }
-            auto* row = list_->add<ui::ValueRow>(title, stateText(entry), [this, id] { press(id); });
+            ui::Box* list = entry.state == Downloads::State::Done ? done_ : running_;
+            auto* row = list->add<ui::ValueRow>(title, stateText(entry), [this, id] { press(id); });
             row->width = ui::SizeSpec::fill();
             row->bind(platform::Action::Options, ui::tr("downloads.remove"), [this, id] {
                 later([this, id] { confirmRemove(id); });
                 return true;
             });
-            rows_.push_back(row);
+            rows_.emplace_back(id, row);
+            if (id == focusedId) {
+                again = row;
+            }
         }
-        if (rows_.empty()) {
-            list_->add<ui::Label>(ui::tr("downloads.empty"), bodyText())->color = ui::theme().textSecondary;
-        }
+        // the first row in the order shown: what is on its way, then what is downloaded
+        first = !running_->children().empty()  ? static_cast<ui::ValueRow*>(running_->children().front().get())
+                : !done_->children().empty() ? static_cast<ui::ValueRow*>(done_->children().front().get())
+                                             : nullptr;
+        runningHeading_->visible = !running_->children().empty();
+        running_->visible = runningHeading_->visible;
+        doneHeading_->visible = !done_->children().empty();
+        done_->visible = doneHeading_->visible;
+        empty_->visible = rows_.empty();
         refreshSpace();
-        if (app != nullptr && !rows_.empty() && app->top() == this && !app->hasModal()) {
-            const int index = focused < 0 ? 0 : std::min(focused, static_cast<int>(rows_.size()) - 1);
-            app->focus().focus(rows_[static_cast<std::size_t>(index)]);
+        remembered = first != nullptr ? static_cast<ui::View*>(first) : target_;
+        if (app != nullptr && app->top() == this && !app->hasModal()) {
+            if (hadFocus && (again != nullptr || first != nullptr)) {
+                app->focus().focus(again != nullptr ? static_cast<ui::View*>(again) : first);
+            } else if (first != nullptr || target_ != nullptr) {
+                focusContent(first != nullptr ? static_cast<ui::View*>(first) : target_, navBar_->currentTab());
+            }
         }
         markDirty();
     }
@@ -159,9 +237,15 @@ private:
 
     Downloads& downloads_;
     ui::Box* column_;
+    NavBar* navBar_;
+    ui::ValueRow* target_ = nullptr;
     ui::Label* space_;
-    ui::Box* list_;
-    std::vector<ui::ValueRow*> rows_;
+    ui::Label* runningHeading_;
+    ui::Box* running_;
+    ui::Label* doneHeading_;
+    ui::Box* done_;
+    ui::Label* empty_;
+    std::vector<std::pair<std::string, ui::ValueRow*>> rows_;
     std::string signature_;
 };
 
