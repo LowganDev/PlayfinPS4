@@ -157,7 +157,7 @@ The screens of the app.
   `Client::episodes(seriesId, "")`; specials only around a special), or channel on Live TV. Test scripts hold a button with
   `down <Action>` / `up <Action>`.
 - Live TV direct (`player_screen.cpp`): `chooseStream` keeps `sourceUrl` (`directSourceUrl`: endless, Protocol
-  Http, an http Path, or https except on the console: `player::kDirectHttps`, docs/ps4-notes.md); the player tries it first on an engine of its own (`engineOptionsDirect`: no Jellyfin
+  Http, an http or https Path; `player::kDirectHttps`, docs/ps4-notes.md); the player tries it first on an engine of its own (`engineOptionsDirect`: no Jellyfin
   header, FFmpeg reconnect options), falls back to the server's relay on an engine error or with no picture after
   8 s, and opens a live stream again after 15 s without a new picture (`watchLive`). The live stream PlaybackInfo
   opened is closed as before.
@@ -210,13 +210,29 @@ The screens of the app.
   before the main queue goes; the part file left is removed at the next start. The player plays a finished download from its file without the
   server (`engineOptionsLocal`, no PlaybackInfo, no report) and keeps where it was left in the list. Pictures of
   downloads are `file://` URLs that `AppSession::fetchImage` reads from `downloads/` only.
+- USB drives (`usb.{hpp,cpp}`, `usb_screen.cpp`, `net/ftp.{hpp,cpp}`): the sandbox hides `/mnt/usbN`, so drives are
+  reached through GoldHEN's FTP server on 127.0.0.1:2121 (`AppSession::usbFtp`; `$PLAYFIN_USB_FTP` on Linux,
+  tests give a `test::FakeFtp`). `net::FtpClient` (curl, ftp only, absolute paths without CWD, PASV, `*MKD`,
+  RNFR/RNTO) checks every path (`validFtpPath`); `usbDrives` lists `/mnt` (a mounted drive has a size or entries).
+  The player reads `pfusb://<path>` through mpv's stream_cb (`EngineOptions::usb`, `usbOpener`): an
+  `net::FtpReader` per stream (a curl multi transfer from the position asked, paused past 4 MB unread, a seek
+  starts a new one, cancel from mpv). A drive's video plays with the subtitle files beside it (`sub-add` once the
+  file is loaded); the local track menu lists mpv's `track-list`. Music from a drive: `Item::localUrl`, a local
+  engine, no report. Downloads to a drive (`downloadTarget` "usb"): `Downloads::toDrive` pipes the HTTP transfer
+  into an FTP upload on its own thread (`<drive>/Playfin/<file>.part`, renamed when complete); the picture stays
+  on the console; `Entry::drive`; `localFile` gives the `pfusb://` URL. Only `<drive>/Playfin/<name>` is ever
+  written (`usbWritablePath`).
+- Chapters (`Item::chapters`, `player::segmentsFromChapters`): without media segments, chapters named as an intro
+  (first half) or credits (second half) become the skip buttons' segments.
 - Software update (`app/update.{hpp,cpp}`): `fetchLatestRelease` (GitHub's API, a generic User-Agent),
   `parseLatestRelease` (a `.pkg` asset with an https address, a size and a `sha256:` digest), `newerVersion`;
   `downloadPackage` writes through a `FileSink`, hashing with `net::Sha256Stream` as it arrives, and keeps the
   file only when size and digest match; it runs on the transfer thread too. `core::packagePath` is
   `/data/pkg/Playfin-<version>.pkg` on the PS4 (the one write outside the data folder; the folder is created
   when missing and never chmodded) and the data folder's `pkg/` on Linux. `AppSession::checkForUpdate` runs
-  once at start (not in test mode); the settings tab shows a dot (`NavTab::badge`).
+  once at start (not in test mode); the settings tab shows a dot (`NavTab::badge`), and the settings screen an
+  `UpdateBanner` at its top (accent fill, focused first; ✕ asks for the download, its state on the right, then
+  how to install). The screen refreshes it in `onShow`, as the check may answer after it was built.
 - PS4 accounts: `platform::consoleUserId()` (`sceUserServiceGetInitialUser`); `servers.json` keeps a
   `ConsoleProfile` (server, user) per account and an optional shared sign-in; `startTarget` starts each account on
   its own user, gives an installation from before 2.0 to the first account that starts it, else the shared

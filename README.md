@@ -27,6 +27,8 @@
 - **Music:** a queue that keeps playing while you browse, with a visualizer.
 - **For the whole household:** several servers and users, Quick Connect, a Jellyfin user per PS4 account,
   14 languages.
+- **USB drives:** videos and music played straight from a USB drive, and downloads saved to it.
+- **Updates in the app:** a new version is offered at the top of the settings and downloaded in one press.
 
 ![Home](docs/images/screens/home.jpg)
 
@@ -42,12 +44,6 @@
 - A PS4 with GoldHEN (the app is a homebrew package; the console's firmware and saves are not touched).
 - A Jellyfin server, version 10.10 or later.
 
-### Tested consoles
-
-| Type | Firmware | Status |
-|---|---|---|
-| PS4 Fat | 13.52 | ✅ |
-
 ## Installing
 
 1. Download `IV0001-PLFN00000_00-PLFN000000100000.pkg` with the button at the top, copy it to the console (USB
@@ -56,8 +52,9 @@
    address (for example `192.168.1.20:8096` or `https://media.example.com`).
 
 The app keeps its settings in `/data/Playfin/` on the console (servers, settings, downloads, the image cache and
-`playfin.log`). Updates: Settings › Mise à jour downloads the newer package to `/data/pkg` and checks it; install
-it from the Package Installer as above.
+`playfin.log`). Updates: when a newer Playfin is out, a banner at the top of the settings downloads its package to
+`/data/pkg` and checks it; install it from the Package Installer as above. USB drives are reached through
+GoldHEN's FTP server, which must be on; Playfin writes on a drive only in a `Playfin` folder at its root.
 
 ## Building
 

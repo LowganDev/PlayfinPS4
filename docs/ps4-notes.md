@@ -32,13 +32,19 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
   was spared by `CURLOPT_IPRESOLVE_V4`). The executable is linked with `--wrap=getaddrinfo`
   (`resolver_ps4.cpp`): a caller without a preference gets IPv4 only (43 ms instead of 5 s). It also removed a 2 s
   UI freeze: an engine destroyed while its resolver waited held the main thread.
-- FFmpeg's own HTTPS (mbedTLS) got no answer within 8 s from France 24, Arte, Euronews and TV5Monde's CDNs
-  (2026-11-09: "Opening https://…" then nothing, with the resolver fixed; plain HTTP to the same hosts answers at
-  once). Not solved: a channel's https source goes through the server's relay on the console
-  (`player::kDirectHttps`); http sources still play directly. To look at for 2.1 (the FFmpeg/mbedTLS recipes).
-
-## Graphics
-
+- FFmpeg's own HTTPS works on the console. On 2026-11-09 it seemed not to: the console had no Internet that
+  day (the Freebox answered every name with its own page, 212.27.38.252), which `player::kDirectHttps` (https
+  sources through the server on the console) came from. Retested 2026-11-10 with Internet and kDirectHttps true:
+  France 24 (picture in 1.3 s), Euronews (4.7 s) and TV5Monde (3.4 s) play straight from their https source;
+  Arte falls back to the server after 8 s (its master playlist lists backup variants that do not answer).
+  kDirectHttps is true everywhere since 2.1.
+- GoldHEN SDK (2026-11-10): `syscall 500` with `GOLDHEN_SDK_CMD_VERSION` answered 0xffffffffffffff00 instead of a
+  version (>= 0x100) on the user's console; the probe stopped there and never asked for the sandbox escape. The
+  app's own sandbox does not show `/mnt/usb0` (opendir: No such file or directory) while GoldHEN's FTP lists it:
+  USB drives are reached through GoldHEN's FTP (127.0.0.1:2121) on that console.
+- In-app update (branch `2.1`), 2026-11-10 with Internet: a build calling itself 2.0.0 found 2.0.1 at once,
+  downloaded it to `/data/pkg/Playfin-2.0.1.pkg` (51 511 296 bytes, digest checked), GoldHEN's Package Installer
+  listed and installed it, and Playfin started as 2.0.1 with its servers and settings kept.
 - Retail firmware has no runtime shader compiler (Piglet "OpenGL ES 2.0 Piglet", `GL_SHADER_COMPILER` 0), so
   NanoVG's GLES2 backend cannot run. The system's `libScePrecompiledShaders.sprx` exports compiled shaders
   loadable with `glShaderBinary`; `swordfish/vpBasic` + `swordfish/fpAlphaTexture` draw a texture upright with

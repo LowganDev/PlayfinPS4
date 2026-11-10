@@ -31,6 +31,12 @@
 - Downloads go to the data folder's `downloads/` only, under names made from the item id (letters, digits,
   dashes); `downloads.json` is read with a size limit and file names with a `/` are ignored. Download pictures
   (`file://` URLs) are read from that folder only.
+- USB drives (2.1.0) are reached through GoldHEN's FTP server on 127.0.0.1 only (curl limited to the ftp
+  protocol). Every path is checked before it is sent (absolute, no `.`/`..`, no empty parts, no control
+  characters: no command can be smuggled into the FTP conversation) and must be inside `/mnt/usb0` to `/mnt/usb7`
+  for reading; writing and deleting are limited to `<drive>/Playfin/<plain name>` (`usbWritablePath`).
+  `downloads.json` entries with any other drive are ignored. The app stays in its sandbox: GoldHEN's SDK escape
+  is not used (approved as a fallback-only exception on 2026-11-10, not needed with the FTP route).
 - A live channel's own stream (an M3U tuner's `Path`, http or https only, `player::directSourceUrl`) is played by an
   engine without the Authorization header (`engineOptionsDirect`: the token never reaches the tuner's host) and with
   TLS verification against the bundled CA list; anything else goes through the server.
