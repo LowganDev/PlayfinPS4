@@ -1,9 +1,19 @@
 # Changelog
 
-## 2.1.0 (unreleased)
+## 2.1.0 (2026-11-10)
 
 - Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
-  a dot on the settings tab when one is out.
+  a dot on the settings tab when one is out, and a banner at the top of the settings (focused first: ✕
+  downloads it, then tells how to install it).
+- USB drives: a "USB drive" card among the libraries opens the drive; its folders, videos and music play without
+  the server (subtitle files beside a video are offered in its track menu). Reached through GoldHEN's FTP server,
+  which must be on.
+- Downloads tab: everything downloaded and on its way in the navigation bar; "Save to" chooses the PS4 or a USB
+  drive (its Playfin folder).
+- Intro and credits skipping for videos the server has no markers for: chapters named as an intro or credits.
+- Files played without the server (downloads, USB drives): their own audio and subtitle tracks in the menu.
+- Live TV: channels with an https stream play straight from it on the console too (2.0 sent them through the
+  server after a test made without Internet access).
 
 ## 2.0.1 (2026-11-09)
 
