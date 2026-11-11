@@ -8,6 +8,8 @@
 - Seeking shows the picture at the target time above the bar, from the server's trickplay pictures (Jellyfin 10.9
   and later, when the library has them).
 - Playback speed in the player's menu, from 0.5× to 2×, kept for the next episode.
+- Downloads show the time left (on the film's button and in the Downloads tab) and, in the tab, the speed.
+- Fixed: pressing a film's download button while it downloads closed Playfin with an error.
 
 ## 2.1.0 (2026-11-10)
 

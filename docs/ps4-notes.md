@@ -86,3 +86,44 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
 - UI pace: the loop presents every display slot (vsync, 16.6 ms); a software frame of up to about 30 ms still makes
   every other slot, hence a steady 30 frames a second (`ui::FramePacer`). Gradients are the renderer's slowest
   paint: the hints' 1920x104 fade alone cost 12 M cycles a frame (60 cycles a pixel), a backdrop shade 87 M.
+
+## Themes, trickplay and speed (2.2, measured on the console on 2026-11-11)
+
+- Projecteur's home draws a frame in 11 to 14 ms. Ultrachromic and Zesty (a backdrop that follows the focus, with
+  blur or tint) take 21 to 25 ms a frame while browsing the home: still 30 frames a second at the median, with one
+  or two frames of about 55 ms every 5 s when a new backdrop fades in over the last one (a full-screen blend of two
+  layers over the theme's background). Done since, to measure again on the console: theme backdrop layers come
+  without a fade (`ImageView::fadeIn`), only the covering layer is drawn, the background image is skipped under a
+  screen that covers it (`Screen::coversBackground`: home, library and details once their backdrop is there), and
+  the root is no longer painted over a frame already cleared to the background colour. Measured again the same day
+  with Zesty on the home: 20 ms a frame at the median, 25 ms at most, no frame dropped while browsing.
+- Trickplay: Nayde's films have 320 px pictures; the preview shows while a seek is held. A single short press can
+  apply its seek before the first sheet (3200 x 1800) has arrived, so no picture showed then: since, the sheet of the
+  playing position and the next one are fetched while playing (`TrickplayPreview::follow`); checked on the console:
+  one short press shows the picture.
+- Speed: 1.5x confirmed by the bar's time (17 s of film in about 11 s). The video's own frame drops are only in the
+  debug log (`player: fps ... decoder-drops`), not measured remotely.
+- Every theme measured on the console the same day, browsing the home (frame drawn, median, after the fixes):
+  Projecteur 20-22 ms, ElegantFin 24-27 ms, Ultrachromic 21-23 ms, Abyss 21-22 ms, Zesty 20 ms, Finimalism 20 ms;
+  30 frames a second with no frame dropped. Before the card borders were drawn as an image, ElegantFin and Abyss
+  spent 40 to 45 % of a frame stroking a rounded border around every card (ElegantFin fell to 20 frames a second):
+  borders are now `ui::ringImage`, made once per card size and drawn over the corners and the thin edges only.
+- Full pass on the console the same day (2.2 test build): settings (theme, accent on top and back to the theme's,
+  licences with the themes' credits), search typed on the on-screen keyboard, the Downloads tab, a library with
+  its quick look, a person's page, a series and its episode, the player (trickplay on a short press, 1.5x on a 1080p
+  H.264 episode, 2x on a 1080p HEVC 5.1 file from the USB drive played to its end), music from the USB drive with
+  its tags. `playfin.log` without an error or a warning. Remote Play sends R2 as a plain button: the L2 / R2 hold
+  (next episode) cannot be checked remotely, only by the unit tests.
+- Blurred backdrops (Ultrachromic, Abyss, Zesty) first came from a picture reduced to 1/32 and stretched back:
+  blocky on the TV ("144p"). They are now a real blur of about 19 px at 1080p (halved, three box passes each way,
+  bilinear back), baked on a worker; smooth on the console, frame times unchanged (Ultrachromic 20-23 ms).
+  ElegantFin's sheen went from 22 % to 7 % white on a narrower band: too strong on the TV before.
+- Crash (CE-34878-0) on 2026-11-11: on a film's details page, pressing the download button while the film was
+  downloading opened the Downloads tab, which replaced the stack and destroyed the details screen still running
+  the press (`refreshDownload()` was then called on the freed screen). The tab now opens on the next frame
+  (`later`), and nothing of the screen is touched after; found under UBSan by a test that presses that button.
+  Rule: a press that replaces the screen it belongs to defers it, and returns.
+- Downloads: the file is written in 1 MB blocks (`FileSink` gathers pieces) and curl receives 512 KB blocks for a
+  download (16 KB by default). On the console a film downloads at about 4.5 MB/s, the same rate as an FTP upload
+  to it: the console's network is the limit (a 6 GB film takes about 22 minutes).
+

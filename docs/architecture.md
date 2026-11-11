@@ -37,9 +37,11 @@ Playfin is a C++17 application for the PS4 (OpenOrbis) with a Linux build used f
 - Theme backgrounds are baked once per theme change into one opaque image (`ui::backgroundImage`: the halo, a
   vertical gradient, a fixed grain, or nothing for a plain colour; `backgroundLitRows` says how many rows to draw).
   Backdrops of the themes whose background follows the focus are decoded with their treatment baked in
-  (`ImageShape::ThemedBackdrop`, `ui::bakeBackdrop`: blur by a 1/32 box filter and bilinear back up, then
+  (`ImageShape::ThemedBackdrop`, `ui::bakeBackdrop`: a blur of about 19 px at 1080p — halved, three box passes each way, bilinear back — then
   saturation, contrast, brightness; a tint of 70 % ground with grain; or a 54° diagonal of the ground over a sharp
   picture), keyed by the theme's id; the screensaver keeps the plain shade (`ImageShape::Backdrop`).
+  A theme's card border is a cached `ui::ringImage` drawn over the picture's corners and edges (a rounded stroke on
+  every card cost up to 45 % of a frame on the console).
   `app::ThemeBackdrop` sits first on the home and library screens and shows the focused card's backdrop 400 ms
   after the focus settles; the details page uses the same treatment.
 - Fonts per theme: `ThemeFont` names three files and whether they cover Cyrillic and Vietnamese (checked against the
@@ -333,6 +335,10 @@ The screens of the app.
   live channels; "Se termine à" uses `player::remainingSeconds`. The next episode (card, L2 / R2, the end) keeps
   the speed through `makePlayer(..., speed)`; anything started from the menus plays at 1. Above what the console
   decodes, mpv drops pictures and the sound stays in step (the user's choice over a lighter transcode).
+- Downloads' speed and time left (2.2): the transfer posts its progress at each percent and at least once a second;
+  `TransferRate` keeps the samples of the last 10 s (known after 2 s) and gives the speed and `secondsLeft`
+  (rounded up). `Downloads::runningText` shows them ("… 9 % · 4,9 Mo/s · reste 20 min"; the details' button
+  without the speed). Not saved: a restart measures again.
 - Trickplay (2.2): `Client::item` asks for `Chapters,Trickplay`; `Item::trickplay` maps a version to its widths
   (`TrickplayInfo`). `player::pickTrickplay` takes the smallest width of at least 240 px, `trickplayFrame` the
   sheet and rectangle for a time (clamped to the last picture). `app::TrickplayPreview` shows the picture while
