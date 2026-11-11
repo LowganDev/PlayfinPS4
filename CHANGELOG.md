@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.2.1 (unreleased)
+## 2.2.1 (2026-11-11)
 
 - Downloads can be paused and resumed from the Downloads tab (✕ on a download on its way, the hint says which); a
   paused download, or one stopped by closing Playfin, goes on from where it was instead of starting over, on the
