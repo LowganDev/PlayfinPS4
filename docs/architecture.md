@@ -339,6 +339,19 @@ The screens of the app.
   `TransferRate` keeps the samples of the last 10 s (known after 2 s) and gives the speed and `secondsLeft`
   (rounded up). `Downloads::runningText` shows them ("… 9 % · 4,9 Mo/s · reste 20 min"; the details' button
   without the speed). Not saved: a restart measures again.
+- Paused and resumed downloads (2.2.1): `Downloads::pause` cancels the transfer with `keepPart_` set, so the part
+  file stays (`FileSink::keep`); the app's closing does the same (`stop`). The next start asks the server for the
+  rest (`Client::downloadItem(from)`: a Range header); the status says whether it answered with the rest (206,
+  written after the part, `FileSink(path, true)`) or the whole file again (the part starts over, `restart`). On a
+  USB drive the upload starts with that status, appending (FTP APPE) after the part found there. `load` keeps the
+  part files of downloads waiting or paused and removes the others. `move` reorders those waiting, never above
+  the one running. In the Downloads tab a row binds ✕ once per state with its own hint ("Mettre en pause",
+  "Reprendre", "Réessayer", "Lire") shown only in that state, and L1 / R1 only while waiting or paused: the rows
+  are not rebuilt when a state changes, and a hint's `shown` is asked at each frame.
+- Subtitles (2.2.1): `EngineOptions::subtitleScale` (mpv `sub-scale`) and `subtitleBackground` (libass' opaque box
+  through `sub-ass-force-style`: mpv 0.36 has no `sub-border-style`), from the settings' size and background.
+- Old update packages (2.2.1): at start, `removeOldPackages` deletes "Playfin-<version>.pkg" files in the package
+  folder whose version is the running one or older, nothing else (`core::packageFolder` never creates it).
 - Trickplay (2.2): `Client::item` asks for `Chapters,Trickplay`; `Item::trickplay` maps a version to its widths
   (`TrickplayInfo`). `player::pickTrickplay` takes the smallest width of at least 240 px, `trickplayFrame` the
   sheet and rectangle for a time (clamped to the last picture). `app::TrickplayPreview` shows the picture while

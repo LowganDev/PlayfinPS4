@@ -97,6 +97,10 @@ What the console, the OpenOrbis toolchain and the PacBrew libraries require, and
   screen that covers it (`Screen::coversBackground`: home, library and details once their backdrop is there), and
   the root is no longer painted over a frame already cleared to the background colour. Measured again the same day
   with Zesty on the home: 20 ms a frame at the median, 25 ms at most, no frame dropped while browsing.
+- Card shadow (2.2.1, ElegantFin and Finimalism): a shadow sprite drawn all around each card (four rects, 22 px
+  feather) took ElegantFin's home from 24-27 ms to 30-34 ms a frame, with frames dropped. Only the band under the
+  card and its lower corners are drawn now (14 px feather, 8 px drop; the sprite's sides fade out upwards when it is
+  made, so there is no edge where the drawing stops): 25-26 ms a frame, 30 frames a second, as without a shadow.
 - Trickplay: Nayde's films have 320 px pictures; the preview shows while a seek is held. A single short press can
   apply its seek before the first sheet (3200 x 1800) has arrived, so no picture showed then: since, the sheet of the
   playing position and the next one are fetched while playing (`TrickplayPreview::follow`); checked on the console:

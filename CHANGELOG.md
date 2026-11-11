@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.1 (unreleased)
+
+- Downloads can be paused and resumed from the Downloads tab (✕ on a download on its way, the hint says which); a
+  paused download, or one stopped by closing Playfin, goes on from where it was instead of starting over, on the
+  console or a USB drive.
+- The order of the downloads waiting can be changed (L1 / R1 in the Downloads tab).
+- A message says when a download is finished.
+- Subtitles: their size (small to larger) and a dark background behind them, in Settings › Lecture.
+- ElegantFin's and Finimalism's cards cast a soft shadow, as in the originals.
+- The update packages of versions already installed are removed from /data/pkg at start.
+
 ## 2.2.0 (2026-11-11)
 
 - Themes: Settings › Affichage › Thème offers Projecteur and five themes in the style of the Jellyfin community's
