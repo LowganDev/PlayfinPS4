@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.2.0 (unreleased)
+## 2.2.0 (2026-11-11)
 
 - Themes: Settings › Affichage › Thème offers Projecteur and five themes in the style of the Jellyfin community's
   best-known ones (ElegantFin, Ultrachromic, Abyss, Zesty, Finimalism): colours, background, cards, focus, tabs and
