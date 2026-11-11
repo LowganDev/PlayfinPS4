@@ -3021,3 +3021,218 @@ TEST_CASE("theme tabs: a pill's ends are half circles (its radius is half its he
     plain.place(ui::Rect{0, 0, 220, 52}, metrics);
     CHECK(plain.cornerRadius == doctest::Approx(ui::theme().radius));
 }
+
+TEST_CASE("Ultrachromic: the backdrop's layers come without a fade (no full-screen blend on the console)") {
+    ThemeReset reset;
+    ui::applyTheme(ui::themeById("chroma"));
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->replace(app::makeHome(shell.session));
+    shell.frames(10);
+    app::ThemeBackdrop* backdrop = themeBackdrop(*shell.application);
+    REQUIRE(backdrop != nullptr);
+    jellyfin::Item first;
+    first.id = "m-1";
+    first.images.backdrops = {"b-m1"};
+    jellyfin::Item second;
+    second.id = "m-2";
+    second.images.backdrops = {"b-m2"};
+    backdrop->follow(first);
+    shell.frames(30);
+    backdrop->follow(second);
+    shell.frames(30);
+    REQUIRE(backdrop->children().size() == 2);
+    for (const auto& child : backdrop->children()) {
+        auto* layer = dynamic_cast<ui::ImageView*>(child.get());
+        REQUIRE(layer != nullptr);
+        CHECK_FALSE(layer->fadeIn);
+    }
+    CHECK_FALSE(backdrop->coversScreen());  // no picture arrived (no image loader in tests)
+    CHECK_FALSE(shell.application->top()->coversBackground());
+}
+
+TEST_CASE("trickplay: the sheet of the playing position is asked for at once, before any seek") {
+    Playing p;
+    jellyfin::Item film = episode();
+    film.id = "m-trick";
+    film.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 0));
+    p.frames(10);
+    auto* preview = dynamic_cast<app::TrickplayPreview*>(anyNamed(*p.shell.application->top(), "trickplay preview"));
+    REQUIRE(preview != nullptr);
+    CHECK_FALSE(preview->visible);
+    const std::vector<int> sheets = preview->sheetsWanted();
+    CHECK(std::find(sheets.begin(), sheets.end(), 0) != sheets.end());
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("player: sped up then stopped, the stop report keeps the position played, not the end") {
+    Playing p;
+    jellyfin::Item film = episode();
+    film.id = "m-1";
+    film.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 10000000));  // resume at 1 s of the 4 s clip
+    p.frames(10);
+    p.shell.press(Action::Options);
+    p.frames(2);
+    pressAnywhere(p.shell, "Speed: Normal");
+    p.frames(2);
+    pressAnywhere(p.shell, "1.5\xC3\x97");
+    p.frames(2);
+    p.shell.press(Action::Back);  // stop
+    p.frames(5);
+    std::string stopped;
+    for (const auto& report : p.server.reports()) {
+        if (report.path == "/Sessions/Playing/Stopped") {
+            stopped = report.body;
+        }
+    }
+    REQUIRE_FALSE(stopped.empty());
+    const auto at = stopped.find("\"PositionTicks\":");
+    REQUIRE(at != std::string::npos);
+    const long long ticks = std::stoll(stopped.substr(at + 16));
+    CHECK(ticks >= 10000000);
+    CHECK(ticks < 30000000);  // well before the end of the 4 s clip
+}
+
+TEST_CASE("downloads: a running download removed from the Downloads tab stops cleanly, without an error") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-slow";
+    movie.name = "Slow film";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    const auto* entry = p.shell.session.downloads().find("m-slow");
+    REQUIRE(entry != nullptr);
+    const auto later = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (entry->received == 0 && std::chrono::steady_clock::now() < later) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        p.frames(1);
+    }
+    REQUIRE(entry->received > 0);
+    p.shell.application->push(app::makeDownloads(p.shell.session));
+    p.frames(5);
+    // as on the console: the running row focused, OPTIONS, then "Remove" in the dialog
+    pressAnywhere(p.shell, "Slow film");  // focuses the row (✕ on a running one does nothing)
+    p.shell.press(Action::Options);
+    p.frames(3);
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "Delete");
+    for (int i = 0; i < 100; ++i) {  // the transfer ends on its thread; its end comes back to the main thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        p.frames(1);
+    }
+    CHECK(p.shell.session.downloads().find("m-slow") == nullptr);
+    CHECK(p.shell.application->toastText().empty());
+    CHECK(p.shell.session.downloads().entries().empty());
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: the download button of a film downloading opens the Downloads tab, safely") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-slow";
+    movie.name = "Slow film";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    p.shell.session.synchronous = true;  // the details page loads inline
+    p.shell.application->push(app::makeDetails(p.shell.session, movie));
+    p.frames(10);
+    const auto later = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    const auto* entry = p.shell.session.downloads().find("m-slow");
+    REQUIRE(entry != nullptr);
+    while (entry->received == 0 && std::chrono::steady_clock::now() < later) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        p.frames(1);
+    }
+    // the details' download button shows the progress; pressing it goes to the Downloads tab
+    std::function<ui::View*(ui::View&)> button = [&](ui::View& view) -> ui::View* {
+        if (view.focusable) {
+            for (const auto& child : view.children()) {
+                const auto* label = dynamic_cast<const ui::Label*>(child.get());
+                // its length unknown, a running download shows as on its way ("Waiting") rather than a percent
+                if (label != nullptr && (label->text().rfind("Downloading", 0) == 0 || label->text() == "Waiting")) {
+                    return &view;
+                }
+            }
+        }
+        for (const auto& child : view.children()) {
+            if (ui::View* found = button(*child)) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+    ui::View* progress = button(p.shell.application->root());
+    REQUIRE(progress != nullptr);
+    REQUIRE(p.shell.application->focus().focus(progress));
+    p.shell.press(Action::Confirm);
+    p.frames(5);
+    CHECK(shows(*p.shell.application, "In progress"));  // the Downloads tab
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}
+
+TEST_CASE("download rate: measured over the last seconds, with the time left") {
+    app::TransferRate rate;
+    CHECK(rate.bytesPerSecond() == doctest::Approx(0));  // nothing yet
+    rate.sample(0, 0);
+    rate.sample(4500000, 1000);
+    CHECK(rate.bytesPerSecond() == doctest::Approx(0));  // under 2 s: not known yet
+    for (int s = 2; s <= 30; ++s) {
+        rate.sample(static_cast<std::int64_t>(s) * 4500000, s * 1000);
+    }
+    CHECK(rate.bytesPerSecond() == doctest::Approx(4500000).epsilon(0.01));
+    // 6 GB film, 30 s in: (6e9 - 135e6) / 4.5e6 = 1303.3 s, rounded up
+    CHECK(rate.secondsLeft(30 * 4500000, 6000000000LL) == 1304);
+    CHECK(rate.secondsLeft(30 * 4500000, 0) == -1);  // the length unknown
+    // the network slows down: the rate follows the last seconds, not the whole download
+    for (int s = 31; s <= 60; ++s) {
+        rate.sample(30LL * 4500000 + static_cast<std::int64_t>(s - 30) * 1000000, s * 1000);
+    }
+    CHECK(rate.bytesPerSecond() == doctest::Approx(1000000).epsilon(0.02));
+}
+
+TEST_CASE("download times and speeds as shown") {
+    ui::translator().load(std::string(PLAYFIN_SOURCE_DIR) + "/resources/i18n", "en");
+    CHECK(app::durationText(30) == "< 1 min");
+    CHECK(app::durationText(18 * 60 + 20) == "19 min");  // rounded up: never shorter than it is
+    CHECK(app::durationText(65 * 60) == "1 h 05");
+    CHECK(app::durationText(3 * 3600 + 59 * 60 + 30) == "4 h 00");
+    CHECK(app::speedText(4500000) == "4.5 MB/s");
+    CHECK(app::speedText(870000) == "0.9 MB/s");
+    CHECK(app::speedText(12000000) == "12 MB/s");
+}
+
+TEST_CASE("downloads: the speed and the time left on the Downloads tab and on the film's button") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-sized";
+    movie.name = "Long film";
+    movie.type = jellyfin::ItemType::Movie;
+    p.shell.session.downloads().add(movie);
+    p.shell.application->push(app::makeDownloads(p.shell.session));
+    p.frames(5);
+    const auto later = std::chrono::steady_clock::now() + std::chrono::seconds(8);
+    while (!showsSomewhere(*p.shell.application, "MB/s") && std::chrono::steady_clock::now() < later) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        p.frames(1);
+    }
+    CHECK(showsSomewhere(*p.shell.application, "MB/s"));
+    CHECK(showsSomewhere(*p.shell.application, " left"));
+    p.shell.session.synchronous = true;
+    p.shell.application->push(app::makeDetails(p.shell.session, movie));
+    p.frames(5);
+    CHECK(showsSomewhere(*p.shell.application, " left"));
+    p.shell.session.synchronous = false;
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}

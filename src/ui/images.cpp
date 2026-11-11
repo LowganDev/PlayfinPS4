@@ -124,41 +124,78 @@ namespace {
 
 std::uint8_t toByte(double value) { return static_cast<std::uint8_t>(std::lround(std::min(255.0, std::max(0.0, value)))); }
 
-// box-filtered down to 1/32 of the size, then bilinear back up: a wide, even blur for little work
-void softBlur(std::vector<std::uint8_t>& rgba, int width, int height) {
-    const int sw = std::max(1, width / 32);
-    const int sh = std::max(1, height / 32);
-    std::vector<double> small(static_cast<std::size_t>(sw) * static_cast<std::size_t>(sh) * 3, 0.0);
-    std::vector<int> counts(static_cast<std::size_t>(sw) * static_cast<std::size_t>(sh), 0);
-    for (int y = 0; y < height; ++y) {
-        const int sy = std::min(sh - 1, y * sh / height);
-        for (int x = 0; x < width; ++x) {
-            const int sx = std::min(sw - 1, x * sw / width);
-            const std::size_t cell = static_cast<std::size_t>(sy) * static_cast<std::size_t>(sw) + static_cast<std::size_t>(sx);
-            const std::uint8_t* p = &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
-            for (int c = 0; c < 3; ++c) {
-                small[cell * 3 + static_cast<std::size_t>(c)] += p[c];
+// One pass of a box blur of `radius` along rows (`horizontal`) or columns of a w x h image of 3 channels, the
+// edges clamped; running sums, so the cost does not depend on the radius.
+void boxPass(std::vector<std::uint16_t>& img, std::vector<std::uint16_t>& tmp, int w, int h, int radius,
+             bool horizontal) {
+    const int length = horizontal ? w : h;
+    const int lines = horizontal ? h : w;
+    const int window = 2 * radius + 1;
+    for (int line = 0; line < lines; ++line) {
+        const auto index = [&](int i) {
+            const int c = std::min(length - 1, std::max(0, i));
+            return horizontal ? (static_cast<std::size_t>(line) * static_cast<std::size_t>(w) + static_cast<std::size_t>(c)) * 3
+                              : (static_cast<std::size_t>(c) * static_cast<std::size_t>(w) + static_cast<std::size_t>(line)) * 3;
+        };
+        for (int ch = 0; ch < 3; ++ch) {
+            std::uint32_t sum = 0;
+            for (int i = -radius; i <= radius; ++i) {
+                sum += img[index(i) + static_cast<std::size_t>(ch)];
             }
-            ++counts[cell];
+            for (int i = 0; i < length; ++i) {
+                tmp[index(i) + static_cast<std::size_t>(ch)] = static_cast<std::uint16_t>((sum + static_cast<std::uint32_t>(window / 2)) / static_cast<std::uint32_t>(window));
+                sum += img[index(i + radius + 1) + static_cast<std::size_t>(ch)];
+                sum -= img[index(i - radius) + static_cast<std::size_t>(ch)];
+            }
         }
     }
-    for (std::size_t cell = 0; cell < counts.size(); ++cell) {
-        for (int c = 0; c < 3; ++c) {
-            small[cell * 3 + static_cast<std::size_t>(c)] /= std::max(1, counts[cell]);
+    img.swap(tmp);
+}
+
+// A soft round blur of about 19 px on a 1920-wide picture (scaled with the picture's width), as the original
+// themes' CSS blur(18px): the picture halved (2 x 2 averages), three box passes each way (close to a Gaussian),
+// then bilinear back to full size. On a worker, once per picture.
+void softBlur(std::vector<std::uint8_t>& rgba, int width, int height) {
+    if (width < 2 || height < 2) {
+        return;
+    }
+    const int hw = width / 2;
+    const int hh = height / 2;
+    std::vector<std::uint16_t> half(static_cast<std::size_t>(hw) * static_cast<std::size_t>(hh) * 3);
+    for (int y = 0; y < hh; ++y) {
+        for (int x = 0; x < hw; ++x) {
+            for (int c = 0; c < 3; ++c) {
+                unsigned sum = 0;
+                for (int dy = 0; dy < 2; ++dy) {
+                    for (int dx = 0; dx < 2; ++dx) {
+                        sum += rgba[((static_cast<std::size_t>(2 * y + dy)) * static_cast<std::size_t>(width) +
+                                     static_cast<std::size_t>(2 * x + dx)) * 4 + static_cast<std::size_t>(c)];
+                    }
+                }
+                // 4 fractional bits kept: smooth gradients without banding
+                half[(static_cast<std::size_t>(y) * static_cast<std::size_t>(hw) + static_cast<std::size_t>(x)) * 3 +
+                     static_cast<std::size_t>(c)] = static_cast<std::uint16_t>(sum * 4);
+            }
         }
+    }
+    const int radius = std::max(1, static_cast<int>(std::lround(9.0 * width / 1920.0)));
+    std::vector<std::uint16_t> tmp(half.size());
+    for (int pass = 0; pass < 3; ++pass) {
+        boxPass(half, tmp, hw, hh, radius, true);
+        boxPass(half, tmp, hw, hh, radius, false);
     }
     const auto sample = [&](int sx, int sy, int c) {
-        sx = std::min(sw - 1, std::max(0, sx));
-        sy = std::min(sh - 1, std::max(0, sy));
-        return small[(static_cast<std::size_t>(sy) * static_cast<std::size_t>(sw) + static_cast<std::size_t>(sx)) * 3 +
-                     static_cast<std::size_t>(c)];
+        sx = std::min(hw - 1, std::max(0, sx));
+        sy = std::min(hh - 1, std::max(0, sy));
+        return static_cast<double>(half[(static_cast<std::size_t>(sy) * static_cast<std::size_t>(hw) +
+                                         static_cast<std::size_t>(sx)) * 3 + static_cast<std::size_t>(c)]) / 16.0;
     };
     for (int y = 0; y < height; ++y) {
-        const double fy = (y + 0.5) * sh / height - 0.5;
+        const double fy = (y + 0.5) / 2.0 - 0.5;
         const int y0 = static_cast<int>(std::floor(fy));
         const double ty = fy - y0;
         for (int x = 0; x < width; ++x) {
-            const double fx = (x + 0.5) * sw / width - 0.5;
+            const double fx = (x + 0.5) / 2.0 - 0.5;
             const int x0 = static_cast<int>(std::floor(fx));
             const double tx = fx - x0;
             std::uint8_t* p = &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];

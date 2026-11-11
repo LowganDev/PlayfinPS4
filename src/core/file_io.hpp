@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace playfin::core {
 
@@ -28,11 +29,17 @@ public:
     bool commit();  // fsync, close, rename
     long long written() const { return written_; }
 
+    // Pieces are gathered up to this size before they are written (one system call per block, not per piece).
+    static constexpr std::size_t kBlock = 1024 * 1024;
+
 private:
     void abandon();
+    bool writeOut(const char* bytes, std::size_t size);  // straight to the file
+    bool flush();                                         // the gathered pieces
     std::string path_;
     int fd_ = -1;
-    long long written_ = 0;
+    long long written_ = 0;  // accepted (gathered or on the disk)
+    std::vector<char> buffer_;
 };
 
 }  // namespace playfin::core

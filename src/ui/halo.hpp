@@ -25,6 +25,15 @@ int backgroundLitRows(int height, const Theme& theme);
 // Adds the fixed grain to an opaque RGBA image, in place (Zesty's background and backdrops).
 void addGrain(std::vector<std::uint8_t>& rgba, int width, int height);
 
+// A border of `ringWidth` on the inner edge of a width x height rounded rectangle (radius), anti-aliased, empty
+// inside and outside: premultiplied RGBA of width x height. Drawn as an image over the picture's edges only (a
+// rounded stroke on every card costs a third of a frame on the console's software renderer).
+std::vector<std::uint8_t> ringImage(int width, int height, float radius, float ringWidth, Color color);
+
+// A light band across a picture (ElegantFin's sheen on the focused card): white along a 115° line, `strength` at
+// its middle (45 % of the way), gone 12 % either side. Premultiplied RGBA of width x height.
+std::vector<std::uint8_t> sheenImage(int width, int height, float strength);
+
 // The focus glow of a picture of width x height: `accent` at `strength` under a rounded rectangle (radius), fading
 // out over `feather` px around it, like NanoVG's box gradient. Premultiplied RGBA of (width + 2 feather) x
 // (height + 2 feather): drawn as an image (a live box gradient costs ~200 cycles per pixel on the PS4).

@@ -36,7 +36,7 @@ Application::Application(Services services, Size screen) : services_(services), 
     ctx.images = services_.images;
     ctx.metrics = &services_.metrics;
     root_ = std::make_unique<Stack>();
-    root_->background = theme().background;
+    root_->background = Color{0, 0, 0, 0};  // the frame is cleared to the background colour (clearColor())
     auto layer = std::make_unique<Stack>();
     layer->width = SizeSpec::fill();
     layer->height = SizeSpec::fill();
@@ -60,7 +60,7 @@ Application* Application::current() { return gCurrent; }
 void Application::setVideoSource(VideoSource* source) {
     videoSource_ = source;
     if (root_) {  // null while the application is being destroyed (the player unregisters then)
-        root_->background = source != nullptr || backgroundImage_ > 0 ? Color{0, 0, 0, 0} : theme().background;
+        root_->background = Color{0, 0, 0, 0};  // the frame is cleared to the background (clearColor())
     }
     redraw_ = true;
 }
@@ -69,7 +69,7 @@ void Application::setBackgroundImage(int imageId, int width, int height) {
     backgroundImage_ = imageId;
     backgroundWidth_ = width;
     backgroundHeight_ = height;
-    root_->background = imageId > 0 || videoSource_ != nullptr ? Color{0, 0, 0, 0} : theme().background;
+    root_->background = Color{0, 0, 0, 0};  // cleared to the background colour, not painted over it
     redraw_ = true;
 }
 
@@ -77,7 +77,15 @@ Color Application::clearColor() const {
     if (videoSource_ != nullptr) {
         return {0, 0, 0, 0};
     }
-    return backgroundImage_ > 0 ? theme().background : Color{0, 0, 0, 255};
+    return withAlpha(theme().background, 255);
+}
+
+bool Application::backgroundShown() const {
+    if (backgroundImage_ <= 0 || videoSource_ != nullptr) {
+        return false;
+    }
+    const Screen* screen = top();
+    return screen == nullptr || screen->opacity < 1 || !screen->coversBackground();
 }
 
 Screen* Application::top() const { return screens_.empty() ? nullptr : screens_.back(); }

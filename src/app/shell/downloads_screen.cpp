@@ -22,21 +22,6 @@ namespace playfin::app {
 
 namespace {
 
-// "1,2 Go", "340 Mo" (decimal units, as the console shows its storage)
-std::string sizeText(std::int64_t bytes) {
-    char text[32];
-    if (bytes >= 1000LL * 1000 * 1000) {
-        std::snprintf(text, sizeof(text), "%.1f", static_cast<double>(bytes) / 1e9);
-        std::string number = text;
-        const std::string separator = ui::tr("settings.decimal_separator");
-        if (const auto dot = number.find('.'); dot != std::string::npos) {
-            number.replace(dot, 1, separator);
-        }
-        return ui::tr("downloads.gb", {number});
-    }
-    return ui::tr("downloads.mb", {std::to_string(bytes / (1000 * 1000))});
-}
-
 std::string stateText(const Downloads::Entry& entry) {
     switch (entry.state) {
     case Downloads::State::Done:
@@ -44,8 +29,7 @@ std::string stateText(const Downloads::Entry& entry) {
                                    : ui::tr("downloads.done", {sizeText(entry.size)}) + " \xC2\xB7 " +
                                          ui::tr("downloads.target.usb");
     case Downloads::State::Running:
-        return entry.size > 0 ? ui::tr("downloads.progress", {std::to_string(entry.received * 100 / entry.size)})
-                              : ui::tr("downloads.progress_bytes", {sizeText(entry.received)});
+        return Downloads::runningText(entry, true);
     case Downloads::State::Queued:
         return ui::tr("downloads.queued");
     case Downloads::State::Failed:

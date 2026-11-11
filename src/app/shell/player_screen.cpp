@@ -915,6 +915,9 @@ private:
         if (!bar_->visible) {  // hidden (□ included): no preview without its bar
             preview_->update(false, 0, 0, 0, {});
         }
+        if (!seek_.pending()) {  // the pictures around the playing position, ready for the next seek
+            preview_->follow(state.position);
+        }
         updateSkip(state, t);
         updateNextCard(state);
         logStats(freshPicture, t);

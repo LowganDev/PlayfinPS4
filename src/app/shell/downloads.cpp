@@ -10,6 +10,9 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
 #include <cctype>
 #include <condition_variable>
 #include <mutex>
@@ -452,6 +455,9 @@ void Downloads::startNext() {
     next->received = 0;
     next->image = next->item.id + ".jpg";
     running_ = next->item.id;
+    rate_.reset();
+    next->bytesPerSecond = 0;
+    next->secondsLeft = -1;
     token_ = core::CancelToken{};
     const std::string id = next->item.id;
     const auto filePath = core::resolveInside(*dir, next->file);
@@ -477,12 +483,16 @@ void Downloads::startNext() {
             }
         }
         int lastPercent = -1;
+        auto lastPost = std::chrono::steady_clock::now();
         const auto progress = [&](long long now, long long total) {
             outcome.received = now;
-            // a step: a percent, or a megabyte when the length is not known
+            // a step: a percent, or a megabyte when the length is not known; and once a second at least (the
+            // speed and the time left on the screen)
             const int percent = total > 0 ? static_cast<int>(now * 100 / total) : static_cast<int>(now / (1024 * 1024));
-            if (percent != lastPercent && app != nullptr) {
+            const auto clock = std::chrono::steady_clock::now();
+            if ((percent != lastPercent || clock - lastPost >= std::chrono::seconds(1)) && app != nullptr) {
                 lastPercent = percent;
+                lastPost = clock;
                 app->mainQueue().post([alive, id, now, total, this] {
                     if (const auto flag = alive.lock(); flag && *flag) {
                         this->progress(id, now, total);
@@ -606,8 +616,101 @@ void Downloads::progress(const std::string& id, std::int64_t received, std::int6
         if (total > 0) {
             found->size = total;
         }
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count();
+        rate_.sample(received, static_cast<std::int64_t>(ms));
+        found->bytesPerSecond = rate_.bytesPerSecond();
+        found->secondsLeft = rate_.secondsLeft(received, found->size);
         notify();
     }
+}
+
+void TransferRate::sample(std::int64_t bytes, std::int64_t ms) {
+    if (!samples_.empty() && (bytes < samples_.back().second || ms < samples_.back().first)) {
+        samples_.clear();  // started again
+    }
+    samples_.emplace_back(ms, bytes);
+    // the window: drop what is older, keeping one sample at or before its start
+    while (samples_.size() > 2 && samples_[1].first <= ms - kWindowMs) {
+        samples_.erase(samples_.begin());
+    }
+}
+
+double TransferRate::bytesPerSecond() const {
+    if (samples_.size() < 2) {
+        return 0;
+    }
+    const auto& first = samples_.front();
+    const auto& last = samples_.back();
+    const std::int64_t span = last.first - first.first;
+    if (span < kMinSpanMs) {
+        return 0;
+    }
+    return static_cast<double>(last.second - first.second) * 1000.0 / static_cast<double>(span);
+}
+
+std::int64_t TransferRate::secondsLeft(std::int64_t received, std::int64_t size) const {
+    const double rate = bytesPerSecond();
+    if (size <= 0 || rate <= 0) {
+        return -1;
+    }
+    const double left = static_cast<double>(std::max<std::int64_t>(0, size - received));
+    return static_cast<std::int64_t>(std::ceil(left / rate));
+}
+
+std::string durationText(std::int64_t seconds) {
+    if (seconds < 60) {
+        return ui::tr("downloads.duration_soon");
+    }
+    const std::int64_t minutes = (seconds + 59) / 60;
+    if (minutes < 60) {
+        return ui::tr("downloads.duration_minutes", {std::to_string(minutes)});
+    }
+    char rest[8];
+    std::snprintf(rest, sizeof(rest), "%02lld", static_cast<long long>(minutes % 60));
+    return ui::tr("downloads.duration_hours", {std::to_string(minutes / 60), rest});
+}
+
+std::string sizeText(std::int64_t bytes) {
+    char text[32];
+    if (bytes >= 1000LL * 1000 * 1000) {
+        std::snprintf(text, sizeof(text), "%.1f", static_cast<double>(bytes) / 1e9);
+        std::string number = text;
+        if (const auto dot = number.find('.'); dot != std::string::npos) {
+            number.replace(dot, 1, ui::tr("settings.decimal_separator"));
+        }
+        return ui::tr("downloads.gb", {number});
+    }
+    return ui::tr("downloads.mb", {std::to_string(bytes / (1000 * 1000))});
+}
+
+std::string speedText(double bytesPerSecond) {
+    const double mb = bytesPerSecond / 1e6;
+    std::string number;
+    if (mb < 10) {
+        char text[16];
+        std::snprintf(text, sizeof(text), "%.1f", mb);
+        number = text;
+        if (const auto dot = number.find('.'); dot != std::string::npos) {
+            number.replace(dot, 1, ui::tr("settings.decimal_separator"));
+        }
+    } else {
+        number = std::to_string(static_cast<long long>(std::lround(mb)));
+    }
+    return ui::tr("downloads.speed", {number});
+}
+
+std::string Downloads::runningText(const Entry& entry, bool speed) {
+    std::string text = entry.size > 0 ? ui::tr("downloads.progress", {std::to_string(entry.received * 100 / entry.size)})
+                                      : ui::tr("downloads.progress_bytes", {sizeText(entry.received)});
+    if (speed && entry.bytesPerSecond > 0) {
+        text += " \xC2\xB7 " + speedText(entry.bytesPerSecond);
+    }
+    if (entry.secondsLeft >= 0) {
+        text += " \xC2\xB7 " + ui::tr("downloads.left", {durationText(entry.secondsLeft)});
+    }
+    return text;
 }
 
 void Downloads::finished(const std::string& id, Outcome outcome) {

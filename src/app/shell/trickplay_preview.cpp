@@ -33,6 +33,31 @@ void TrickplayPreview::setPictures(const jellyfin::TrickplayInfo& info, std::fun
     info_ = info;
     sheetUrl_ = std::move(sheetUrl);
     sheets_.clear();
+    followed_ = -1;
+}
+
+void TrickplayPreview::follow(double position) {
+    if (!info_ || !sheetUrl_) {
+        return;
+    }
+    const int sheet = player::trickplayFrame(*info_, position).sheet;
+    if (sheet == followed_) {
+        return;
+    }
+    followed_ = sheet;
+    for (auto it = sheets_.begin(); it != sheets_.end();) {
+        it = it->first == sheet || it->first == sheet + 1 ? std::next(it) : sheets_.erase(it);
+    }
+    want(sheet);
+    want(sheet + 1);
+}
+
+std::vector<int> TrickplayPreview::sheetsWanted() const {
+    std::vector<int> out;
+    for (const auto& entry : sheets_) {
+        out.push_back(entry.first);
+    }
+    return out;
 }
 
 void TrickplayPreview::want(int sheet) {

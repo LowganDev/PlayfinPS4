@@ -544,6 +544,15 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
             res.status = 403;
             return;
         }
+        if (req.matches[1] == "m-sized") {  // 64 MB at about 3 MB/s, its length announced
+            res.set_content_provider(64 * 1024 * 1024, "video/mp4", [](std::size_t offset, std::size_t, httplib::DataSink& sink) {
+                static const std::string chunk(64 * 1024, 'x');
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                const std::size_t left = 64 * 1024 * 1024 - offset;
+                return sink.write(chunk.data(), std::min(left, chunk.size()));
+            });
+            return;
+        }
         if (req.matches[1] == "m-slow") {  // a film that takes long: 64 KB every 20 ms until the client leaves
             res.set_chunked_content_provider("video/mp4", [](std::size_t, httplib::DataSink& sink) {
                 static const std::string chunk(64 * 1024, 'x');
@@ -590,6 +599,12 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
             res.set_content(readFixture("jellyfin/item_episode.json"), "application/json");
         } else if (id == "s-1") {
             res.set_content(readFixture("jellyfin/item_series.json"), "application/json");
+        } else if (id == "m-sized") {
+            res.set_content(R"({"Id":"m-sized","Name":"Long film","Type":"Movie","RunTimeTicks":40000000})",
+                            "application/json");
+        } else if (id == "m-slow") {  // a film whose download takes long
+            res.set_content(R"({"Id":"m-slow","Name":"Slow film","Type":"Movie","RunTimeTicks":40000000})",
+                            "application/json");
         } else if (id == "m-trick") {  // trickplay pictures for version ms-1: 2 x 2 per sheet, one a second
             res.set_content(R"({"Id":"m-trick","Name":"Previewed","Type":"Movie","RunTimeTicks":40000000,)"
                             R"("Trickplay":{"ms-1":{"320":{"Width":320,"Height":180,"TileWidth":2,"TileHeight":2,)"

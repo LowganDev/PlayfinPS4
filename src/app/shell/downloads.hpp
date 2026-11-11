@@ -18,6 +18,29 @@ namespace playfin::app {
 
 class AppSession;
 
+// A download's speed over its last seconds (kWindowMs), from samples of the bytes received and the time; known once
+// the samples span kMinSpanMs, so the first second's burst does not count alone.
+class TransferRate {
+public:
+    static constexpr std::int64_t kWindowMs = 10000;
+    static constexpr std::int64_t kMinSpanMs = 2000;
+    void sample(std::int64_t bytes, std::int64_t ms);
+    void reset() { samples_.clear(); }
+    double bytesPerSecond() const;  // 0 while unknown
+    // seconds until `size` bytes at this speed (rounded up), -1 when the size or the speed is not known
+    std::int64_t secondsLeft(std::int64_t received, std::int64_t size) const;
+
+private:
+    std::vector<std::pair<std::int64_t, std::int64_t>> samples_;  // (ms, bytes), oldest first
+};
+
+// "< 1 min", "19 min", "1 h 05" (rounded up to the minute)
+std::string durationText(std::int64_t seconds);
+// "1,2 Go", "340 Mo" (decimal units, as the console shows its storage)
+std::string sizeText(std::int64_t bytes);
+// "4,5 Mo/s", "12 Mo/s" (decimal megabytes, one decimal under 10)
+std::string speedText(double bytesPerSecond);
+
 // Films and episodes kept on the console (in the data folder's downloads/) or on a USB drive (in its Playfin/ folder,
 // through the console's FTP server; their pictures stay on the console), played without the server. One file at a
 // time, in the order asked; the list is kept in downloads.json. Where a download goes is the settings'
@@ -35,7 +58,12 @@ public:
         std::string error;         // why it failed, for the user
         std::int64_t positionTicks = 0;  // where it was left, played offline
         std::string drive;               // "" on the console, else the USB drive it is on ("/mnt/usb0")
+        // while it runs (not saved): its speed (bytes a second, 0 unknown) and the time left (-1 unknown)
+        double bytesPerSecond = 0;
+        std::int64_t secondsLeft = -1;
     };
+    // "Téléchargement… 9 % · reste 19 min" (with `speed`: "… 9 % · 4,5 Mo/s · reste 19 min"); what it knows only
+    static std::string runningText(const Entry& entry, bool speed);
 
     explicit Downloads(AppSession& session);
     ~Downloads();
@@ -87,6 +115,7 @@ private:
                                             const core::CancelToken& token, std::string& drive,
                                             std::int64_t& received);
     void progress(const std::string& id, std::int64_t received, std::int64_t total);
+    TransferRate rate_;  // the running download's
     void save() const;
     void notify();
     Entry* entry(const std::string& id);

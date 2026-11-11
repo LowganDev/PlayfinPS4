@@ -48,6 +48,7 @@ struct Theme {
     bool backdropFollowsFocus = false;  // the home and library screens show the focused item's backdrop
     FocusStyle focusStyle = FocusStyle::Glow;
     bool focusSheen = false;  // a light band across the focused card
+    float sheenStrength = 0.07f;  // its white at the middle of the band
     bool focusInAccent = true;  // the ring in the accent; else in focusColor
     Color focusColor{0xFF, 0xFF, 0xFF, 0xFF};
     float glowStrength = 0.3f;  // Glow: the accent's alpha under the card

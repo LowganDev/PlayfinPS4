@@ -22,6 +22,8 @@ public:
     Screen();
     virtual void onShow() {}
     virtual void onHide() {}
+    // Its own picture covers the whole frame (a theme backdrop shown): the background image need not be drawn.
+    virtual bool coversBackground() const { return false; }
     float enterRise = 24;  // how far below its place a pushed screen starts (px)
 };
 
@@ -85,7 +87,8 @@ public:
 
     // An image drawn 1:1 under the screens (the halo); not while a video shows.
     void setBackgroundImage(int imageId, int width, int height);
-    bool backgroundShown() const { return backgroundImage_ > 0 && videoSource_ == nullptr; }
+    // the background image is drawn: one is set, no video, and the top screen (at rest) does not cover it
+    bool backgroundShown() const;
     // What the frame is cleared to before drawing: the background colour under the halo, transparent under a
     // video, black otherwise (the root paints its own background).
     Color clearColor() const;

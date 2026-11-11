@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "jellyfin/models.hpp"
 #include "player/trickplay.hpp"
@@ -30,6 +31,11 @@ public:
     // Shown while `seeking`, at `target` of `duration` seconds; `direction` (-1, 1) picks the sheet fetched ahead.
     void update(bool seeking, double target, double duration, int direction, const std::string& timeText);
     const std::string& wantedUrl() const { return wanted_; }
+    // While playing (not seeking): the sheet of `position` and the next one are fetched ahead, so a short press
+    // finds its picture already there.
+    void follow(double position);
+    // the sheets asked for and kept, in order
+    std::vector<int> sheetsWanted() const;
     // The picture's size on screen: 320 wide, as tall as the video's shape makes it.
     ui::Size pictureSize() const;
     void draw(NVGcontext* vg) const override;
@@ -44,6 +50,7 @@ private:
     double fraction_ = 0;
     std::string time_;
     std::string wanted_;
+    int followed_ = -1;  // the sheet of the playing position last fetched ahead
     struct Sheet {
         std::unique_ptr<ui::ImageRequest> request;
         ui::TextureRef texture;

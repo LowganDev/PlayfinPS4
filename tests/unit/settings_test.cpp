@@ -207,3 +207,30 @@ TEST_CASE("the accent applies on top of the theme") {
     CHECK(ui::theme().id == "projecteur");
     CHECK(ui::theme().accent.b == 0xD1);
 }
+
+// A film arrives in pieces of a few kilobytes: they are gathered into large writes (on the console every write
+// is a system call, and tens of thousands of small ones slow a download down), and nothing is lost at the end.
+TEST_CASE("a file written in small pieces is written to disk in large blocks, whole once committed") {
+    TempDir dir;
+    const std::string path = dir.path + "/film.mkv";
+    std::string expected;
+    {
+        core::FileSink sink(path);
+        REQUIRE(sink.ok());
+        for (int i = 0; i < 200; ++i) {  // 200 pieces of 1000 bytes: under one block
+            const std::string piece(1000, static_cast<char>('a' + i % 26));
+            REQUIRE(sink.write(piece.data(), piece.size()));
+            expected += piece;
+        }
+        CHECK(sink.written() == 200000);
+        CHECK(std::filesystem::file_size(path + ".part") == 0);  // still gathered
+        const std::string big(3 * 1024 * 1024 + 7, 'z');  // more than a block: written through
+        REQUIRE(sink.write(big.data(), big.size()));
+        expected += big;
+        CHECK(std::filesystem::file_size(path + ".part") >= 3u * 1024u * 1024u);
+        REQUIRE(sink.commit());
+    }
+    std::string text;
+    REQUIRE(core::readSmallFile(path, 8u << 20, text) == core::ReadStatus::Ok);
+    CHECK(text == expected);
+}

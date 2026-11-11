@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -227,4 +228,33 @@ TEST_CASE("theme backgrounds: Projecteur's halo, ElegantFin's gradient, nothing 
     CHECK(std::abs(sum[0] / 4096 - mint.background.r) <= 2);
     CHECK(std::abs(sum[1] / 4096 - mint.background.g) <= 2);
     CHECK(std::abs(sum[2] / 4096 - mint.background.b) <= 2);
+}
+
+TEST_CASE("a card's border as an image: a ring on the picture's edge, rounded at the corners, empty inside") {
+    const Color colour{0x31, 0x37, 0x3F, 0xFF};
+    const int w = 40;
+    const int h = 30;
+    const std::vector<std::uint8_t> ring = ringImage(w, h, 8, 2, colour);
+    REQUIRE(ring.size() == static_cast<std::size_t>(w * h * 4));
+    const auto alpha = [&](int x, int y) { return ring[(static_cast<std::size_t>(y) * w + static_cast<std::size_t>(x)) * 4 + 3]; };
+    CHECK(alpha(20, 0) > 200);   // the top edge
+    CHECK(alpha(20, 1) > 200);
+    CHECK(alpha(20, 3) == 0);    // inside
+    CHECK(alpha(20, 15) == 0);
+    CHECK(alpha(0, 15) > 200);   // the left edge
+    CHECK(alpha(0, 0) == 0);     // outside the rounded corner
+    CHECK(ring[(static_cast<std::size_t>(0) * w + 20) * 4] <= alpha(20, 0));  // premultiplied
+}
+
+TEST_CASE("ElegantFin's sheen on the focused card is a light touch") {
+    const float strength = themeById("slate").tokens.sheenStrength;
+    CHECK(strength > 0);
+    CHECK(strength <= 0.1f);
+    const std::vector<std::uint8_t> sheen = sheenImage(200, 120, strength);
+    int peak = 0;
+    for (std::size_t i = 3; i < sheen.size(); i += 4) {
+        peak = std::max(peak, int(sheen[i]));
+    }
+    CHECK(peak <= int(255 * strength) + 1);
+    CHECK(peak > 0);
 }

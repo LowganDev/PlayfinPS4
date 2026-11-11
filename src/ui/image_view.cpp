@@ -43,7 +43,7 @@ void ImageView::layout(TextMetrics& metrics) {
     request_ = context().images->request(url_, w, h, [this](TextureRef texture) {
         texture_ = std::move(texture);
         failed_ = !texture_;
-        if (texture_ && context().animator != nullptr) {
+        if (texture_ && fadeIn && context().animator != nullptr) {
             alpha_ = 0;
             context().animator->animate(&alpha_, 1, theme().fadeMs, Easing::Linear, this);
         } else {

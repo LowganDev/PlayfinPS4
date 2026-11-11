@@ -17,6 +17,10 @@
 
 #include "core/task.hpp"
 #include "support/files.hpp"
+#include "support/fixed_metrics.hpp"
+#include "ui/animation.hpp"
+#include "ui/context.hpp"
+#include "ui/image_view.hpp"
 #include "ui/images.hpp"
 
 using namespace playfin;
@@ -34,6 +38,13 @@ std::string png(int width, int height) {
     std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 4), 0x80);
     std::string out;
     stbi_write_png_to_func(appendTo, &out, width, height, 4, pixels.data(), width * 4);
+    return out;
+}
+
+std::string opaquePng(int width, int height) {
+    std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 3), 0x80);
+    std::string out;
+    stbi_write_png_to_func(appendTo, &out, width, height, 3, pixels.data(), width * 3);
     return out;
 }
 
@@ -74,6 +85,9 @@ struct Rig {
             }
             if (url.find("junk") != std::string::npos) {
                 return std::string("not an image");
+            }
+            if (url.find("opaque") != std::string::npos) {
+                return opaquePng(200, 100);
             }
             return png(200, 100);
         });
@@ -414,18 +428,18 @@ TEST_CASE("a backdrop's Shade treatment is the identity's shade, unchanged") {
 }
 
 TEST_CASE("a blurred backdrop: soft, then saturated, contrasted and darkened") {
-    std::vector<std::uint8_t> image = checkerboard(320, 180);
+    std::vector<std::uint8_t> image = checkerboard(640, 360);
     const double before = stats(image).second;
     ui::BackdropTreatment blur;
     blur.kind = ui::BackdropKind::Blur;
     blur.brightness = 0.4f;
     blur.saturation = 1.2f;
     blur.contrast = 1.2f;
-    ui::bakeBackdrop(image, 320, 180, blur);
+    ui::bakeBackdrop(image, 640, 360, blur);
     const auto [mean, deviation] = stats(image);
     CHECK(deviation < before * 0.2);
     CHECK(mean == doctest::Approx(0.4 * 127.5).epsilon(0.08));
-    CHECK(at(image, 320, 100, 100)[3] == 255);
+    CHECK(at(image, 640, 100, 100)[3] == 255);
 }
 
 TEST_CASE("a diagonal backdrop: the ground over the bottom left, the picture showing at the top right") {
@@ -472,4 +486,66 @@ TEST_CASE("a backdrop shaded into one theme's background is not reused for anoth
     REQUIRE(rig.pumpUntil([&] { return second != nullptr; }));
     CHECK(second != first);
     ui::applyTheme(ui::themeById("projecteur"));
+}
+
+TEST_CASE("an image view without its fade covers its frame as soon as its picture arrives; with it, after the fade") {
+    Rig rig;
+    ui::Animator animator;
+    ui::Context& ctx = ui::context();
+    ui::ImageLoader* images = ctx.images;
+    ui::Animator* previous = ctx.animator;
+    ctx.images = rig.loader.get();
+    ctx.animator = &animator;
+    test::FixedMetrics metrics;
+    {
+        ui::ImageView faded;
+        ui::ImageView instant;
+        instant.fadeIn = false;
+        faded.setUrl("http://x/opaque-a.png");
+        instant.setUrl("http://x/opaque-b.png");
+        faded.place(ui::Rect{0, 0, 100, 50}, metrics);
+        instant.place(ui::Rect{0, 0, 100, 50}, metrics);
+        REQUIRE(rig.pumpUntil([&] { return instant.coversFrame(); }));
+        REQUIRE(rig.pumpUntil([&] { return animator.active(); }));  // the other one is fading in
+        CHECK_FALSE(faded.coversFrame());
+        animator.tick(1000);
+        CHECK(faded.coversFrame());
+    }
+    ctx.images = images;
+    ctx.animator = previous;
+}
+
+namespace {
+// a 1920 x 1080 black picture with a white 32 x 32 square centred at (x, y), blurred as Ultrachromic's backdrop
+std::vector<std::uint8_t> blurredDot(int x, int y) {
+    std::vector<std::uint8_t> image = solid(1920, 1080, ui::Color{0, 0, 0, 255});
+    for (int j = y - 16; j < y + 16; ++j) {
+        for (int i = x - 16; i < x + 16; ++i) {
+            std::uint8_t* p = &image[(static_cast<std::size_t>(j) * 1920 + static_cast<std::size_t>(i)) * 4];
+            p[0] = p[1] = p[2] = 255;
+        }
+    }
+    ui::BackdropTreatment blur;
+    blur.kind = ui::BackdropKind::Blur;
+    ui::bakeBackdrop(image, 1920, 1080, blur);
+    return image;
+}
+}  // namespace
+
+// The blur is a real one (a soft round spot), not a tiny picture stretched (blocks, a spot that changes with where
+// the picture's cells fall): the same spot wherever it is, as wide one way as the other.
+TEST_CASE("a blurred backdrop has no blocks: the same round spot wherever the light is") {
+    const std::vector<std::uint8_t> a = blurredDot(960, 540);
+    const std::vector<std::uint8_t> b = blurredDot(990, 560);
+    const int offsets[][2] = {{0, 0}, {12, 0}, {0, 12}, {24, 0}, {0, 24}, {17, 17}, {-30, 5}};
+    for (const auto& o : offsets) {
+        CAPTURE(o[0]);
+        CAPTURE(o[1]);
+        CHECK(std::abs(int(at(a, 1920, 960 + o[0], 540 + o[1])[0]) - int(at(b, 1920, 990 + o[0], 560 + o[1])[0])) <= 2);
+    }
+    const int alongX = at(a, 1920, 960 + 24, 540)[0];
+    const int alongY = at(a, 1920, 960, 540 + 24)[0];
+    CHECK(std::abs(alongX - alongY) <= 2);
+    CHECK(at(a, 1920, 960, 540)[0] > alongX);  // brightest at its centre
+    CHECK(at(a, 1920, 960 + 140, 540)[0] <= 1);  // gone further away (a blur of about 18 px, as the original's)
 }

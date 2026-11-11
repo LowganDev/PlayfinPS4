@@ -92,6 +92,7 @@ public:
         ShellScreen::onDescendantFocused(view);
         backdrop_->followFocus(view);
     }
+    bool coversBackground() const override { return backdrop_->coversScreen(); }
 private:
     // the rows of Resume and Next up get their new items in place (the focus stays where it was)
     void refresh() {
@@ -341,6 +342,7 @@ public:
         ShellScreen::onDescendantFocused(view);
         backdrop_->followFocus(view);
     }
+    bool coversBackground() const override { return backdrop_->coversScreen(); }
 private:
     void refreshBar() {
         sort_->setText(ui::tr("shell.library.sort", {sortName(choice_.sort)}));
@@ -620,6 +622,8 @@ public:
         }
     }
 
+    // its backdrop covers the screen once it is there: the background image need not be drawn under it
+    bool coversBackground() const override { return backdrop_ != nullptr && backdrop_->coversFrame(); }
 private:
     void load() {
         const auto client = session_.client();
@@ -719,7 +723,7 @@ private:
         } else if (entry->state == Downloads::State::Done) {
             download_->setText(ui::tr("downloads.downloaded"));
         } else if (entry->state == Downloads::State::Running && entry->size > 0) {
-            download_->setText(ui::tr("downloads.progress", {std::to_string(entry->received * 100 / entry->size)}));
+            download_->setText(Downloads::runningText(*entry, false));
         } else if (entry->state == Downloads::State::Failed) {
             download_->setText(ui::tr("downloads.retry"));
         } else {
@@ -745,7 +749,10 @@ private:
         } else if (entry->state == Downloads::State::Failed) {
             downloads.retry(item_.id);
         } else {
-            openTab(session_, Tab::Downloads);
+            // the tab replaces this screen: after this press, and nothing of the screen touched once it is asked
+            AppSession* session = &session_;
+            later([session] { openTab(*session, Tab::Downloads); });
+            return;
         }
         refreshDownload();
     }

@@ -326,9 +326,10 @@ TEST_CASE("the application keeps the video source a screen registers") {
     rig.app->setVideoSource(&video);
     CHECK(rig.app->videoSource() == &video);
     CHECK(rig.app->root().background.a == 0);  // the video shows through
+    CHECK(rig.app->clearColor().a == 0);
     rig.app->setVideoSource(nullptr);
     CHECK(rig.app->videoSource() == nullptr);
-    CHECK(rig.app->root().background.a > 0);
+    CHECK(rig.app->clearColor().a == 255);  // the frame is cleared to the background again
 }
 
 TEST_CASE("the halo background shows under the screens, never under a video") {
@@ -439,4 +440,33 @@ TEST_CASE("a button down again before its release is the platform's repeat") {
     CHECK_FALSE(rig.app->held(Action::Right));
     rig.app->handle(press(Action::Right));
     CHECK_FALSE(rig.app->repeating());
+}
+
+namespace {
+// a screen whose own picture covers the whole frame (a theme backdrop)
+struct CoveringScreen : ui::Screen {
+    bool covers = true;
+    bool coversBackground() const override { return covers; }
+};
+}  // namespace
+
+TEST_CASE("the background image is not drawn under a screen that covers it") {
+    Rig rig;
+    rig.app->setBackgroundImage(7, 1920, 1080);
+    auto* screen = static_cast<CoveringScreen*>(rig.app->push(std::make_unique<CoveringScreen>()));
+    rig.frames(30);  // past the entrance fade
+    CHECK_FALSE(rig.app->backgroundShown());
+    screen->covers = false;
+    CHECK(rig.app->backgroundShown());
+}
+
+TEST_CASE("without a background image the frame is cleared to the theme's background, not painted over") {
+    Rig rig;
+    rig.app->setBackgroundImage(0, 0, 0);
+    CHECK(rig.app->root().background.a == 0);
+    const ui::Color clear = rig.app->clearColor();
+    CHECK(clear.r == ui::theme().background.r);
+    CHECK(clear.g == ui::theme().background.g);
+    CHECK(clear.b == ui::theme().background.b);
+    CHECK(clear.a == 255);
 }

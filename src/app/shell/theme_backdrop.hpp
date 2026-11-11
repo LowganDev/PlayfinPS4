@@ -15,7 +15,9 @@ namespace playfin::app {
 // (Ultrachromic, Abyss, Zesty, Finimalism): the picture comes with the theme's treatment baked in. It changes 400 ms
 // after the focus settles (a quick scroll loads nothing), keeps the last picture when the focus goes to something
 // without one, and stays hidden, asking for nothing, in the other themes. First among the screen's children. Two
-// layers: a new picture loads and fades in over the last one, which stays under it until then (no dark flash).
+// layers: a new picture loads over the last one, which stays under it until then (no dark flash); it comes without a
+// fade (blending two full-screen layers costs frames on the console), and once it is there the layer under it is not
+// drawn.
 class ThemeBackdrop : public ui::Stack {
 public:
     static constexpr float kDelayMs = 400;
@@ -28,6 +30,9 @@ public:
     const std::string& shownUrl() const { return shown_; }
     // the layers' pictures, bottom first
     std::vector<std::string> layerUrls() const;
+    // a picture is shown over the whole screen (the screen need not draw the background image under it)
+    bool coversScreen() const;
+    void draw(NVGcontext* vg) const override;
     void onThemeChanged() override;
 
 private:

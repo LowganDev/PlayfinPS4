@@ -79,6 +79,7 @@ FileSink::FileSink(std::string path) : path_(std::move(path)) {
 FileSink::~FileSink() { abandon(); }
 
 void FileSink::abandon() {
+    buffer_.clear();
     if (fd_ >= 0) {
         ::close(fd_);
         fd_ = -1;
@@ -86,8 +87,7 @@ void FileSink::abandon() {
     }
 }
 
-bool FileSink::write(const void* data, std::size_t size) {
-    const char* bytes = static_cast<const char*>(data);
+bool FileSink::writeOut(const char* bytes, std::size_t size) {
     std::size_t done = 0;
     while (fd_ >= 0 && done < size) {
         const ssize_t n = ::write(fd_, bytes + done, size - done);
@@ -100,12 +100,42 @@ bool FileSink::write(const void* data, std::size_t size) {
         }
         done += static_cast<std::size_t>(n);
     }
-    written_ += static_cast<long long>(done);
     return fd_ >= 0;
 }
 
-bool FileSink::commit() {
+bool FileSink::flush() {
+    if (buffer_.empty()) {
+        return fd_ >= 0;
+    }
+    const bool ok = writeOut(buffer_.data(), buffer_.size());
+    buffer_.clear();
+    return ok;
+}
+
+bool FileSink::write(const void* data, std::size_t size) {
     if (fd_ < 0) {
+        return false;
+    }
+    const char* bytes = static_cast<const char*>(data);
+    if (buffer_.size() + size > kBlock && !flush()) {
+        return false;
+    }
+    if (size >= kBlock) {  // a large piece goes straight to the file
+        if (!writeOut(bytes, size)) {
+            return false;
+        }
+    } else {
+        if (buffer_.capacity() < kBlock) {
+            buffer_.reserve(kBlock);
+        }
+        buffer_.insert(buffer_.end(), bytes, bytes + size);
+    }
+    written_ += static_cast<long long>(size);
+    return true;
+}
+
+bool FileSink::commit() {
+    if (fd_ < 0 || !flush()) {
         return false;
     }
     const bool synced = ::fsync(fd_) == 0;

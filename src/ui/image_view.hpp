@@ -24,6 +24,9 @@ public:
     bool backdrop = false;
     // with `backdrop`: the current theme's treatment instead of the shade (ImageShape::ThemedBackdrop)
     bool themedBackdrop = false;
+    // the picture fades in when it arrives (false: shown at once, e.g. a full-screen layer whose fade would blend
+    // two million pixels a frame on the console)
+    bool fadeIn = true;
     // the picture is shown, opaque, over the whole frame (what is under it need not be drawn)
     bool coversFrame() const;
 

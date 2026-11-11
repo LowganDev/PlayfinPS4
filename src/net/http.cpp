@@ -198,6 +198,8 @@ core::Result<HttpResponse> HttpClient::perform(const HttpRequest& request, const
     transfer.sink = sink;
     transfer.progress = progress;
     applyCommon(curl, config_, request.url, request.timeoutMs, request.connectTimeoutMs, transfer);
+    // a download into a file: large receive blocks (16 KB by default: tens of thousands of callbacks for a film)
+    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, sink != nullptr ? 512L * 1024L : static_cast<long>(CURL_MAX_WRITE_SIZE));
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
     const bool secure = request.url.rfind("https://", 0) == 0;

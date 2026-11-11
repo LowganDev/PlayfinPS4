@@ -87,26 +87,6 @@ constexpr float kRingWidth = 3;
 constexpr float kRingGap = 4;
 constexpr float kThemeRingWidth = 4;  // Ring and Frame
 
-// A light band across a picture (ElegantFin's sheen): white along a 115° line, 22 % at its middle (45 % of the
-// way), gone 15 % either side. Premultiplied RGBA, made once per size and theme like the glow.
-std::vector<std::uint8_t> sheenImage(int width, int height) {
-    std::vector<std::uint8_t> out(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4, 0);
-    const double angle = 115.0 * 3.14159265358979 / 180.0;
-    const double dx = std::sin(angle);
-    const double dy = -std::cos(angle);
-    const double length = std::fabs(width * dx) + std::fabs(height * dy);
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            const double t = ((x + 0.5 - width / 2.0) * dx + (y + 0.5 - height / 2.0) * dy) / length + 0.5;
-            const double a = 0.22 * std::max(0.0, 1.0 - std::fabs(t - 0.45) / 0.15);
-            const auto v = static_cast<std::uint8_t>(std::lround(255 * a));
-            std::uint8_t* p = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
-            p[0] = p[1] = p[2] = p[3] = v;
-        }
-    }
-    return out;
-}
-
 int sheenSprite(NVGcontext* vg, int width, int height) {
     struct Entry {
         NVGcontext* vg;
@@ -114,13 +94,13 @@ int sheenSprite(NVGcontext* vg, int width, int height) {
         int height;
         int image;
     };
-    static std::vector<Entry> cache;  // the band does not depend on the theme's colours
+    static std::vector<Entry> cache;  // the band is white: only its strength comes from the theme
     for (const Entry& entry : cache) {
         if (entry.vg == vg && entry.width == width && entry.height == height) {
             return entry.image;
         }
     }
-    const std::vector<std::uint8_t> pixels = sheenImage(width, height);
+    const std::vector<std::uint8_t> pixels = ui::sheenImage(width, height, ui::theme().sheenStrength);
     const int image = nvgCreateImageRGBA(vg, width, height, NVG_IMAGE_PREMULTIPLIED, pixels.data());
     cache.push_back({vg, width, height, image});
     return image;
@@ -159,18 +139,67 @@ int glowSprite(NVGcontext* vg, int width, int height) {
 
 }  // namespace
 
+namespace {
+
+// The border image of a picture size for the current theme, made once per canvas (see ui::ringImage).
+int borderSprite(NVGcontext* vg, int width, int height) {
+    struct Entry {
+        NVGcontext* vg;
+        int width;
+        int height;
+        unsigned generation;
+        int image;
+    };
+    static std::vector<Entry> cache;
+    for (Entry& entry : cache) {
+        if (entry.vg == vg && entry.width == width && entry.height == height) {
+            if (entry.generation == ui::themeGeneration()) {
+                return entry.image;
+            }
+            nvgDeleteImage(vg, entry.image);
+            entry = cache.back();
+            cache.pop_back();
+            break;
+        }
+    }
+    const ui::Theme& t = ui::theme();
+    const std::vector<std::uint8_t> pixels = ui::ringImage(width, height, t.radius, t.cardBorderWidth, t.cardBorder);
+    const int image = nvgCreateImageRGBA(vg, width, height, NVG_IMAGE_PREMULTIPLIED, pixels.data());
+    cache.push_back({vg, width, height, ui::themeGeneration(), image});
+    return image;
+}
+
+}  // namespace
+
+// The theme's border on the picture's edge: its image over the four corners and the four thin edges only.
 void ItemCard::drawBorder(NVGcontext* vg, const ui::Rect& picture) const {
     const ui::Theme& t = ui::theme();
     if (t.cardBorderWidth <= 0) {
         return;
     }
-    const float half = t.cardBorderWidth / 2;
-    nvgBeginPath(vg);
-    nvgRoundedRect(vg, picture.x + half, picture.y + half, picture.width - 2 * half, picture.height - 2 * half,
-                   std::max(0.0f, t.radius - half));
-    nvgStrokeColor(vg, ui::nvgColor(t.cardBorder));
-    nvgStrokeWidth(vg, t.cardBorderWidth);
-    nvgStroke(vg);
+    const int image = borderSprite(vg, static_cast<int>(picture.width), static_cast<int>(picture.height));
+    if (image <= 0) {
+        return;
+    }
+    const NVGpaint paint = nvgImagePattern(vg, picture.x, picture.y, picture.width, picture.height, 0, image, 1);
+    const float r = static_cast<float>(std::ceil(std::min(t.radius, std::min(picture.width, picture.height) / 2)));
+    const float b = static_cast<float>(std::ceil(t.cardBorderWidth)) + 1;
+    const float x = picture.x;
+    const float y = picture.y;
+    const float w = picture.width;
+    const float h = picture.height;
+    const float rects[8][4] = {{x, y, r, r},         {x + w - r, y, r, r},         {x, y + h - r, r, r},
+                               {x + w - r, y + h - r, r, r}, {x + r, y, w - 2 * r, b}, {x + r, y + h - b, w - 2 * r, b},
+                               {x, y + r, b, h - 2 * r}, {x + w - b, y + r, b, h - 2 * r}};
+    nvgSave(vg);
+    nvgShapeAntiAlias(vg, 0);  // the image has its own soft edge
+    for (const auto& rect : rects) {
+        nvgBeginPath(vg);
+        nvgRect(vg, rect[0], rect[1], rect[2], rect[3]);
+        nvgFillPaint(vg, paint);
+        nvgFill(vg);
+    }
+    nvgRestore(vg);
 }
 
 void ItemCard::draw(NVGcontext* vg) const {

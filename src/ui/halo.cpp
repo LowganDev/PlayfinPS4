@@ -83,6 +83,52 @@ std::vector<std::uint8_t> backgroundImage(int width, int height, const Theme& th
     return image;
 }
 
+std::vector<std::uint8_t> ringImage(int width, int height, float radius, float ringWidth, Color color) {
+    std::vector<std::uint8_t> out(static_cast<std::size_t>(std::max(width, 0)) * static_cast<std::size_t>(std::max(height, 0)) * 4, 0);
+    const double r = std::min<double>(radius, std::min(width, height) / 2.0);
+    const double hw = width / 2.0 - r;
+    const double hh = height / 2.0 - r;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // signed distance to the rounded rectangle's edge, positive inside
+            const double qx = std::fabs(x + 0.5 - width / 2.0) - hw;
+            const double qy = std::fabs(y + 0.5 - height / 2.0) - hh;
+            const double outside = std::sqrt(std::max(qx, 0.0) * std::max(qx, 0.0) + std::max(qy, 0.0) * std::max(qy, 0.0));
+            const double inside = std::min(std::max(qx, qy), 0.0);
+            const double d = r - (outside + inside);
+            const double cover = std::min(1.0, std::max(0.0, d + 0.5)) - std::min(1.0, std::max(0.0, d - ringWidth + 0.5));
+            if (cover <= 0) {
+                continue;
+            }
+            const double a = cover * color.a / 255.0;
+            std::uint8_t* p = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            p[0] = clampByte(static_cast<int>(std::lround(color.r * a)));
+            p[1] = clampByte(static_cast<int>(std::lround(color.g * a)));
+            p[2] = clampByte(static_cast<int>(std::lround(color.b * a)));
+            p[3] = clampByte(static_cast<int>(std::lround(255 * a)));
+        }
+    }
+    return out;
+}
+
+std::vector<std::uint8_t> sheenImage(int width, int height, float strength) {
+    std::vector<std::uint8_t> out(static_cast<std::size_t>(std::max(width, 0)) * static_cast<std::size_t>(std::max(height, 0)) * 4, 0);
+    const double angle = 115.0 * 3.14159265358979 / 180.0;
+    const double dx = std::sin(angle);
+    const double dy = -std::cos(angle);
+    const double length = std::fabs(width * dx) + std::fabs(height * dy);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const double t = ((x + 0.5 - width / 2.0) * dx + (y + 0.5 - height / 2.0) * dy) / length + 0.5;
+            const double a = strength * std::max(0.0, 1.0 - std::fabs(t - 0.45) / 0.12);
+            const std::uint8_t v = clampByte(static_cast<int>(std::lround(255 * a)));
+            std::uint8_t* p = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            p[0] = p[1] = p[2] = p[3] = v;
+        }
+    }
+    return out;
+}
+
 int backgroundLitRows(int height, const Theme& theme) {
     switch (theme.backgroundKind) {
     case BackgroundKind::Halo:
