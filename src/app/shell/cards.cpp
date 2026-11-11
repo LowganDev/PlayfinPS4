@@ -171,6 +171,95 @@ int borderSprite(NVGcontext* vg, int width, int height) {
 
 }  // namespace
 
+namespace {
+
+constexpr float kShadowFeather = 14;
+constexpr float kShadowDrop = 8;  // lower than the picture
+constexpr float kShadowFade = 24;  // the sides fade out over this height above the picture's lower corners
+
+// The shadow image of a picture size for the current theme, made once per canvas (black, soft, see glowImage).
+int shadowSprite(NVGcontext* vg, int width, int height) {
+    struct Entry {
+        NVGcontext* vg;
+        int width;
+        int height;
+        unsigned generation;
+        int image;
+    };
+    static std::vector<Entry> cache;
+    for (Entry& entry : cache) {
+        if (entry.vg == vg && entry.width == width && entry.height == height) {
+            if (entry.generation == ui::themeGeneration()) {
+                return entry.image;
+            }
+            nvgDeleteImage(vg, entry.image);
+            entry = cache.back();
+            cache.pop_back();
+            break;
+        }
+    }
+    std::vector<std::uint8_t> pixels = ui::glowImage(width, height, ui::theme().radius, kShadowFeather,
+                                                     ui::Color{0, 0, 0, 255}, ui::theme().cardShadow);
+    // Only the bottom is kept: rows above the lower corners fade to nothing (drawShadow draws that part only).
+    const int imageWidth = width + 2 * static_cast<int>(kShadowFeather);
+    const int imageHeight = height + 2 * static_cast<int>(kShadowFeather);
+    const float fadeEnd = static_cast<float>(height) + kShadowFeather - kShadowDrop - ui::theme().radius;
+    const float fadeStart = fadeEnd - kShadowFade;
+    for (int row = 0; row < imageHeight; ++row) {
+        const float py = static_cast<float>(row) + 0.5f;
+        const float keep = py <= fadeStart ? 0.0f : py >= fadeEnd ? 1.0f : (py - fadeStart) / kShadowFade;
+        if (keep >= 1.0f) {
+            continue;
+        }
+        std::uint8_t* line = pixels.data() + static_cast<std::size_t>(row) * static_cast<std::size_t>(imageWidth) * 4u;
+        for (int i = 0; i < imageWidth * 4; ++i) {
+            line[i] = static_cast<std::uint8_t>(static_cast<float>(line[i]) * keep + 0.5f);
+        }
+    }
+    const int image = nvgCreateImageRGBA(vg, imageWidth, imageHeight, NVG_IMAGE_PREMULTIPLIED, pixels.data());
+    cache.push_back({vg, width, height, ui::themeGeneration(), image});
+    return image;
+}
+
+}  // namespace
+
+// The theme's shadow under the picture: only the band below it and its lower corners, the sides fading upwards (the
+// opaque picture hides the rest; a shadow all around cost the console about 5 ms a frame)
+void ItemCard::drawShadow(NVGcontext* vg, const ui::Rect& picture) const {
+    const ui::Theme& t = ui::theme();
+    if (t.cardShadow <= 0) {
+        return;
+    }
+    const int image = shadowSprite(vg, static_cast<int>(picture.width), static_cast<int>(picture.height));
+    if (image <= 0) {
+        return;
+    }
+    const float f = kShadowFeather;
+    const float x = picture.x;
+    const float y = picture.y + kShadowDrop;
+    const float w = picture.width;
+    const float h = picture.height;
+    const NVGpaint paint = nvgImagePattern(vg, x - f, y - f, w + 2 * f, h + 2 * f, 0, image, 1);
+    const float inset = t.radius;
+    const float pictureBottom = picture.y + h;
+    const float sideTop = pictureBottom - inset - kShadowFade;  // above it the image is clear (shadowSprite)
+    const float rects[3][4] = {{x - f, pictureBottom, w + 2 * f, y + h + f - pictureBottom},
+                               {x - f, sideTop, f + inset, pictureBottom - sideTop},
+                               {x + w - inset, sideTop, f + inset, pictureBottom - sideTop}};
+    nvgSave(vg);
+    nvgShapeAntiAlias(vg, 0);
+    for (const auto& r : rects) {
+        if (r[2] <= 0 || r[3] <= 0) {
+            continue;
+        }
+        nvgBeginPath(vg);
+        nvgRect(vg, r[0], r[1], r[2], r[3]);
+        nvgFillPaint(vg, paint);
+        nvgFill(vg);
+    }
+    nvgRestore(vg);
+}
+
 // The theme's border on the picture's edge: its image over the four corners and the four thin edges only.
 void ItemCard::drawBorder(NVGcontext* vg, const ui::Rect& picture) const {
     const ui::Theme& t = ui::theme();
@@ -207,6 +296,7 @@ void ItemCard::draw(NVGcontext* vg) const {
     const float p = focus_;
     const ui::Rect picture = children().front()->frame;
     if (p <= 0.001f) {
+        drawShadow(vg, picture);
         ui::Box::draw(vg);
         drawBorder(vg, picture);
         return;
@@ -255,6 +345,7 @@ void ItemCard::draw(NVGcontext* vg) const {
     nvgTranslate(vg, cx, cy - 6 * p);
     nvgScale(vg, 1 + grow, 1 + grow);
     nvgTranslate(vg, -cx, -cy);
+    drawShadow(vg, picture);
     ui::Box::draw(vg);
     drawBorder(vg, picture);
     if (t.focusSheen) {

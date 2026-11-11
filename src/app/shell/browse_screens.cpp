@@ -724,6 +724,8 @@ private:
             download_->setText(ui::tr("downloads.downloaded"));
         } else if (entry->state == Downloads::State::Running && entry->size > 0) {
             download_->setText(Downloads::runningText(*entry, false));
+        } else if (entry->state == Downloads::State::Paused) {
+            download_->setText(Downloads::pausedText(*entry));
         } else if (entry->state == Downloads::State::Failed) {
             download_->setText(ui::tr("downloads.retry"));
         } else {

@@ -12,6 +12,7 @@
 
 #include "app/gallery.hpp"
 #include "app/settings.hpp"
+#include "app/update.hpp"
 #include "app/shell/nav_bar.hpp"
 #include "app/shell/screens.hpp"
 #include "app/shell/screensaver.hpp"
@@ -345,6 +346,9 @@ int run(const Options& options) {
         if (testMode) {
             session.updateUrl.clear();  // script tests never ask GitHub
         } else if (options.screen != "gallery") {
+            if (const auto folder = core::packageFolder()) {  // the packages of updates already installed
+                removeOldPackages(*folder, core::version());
+            }
             session.checkForUpdate();  // the settings tab gets a dot when a newer Playfin is published
             session.tvGuide().refresh();  // the XMLTV guide of the settings, if any
         }

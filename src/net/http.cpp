@@ -74,6 +74,8 @@ struct Transfer {
     std::string trace = {};  // curl's informational lines, logged when the request fails
     const HttpClient::Sink* sink = nullptr;          // a download: the body goes there
     const HttpClient::Progress* progress = nullptr;
+    const HttpClient::Started* started = nullptr;  // told the status once, before the first piece
+    CURL* curl = nullptr;
     bool sinkRefused = false;
 };
 
@@ -90,6 +92,12 @@ std::size_t onWrite(char* data, std::size_t size, std::size_t count, void* user)
     auto* transfer = static_cast<Transfer*>(user);
     const std::size_t bytes = size * count;
     if (transfer->sink != nullptr) {
+        if (transfer->started != nullptr && *transfer->started) {
+            long status = 0;
+            curl_easy_getinfo(transfer->curl, CURLINFO_RESPONSE_CODE, &status);
+            (*transfer->started)(status);
+            transfer->started = nullptr;
+        }
         if (!(*transfer->sink)(data, bytes)) {
             transfer->sinkRefused = true;
             return 0;
@@ -179,13 +187,14 @@ core::Result<HttpResponse> HttpClient::send(const HttpRequest& request, const st
 }
 
 core::Result<HttpResponse> HttpClient::download(const HttpRequest& request, Sink sink, Progress progress,
-                                                const std::string& pin, const core::CancelToken& token) const {
-    return perform(request, pin, token, &sink, &progress);
+                                                const std::string& pin, const core::CancelToken& token,
+                                                Started started) const {
+    return perform(request, pin, token, &sink, &progress, &started);
 }
 
 core::Result<HttpResponse> HttpClient::perform(const HttpRequest& request, const std::string& pin,
                                                const core::CancelToken& token, const Sink* sink,
-                                               const Progress* progress) const {
+                                               const Progress* progress, const Started* onStatus) const {
     Lease lease;
     CURL* curl = lease.get();
     if (curl == nullptr) {
@@ -197,6 +206,8 @@ core::Result<HttpResponse> HttpClient::perform(const HttpRequest& request, const
     Transfer transfer{&response.body, limit, false, &token};
     transfer.sink = sink;
     transfer.progress = progress;
+    transfer.started = onStatus;
+    transfer.curl = curl;
     applyCommon(curl, config_, request.url, request.timeoutMs, request.connectTimeoutMs, transfer);
     // a download into a file: large receive blocks (16 KB by default: tens of thousands of callbacks for a film)
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, sink != nullptr ? 512L * 1024L : static_cast<long>(CURL_MAX_WRITE_SIZE));

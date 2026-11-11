@@ -633,7 +633,7 @@ private:
         local_ = true;
         if (!engine_) {
             engine_ = player::Engine::create(
-                engineOptionsLocal(session().synchronous, usbOpener(session().usbFtp)), [] {});
+                withSubtitles(engineOptionsLocal(session().synchronous, usbOpener(session().usbFtp))), [] {});
             if (!engine_) {
                 showError();
                 return;
@@ -653,7 +653,7 @@ private:
 
     bool createEngine(const jellyfin::Client& client) {
         // the frame loop polls the engine every frame
-        player::EngineOptions options = engineOptionsFor(client, session().synchronous);
+        player::EngineOptions options = withSubtitles(engineOptionsFor(client, session().synchronous));
         options.reconnect = live_;
         engine_ = player::Engine::create(options, [] {});
         if (engine_) {
@@ -706,7 +706,7 @@ private:
 
     bool startDirect() {
         // its own engine: the Jellyfin header must not go to another host
-        auto direct = player::Engine::create(engineOptionsDirect(session().synchronous), [] {});
+        auto direct = player::Engine::create(withSubtitles(engineOptionsDirect(session().synchronous)), [] {});
         if (!direct) {
             return false;
         }
@@ -1274,6 +1274,13 @@ private:
             return client->trickplayUrl(itemId, sourceId, width, sheet);
         });
         PF_LOG_INFO("player: trickplay pictures at %d px", width);
+    }
+
+    // the subtitles' size and background of the settings
+    player::EngineOptions withSubtitles(player::EngineOptions options) const {
+        options.subtitleScale = subtitleScale(session().settings().subtitleSize);
+        options.subtitleBackground = session().settings().subtitleBackground;
+        return options;
     }
 
     void applySpeed() {

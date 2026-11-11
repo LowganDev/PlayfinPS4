@@ -36,6 +36,7 @@ public:
         std::string target;  // path + raw query
         std::string authorization;
         std::string body;
+        std::string range;  // the Range header, if any
     };
     Seen last() const;
     // POSTs to /Sessions/Playing, /Sessions/Playing/Progress and /Sessions/Playing/Stopped, in order

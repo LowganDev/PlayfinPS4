@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -34,6 +35,7 @@
 #include "support/files.hpp"
 #include "support/fixed_metrics.hpp"
 #include "ui/application.hpp"
+#include "ui/hints.hpp"
 #include "ui/i18n.hpp"
 #include "ui/image_view.hpp"
 #include "ui/label.hpp"
@@ -1058,6 +1060,20 @@ ui::View* findPressable(ui::View& view, const std::string& text) {
         }
     }
     return nullptr;
+}
+
+// the labels of the hints bar for what has the focus now
+std::vector<std::string> hintLabels(Shell& shell) {
+    std::vector<std::string> labels;
+    for (const ui::HintItem& item : ui::hintItems(shell.application->focus().actionChain(), true, true)) {
+        labels.push_back(item.label);
+    }
+    return labels;
+}
+
+bool hasHint(Shell& shell, const std::string& label) {
+    const auto labels = hintLabels(shell);
+    return std::find(labels.begin(), labels.end(), label) != labels.end();
 }
 
 void pressAnywhere(Shell& shell, const std::string& text) {
@@ -3235,4 +3251,226 @@ TEST_CASE("downloads: the speed and the time left on the Downloads tab and on th
     p.shell.session.synchronous = false;
     p.shell.session.stopTransfers();
     core::setDataRoot({});
+}
+
+namespace {
+// waits (frames with time passing) until `done`
+bool waitFor(Playing& p, const std::function<bool()>& done, int seconds = 10) {
+    const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+    while (!done() && std::chrono::steady_clock::now() < end) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        p.frames(1);
+    }
+    return done();
+}
+
+std::string readAll(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in), {});
+}
+}  // namespace
+
+TEST_CASE("downloads: paused, it keeps what it got; resumed, it asks the server for the rest; the file is whole") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-resume";
+    movie.name = "Resumed film";
+    movie.type = jellyfin::ItemType::Movie;
+    app::Downloads& downloads = p.shell.session.downloads();
+    downloads.add(movie);
+    const auto* entry = downloads.find("m-resume");
+    REQUIRE(entry != nullptr);
+    REQUIRE(waitFor(p, [&] { return entry->received > 256 * 1024; }));
+    downloads.pause("m-resume");
+    CHECK(entry->state == app::Downloads::State::Paused);
+    const std::string part = p.shell.dir.path + "/downloads/m-resume.mkv.part";
+    REQUIRE(waitFor(p, [&] { return std::filesystem::exists(part) && downloads.runningId().empty(); }));
+    const auto kept = static_cast<std::int64_t>(std::filesystem::file_size(part));
+    CHECK(kept > 0);
+    p.frames(20);
+    CHECK(entry->state == app::Downloads::State::Paused);  // nothing starts it again by itself
+    downloads.resume("m-resume");
+    REQUIRE(waitFor(p, [&] { return entry->state == app::Downloads::State::Done; }));
+    std::string range;
+    for (const auto& seen : p.server.requests()) {
+        if (seen.path == "/Items/m-resume/Download") {
+            range = seen.range;
+        }
+    }
+    CHECK(range == "bytes=" + std::to_string(kept) + "-");
+    const std::string film = readAll(p.shell.dir.path + "/downloads/m-resume.mkv");
+    REQUIRE(film.size() == 4u * 1024u * 1024u);
+    bool same = true;
+    for (std::size_t i = 0; i < film.size() && same; ++i) {
+        same = static_cast<unsigned char>(film[i]) == i % 251;
+    }
+    CHECK(same);
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: one stopped by the app's closing keeps its part and starts from there next time") {
+    Shell shell;
+    core::setDataRoot(shell.dir.path);
+    std::filesystem::create_directories(shell.dir.path + "/downloads");
+    std::ofstream(shell.dir.path + "/downloads/m-9.mkv.part") << std::string(1000, 'x');
+    std::ofstream(shell.dir.path + "/downloads.json")
+        << R"({"version":1,"items":[{"id":"m-9","name":"Half film","type":"Movie","file":"m-9.mkv","size":5000,)"
+           R"("state":"paused"}]})";
+    const auto* entry = shell.session.downloads().find("m-9");
+    REQUIRE(entry != nullptr);
+    CHECK(entry->state == app::Downloads::State::Paused);
+    CHECK(entry->received == 1000);
+    CHECK(std::filesystem::exists(shell.dir.path + "/downloads/m-9.mkv.part"));
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: the queue's order can be changed; a finished download says so") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    app::Downloads& downloads = p.shell.session.downloads();
+    p.shell.session.synchronous = false;
+    jellyfin::Item running;
+    running.id = "m-slow";
+    running.name = "Slow film";
+    running.type = jellyfin::ItemType::Movie;
+    downloads.add(running);
+    jellyfin::Item a = running;
+    a.id = "m-a";
+    jellyfin::Item b = running;
+    b.id = "m-b";
+    downloads.add(a);
+    downloads.add(b);
+    const auto order = [&] {
+        std::vector<std::string> ids;
+        for (const auto& e : downloads.entries()) {
+            ids.push_back(e.item.id);
+        }
+        return ids;
+    };
+    CHECK(order() == std::vector<std::string>{"m-slow", "m-a", "m-b"});
+    downloads.move("m-b", -1);
+    CHECK(order() == std::vector<std::string>{"m-slow", "m-b", "m-a"});
+    downloads.move("m-b", -1);  // not above the one running
+    CHECK(order() == std::vector<std::string>{"m-slow", "m-b", "m-a"});
+    downloads.move("m-b", 1);
+    CHECK(order() == std::vector<std::string>{"m-slow", "m-a", "m-b"});
+    downloads.remove("m-slow");
+    downloads.remove("m-a");
+    downloads.remove("m-b");
+    REQUIRE(waitFor(p, [&] { return downloads.runningId().empty(); }));
+    // a short one, to its end: a message says it is there
+    p.shell.session.synchronous = true;
+    jellyfin::Item film;
+    film.id = "m-1";
+    film.name = "Big Buck Bunny";
+    film.type = jellyfin::ItemType::Movie;
+    downloads.add(film);
+    p.frames(2);
+    CHECK(p.shell.application->toastText() == "\xE2\x80\x9C" "Big Buck Bunny" "\xE2\x80\x9D is downloaded.");
+    // an episode: its series, season and number, as in the Downloads tab
+    jellyfin::Item episode;
+    episode.id = "e-1";
+    episode.name = "Pilot";
+    episode.type = jellyfin::ItemType::Episode;
+    episode.seriesName = "Test Show";
+    episode.parentIndexNumber = 1;
+    episode.indexNumber = 1;
+    downloads.add(episode);
+    p.frames(2);
+    const std::string title = app::Downloads::title(episode);
+    CHECK(title.rfind("Test Show \xC2\xB7 ", 0) == 0);
+    CHECK(title.find("Pilot") != std::string::npos);
+    CHECK(p.shell.application->toastText() == "\xE2\x80\x9C" + title + "\xE2\x80\x9D is downloaded.");
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: on the Downloads tab, X pauses the running download and resumes it") {
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-slow";
+    movie.name = "Slow film";
+    movie.type = jellyfin::ItemType::Movie;
+    app::Downloads& downloads = p.shell.session.downloads();
+    downloads.add(movie);
+    p.shell.application->push(app::makeDownloads(p.shell.session));
+    p.frames(5);
+    ui::View* row = findPressable(p.shell.application->root(), "Slow film");
+    REQUIRE(row != nullptr);
+    REQUIRE(p.shell.application->focus().focus(row));
+    // running: X pauses it, and the order cannot change (nothing goes above the running one)
+    CHECK(hasHint(p.shell, "Pause"));
+    CHECK_FALSE(hasHint(p.shell, "Select"));
+    CHECK_FALSE(hasHint(p.shell, "Move up"));
+    pressAnywhere(p.shell, "Slow film");
+    CHECK(downloads.find("m-slow")->state == app::Downloads::State::Paused);
+    REQUIRE(waitFor(p, [&] { return downloads.runningId().empty(); }));
+    CHECK(showsSomewhere(*p.shell.application, "Paused"));
+    CHECK(hasHint(p.shell, "Resume"));
+    CHECK_FALSE(hasHint(p.shell, "Pause"));
+    CHECK(hasHint(p.shell, "Move up"));
+    pressAnywhere(p.shell, "Slow film");
+    CHECK(downloads.find("m-slow")->state == app::Downloads::State::Running);
+    CHECK(hasHint(p.shell, "Pause"));
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}
+
+TEST_CASE("downloads: paused on a USB drive, it goes on there and the file on the drive is whole") {
+    UsbDrive drive;
+    Playing p;
+    core::setDataRoot(p.shell.dir.path);
+    p.shell.session.usbFtp = drive.client();
+    p.shell.session.settings().downloadTarget = "usb";
+    p.shell.session.synchronous = false;
+    jellyfin::Item movie;
+    movie.id = "m-resume";
+    movie.name = "Resumed film";
+    movie.type = jellyfin::ItemType::Movie;
+    app::Downloads& downloads = p.shell.session.downloads();
+    downloads.add(movie);
+    const auto* entry = downloads.find("m-resume");
+    REQUIRE(entry != nullptr);
+    REQUIRE(waitFor(p, [&] { return entry->received > 256 * 1024; }));
+    downloads.pause("m-resume");
+    REQUIRE(waitFor(p, [&] { return downloads.runningId().empty(); }));
+    const std::string part = drive.root.path + "/mnt/usb0/Playfin/m-resume.mkv.part";
+    REQUIRE(std::filesystem::exists(part));
+    const auto kept = static_cast<std::int64_t>(std::filesystem::file_size(part));
+    CHECK(kept > 0);
+    downloads.resume("m-resume");
+    REQUIRE(waitFor(p, [&] { return entry->state == app::Downloads::State::Done; }));
+    std::string range;
+    for (const auto& seen : p.server.requests()) {
+        if (seen.path == "/Items/m-resume/Download") {
+            range = seen.range;
+        }
+    }
+    CHECK(range == "bytes=" + std::to_string(kept) + "-");
+    const std::string film = readAll(drive.root.path + "/mnt/usb0/Playfin/m-resume.mkv");
+    REQUIRE(film.size() == 4u * 1024u * 1024u);
+    bool same = true;
+    for (std::size_t i = 0; i < film.size() && same; ++i) {
+        same = static_cast<unsigned char>(film[i]) == i % 251;
+    }
+    CHECK(same);
+    p.shell.session.stopTransfers();
+    core::setDataRoot({});
+}
+
+TEST_CASE("settings: the subtitles' size and background are chosen and saved") {
+    SettingsShell s;
+    CHECK(shows(*s.shell.application, "Subtitle size"));
+    pressAnywhere(s.shell, "Subtitle size");
+    REQUIRE(s.shell.application->hasModal());
+    pressAnywhere(s.shell, "Large");
+    CHECK(s.shell.session.settings().subtitleSize == "large");
+    pressAnywhere(s.shell, "Subtitle background");
+    CHECK(s.shell.session.settings().subtitleBackground);
+    CHECK(app::loadSettings(s.shell.dir.path + "/settings.json").subtitleSize == "large");
+    CHECK(app::loadSettings(s.shell.dir.path + "/settings.json").subtitleBackground);
 }

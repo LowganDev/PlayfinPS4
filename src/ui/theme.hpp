@@ -52,6 +52,7 @@ struct Theme {
     bool focusInAccent = true;  // the ring in the accent; else in focusColor
     Color focusColor{0xFF, 0xFF, 0xFF, 0xFF};
     float glowStrength = 0.3f;  // Glow: the accent's alpha under the card
+    float cardShadow = 0;  // a soft dark shadow under every card (its strength), 0: none
     float cardBorderWidth = 0;
     Color cardBorder{0, 0, 0, 0};
     TabStyle tabStyle = TabStyle::Underline;

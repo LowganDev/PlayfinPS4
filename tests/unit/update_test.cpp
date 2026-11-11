@@ -1,5 +1,7 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "app/update.hpp"
@@ -79,5 +81,25 @@ TEST_CASE("the package downloaded is kept only when its size and digest match th
     REQUIRE_FALSE(bad.ok());
     CHECK_FALSE(std::filesystem::exists(dir + "/other.pkg"));
     CHECK_FALSE(std::filesystem::exists(dir + "/other.pkg.part"));
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("update packages of this version or older are removed; newer ones and others' packages stay") {
+    char tmpl[] = "/tmp/playfin-pkg-XXXXXX";
+    REQUIRE(mkdtemp(tmpl) != nullptr);
+    const std::string dir = tmpl;
+    for (const char* name : {"Playfin-2.1.0.pkg", "Playfin-2.2.0.pkg", "Playfin-2.3.0.pkg", "Playfin-2.2.0.pkg.part",
+                             "IV0001-PLFN00000_00-PLFN000000100000.pkg", "Playtube-1.0.pkg", "Playfin-x.pkg"}) {
+        std::ofstream(dir + "/" + name) << "p";
+    }
+    const int removed = app::removeOldPackages(dir, "2.2.0");
+    CHECK(removed == 2);
+    CHECK_FALSE(std::filesystem::exists(dir + "/Playfin-2.1.0.pkg"));
+    CHECK_FALSE(std::filesystem::exists(dir + "/Playfin-2.2.0.pkg"));  // the one installed: done with
+    CHECK(std::filesystem::exists(dir + "/Playfin-2.3.0.pkg"));        // newer: not installed yet
+    CHECK(std::filesystem::exists(dir + "/Playfin-2.2.0.pkg.part"));   // not a finished package of ours
+    CHECK(std::filesystem::exists(dir + "/IV0001-PLFN00000_00-PLFN000000100000.pkg"));  // put there by the user
+    CHECK(std::filesystem::exists(dir + "/Playtube-1.0.pkg"));
+    CHECK(std::filesystem::exists(dir + "/Playfin-x.pkg"));
     std::filesystem::remove_all(dir);
 }

@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <cstdio>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <utility>
@@ -31,7 +33,10 @@ std::string stateText(const Downloads::Entry& entry) {
     case Downloads::State::Running:
         return Downloads::runningText(entry, true);
     case Downloads::State::Queued:
-        return ui::tr("downloads.queued");
+        return entry.received > 0 ? Downloads::pausedText(entry) + " \xC2\xB7 " + ui::tr("downloads.queued")
+                                  : ui::tr("downloads.queued");
+    case Downloads::State::Paused:
+        return Downloads::pausedText(entry);
     case Downloads::State::Failed:
         return ui::tr("downloads.failed", {entry.error});
     }
@@ -124,7 +129,7 @@ private:
     std::string signature() const {
         std::string text;
         for (const auto& entry : downloads_.entries()) {
-            text += entry.item.id + (entry.state == Downloads::State::Done ? "+" : "-") + ",";
+            text += entry.item.id + (entry.state == Downloads::State::Done ? "+" : "-") + ",";  // order and sections
         }
         return text;
     }
@@ -159,17 +164,52 @@ private:
         ui::ValueRow* again = nullptr;
         for (const auto& entry : downloads_.entries()) {
             const std::string id = entry.item.id;
-            std::string title = cardTitle(entry.item);
-            if (entry.item.type == jellyfin::ItemType::Episode) {
-                title += " \xC2\xB7 " + cardSubtitle(entry.item);
-            }
+            const std::string title = Downloads::title(entry.item);
             ui::Box* list = entry.state == Downloads::State::Done ? done_ : running_;
-            auto* row = list->add<ui::ValueRow>(title, stateText(entry), [this, id] { press(id); });
+            auto* row = list->add<ui::ValueRow>(title, stateText(entry), std::function<void()>{});
             row->width = ui::SizeSpec::fill();
+            // ✕ does what the row's state calls for, and its hint says so (the state changes without a rebuild)
+            const auto in = [this, id](std::initializer_list<Downloads::State> states) {
+                return [this, id, states = std::vector<Downloads::State>(states)] {
+                    const Downloads::Entry* now = downloads_.find(id);
+                    return now != nullptr && std::find(states.begin(), states.end(), now->state) != states.end();
+                };
+            };
+            const std::pair<const char*, std::function<bool()>> pressLabels[] = {
+                {"downloads.pause", in({Downloads::State::Running, Downloads::State::Queued})},
+                {"downloads.resume", in({Downloads::State::Paused})},
+                {"ui.retry", in({Downloads::State::Failed})},
+                {"shell.details.play", in({Downloads::State::Done})}};
+            for (const auto& [key, shown] : pressLabels) {
+                row->bind(
+                    platform::Action::Confirm, ui::tr(key),
+                    [this, id] {
+                        press(id);
+                        return true;
+                    },
+                    shown);
+            }
             row->bind(platform::Action::Options, ui::tr("downloads.remove"), [this, id] {
                 later([this, id] { confirmRemove(id); });
                 return true;
             });
+            if (entry.state != Downloads::State::Done) {  // the order of what is on its way (not the running one)
+                const auto movable = in({Downloads::State::Queued, Downloads::State::Paused});
+                row->bind(
+                    platform::Action::L1, ui::tr("downloads.move_up"),
+                    [this, id] {
+                        downloads_.move(id, -1);
+                        return true;
+                    },
+                    movable);
+                row->bind(
+                    platform::Action::R1, ui::tr("downloads.move_down"),
+                    [this, id] {
+                        downloads_.move(id, 1);
+                        return true;
+                    },
+                    movable);
+            }
             rows_.emplace_back(id, row);
             if (id == focusedId) {
                 again = row;
@@ -203,6 +243,10 @@ private:
         }
         if (entry->state == Downloads::State::Failed) {
             downloads_.retry(id);
+        } else if (entry->state == Downloads::State::Running || entry->state == Downloads::State::Queued) {
+            downloads_.pause(id);
+        } else if (entry->state == Downloads::State::Paused) {
+            downloads_.resume(id);
         } else if (entry->state == Downloads::State::Done) {
             ui::Application::current()->push(makePlayer(session_, entry->item, entry->positionTicks));
         }

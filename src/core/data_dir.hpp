@@ -22,6 +22,8 @@ std::optional<std::string> dataPath(std::string_view relative);
 // packages; the one write outside the data folder, approved for that file only), the data folder's pkg/ elsewhere.
 // The folder is made if needed; nullopt for a name that would leave it.
 std::optional<std::string> packagePath(std::string_view name);
+// That folder when it exists (nothing is made), else nullopt.
+std::optional<std::string> packageFolder();
 
 // mkdir -p; true when the directory exists afterwards.
 bool makeDirs(const std::string& path);

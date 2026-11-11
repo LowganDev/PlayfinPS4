@@ -1,9 +1,13 @@
 #include "app/update.hpp"
 
+#include <dirent.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cctype>
 #include <vector>
 
+#include "core/data_dir.hpp"
 #include "core/file_io.hpp"
 #include "core/log.hpp"
 #include "core/version.hpp"
@@ -188,6 +192,38 @@ core::Result<core::Unit> downloadPackage(const net::HttpClient& http, const Rele
         return core::makeError(core::ErrorKind::Storage, "the package cannot be written");
     }
     return core::Unit{};
+}
+
+int removeOldPackages(const std::string& folder, const std::string& current) {
+    DIR* listing = ::opendir(folder.c_str());
+    if (listing == nullptr) {
+        return 0;
+    }
+    std::vector<std::string> old;
+    const std::string prefix = "Playfin-";
+    const std::string suffix = ".pkg";
+    while (const dirent* file = ::readdir(listing)) {
+        const std::string name = file->d_name;
+        if (name.size() <= prefix.size() + suffix.size() || name.compare(0, prefix.size(), prefix) != 0 ||
+            name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) {
+            continue;
+        }
+        const std::string version = name.substr(prefix.size(), name.size() - prefix.size() - suffix.size());
+        // ours exactly (the name the update gives it), and a version: not newer than the one running
+        const bool numbered = !version.empty() && std::isdigit(static_cast<unsigned char>(version.front())) != 0;
+        if (numbered && packageFileName(version) == name && !newerVersion(version, current)) {
+            old.push_back(name);
+        }
+    }
+    ::closedir(listing);
+    int removed = 0;
+    for (const std::string& name : old) {
+        if (const auto path = core::resolveInside(folder, name); path && ::unlink(path->c_str()) == 0) {
+            PF_LOG_INFO("update: %s removed (installed)", name.c_str());
+            ++removed;
+        }
+    }
+    return removed;
 }
 
 }  // namespace playfin::app

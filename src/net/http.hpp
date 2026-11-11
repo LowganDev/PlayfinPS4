@@ -51,8 +51,11 @@ public:
     // bytes received and the total (0 when unknown). No size limit; the request's timeout applies (0: none).
     using Sink = std::function<bool(const char* data, std::size_t size)>;
     using Progress = std::function<void(long long received, long long total)>;
+    // `started` gets the response's status before its first piece (206: a range asked was answered).
+    using Started = std::function<void(long status)>;
     core::Result<HttpResponse> download(const HttpRequest& request, Sink sink, Progress progress = {},
-                                        const std::string& pin = {}, const core::CancelToken& token = {}) const;
+                                        const std::string& pin = {}, const core::CancelToken& token = {},
+                                        Started started = {}) const;
 
     // The certificate presented by the server of `url`, read without trusting it (trust on first use): a GET of
     // the server root without any header, response discarded.
@@ -63,7 +66,7 @@ public:
 private:
     core::Result<HttpResponse> perform(const HttpRequest& request, const std::string& pin,
                                        const core::CancelToken& token, const Sink* sink,
-                                       const Progress* progress) const;
+                                       const Progress* progress, const Started* onStatus = nullptr) const;
     HttpConfig config_;
 };
 

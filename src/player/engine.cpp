@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <strings.h>
 
@@ -173,6 +174,18 @@ std::unique_ptr<Engine> Engine::create(const EngineOptions& options, std::functi
         setOption(mpv, "sub-fonts-dir", options.fontsDir);
         setOption(mpv, "sub-font", "Noto Sans");
         setOption(mpv, "sub-font-provider", "none");
+    }
+    if (options.subtitleScale > 0 && options.subtitleScale != 1.0) {
+        char scale[16];
+        std::snprintf(scale, sizeof(scale), "%.2f", options.subtitleScale);
+        setOption(mpv, "sub-scale", scale);
+    }
+    if (options.subtitleBackground) {
+        // libass' opaque box (BorderStyle 3) in a translucent black, for text subtitles and the ASS ones alike
+        // (mpv 0.36 has no sub-border-style)
+        setOption(mpv, "sub-ass-force-style", "BorderStyle=3,BackColour=&H60000000,OutlineColour=&H60000000,Outline=6,Shadow=0");
+        setOption(mpv, "sub-back-color", "0.0/0.0/0.0/0.62");
+        setOption(mpv, "sub-border-color", "0.0/0.0/0.0/0.62");
     }
     if (options.reconnect) {
         setOption(mpv, "stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5");

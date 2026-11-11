@@ -258,3 +258,12 @@ TEST_CASE("ElegantFin's sheen on the focused card is a light touch") {
     CHECK(peak <= int(255 * strength) + 1);
     CHECK(peak > 0);
 }
+
+TEST_CASE("ElegantFin's and Finimalism's cards cast a soft shadow; the other themes' do not") {
+    CHECK(themeById("slate").tokens.cardShadow > 0);
+    CHECK(themeById("violet").tokens.cardShadow > 0);
+    for (const char* id : {"projecteur", "chroma", "abyss", "mint"}) {
+        CAPTURE(std::string(id));
+        CHECK(themeById(id).tokens.cardShadow == doctest::Approx(0));
+    }
+}

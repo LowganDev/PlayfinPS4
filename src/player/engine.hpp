@@ -42,6 +42,8 @@ struct EngineOptions {
     bool audioOnly = false;     // music: no video track (album art included), nothing to render
     bool reconnect = false;     // live: FFmpeg reconnects an http stream that drops
     StreamOpener usb;           // "pfusb://" files (a USB drive), none without it
+    double subtitleScale = 1.0;      // text subtitles' size (0.75 small to 1.5 very large)
+    bool subtitleBackground = false;  // a dark box behind text subtitles (read better on a bright picture)
 };
 
 // Options every player gets before anything else: no configuration files, scripts or key bindings of mpv, and a

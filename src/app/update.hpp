@@ -29,6 +29,10 @@ bool newerVersion(const std::string& candidate, const std::string& current);
 // "Playfin-2.0.0.pkg": the version's digits, letters, dots and dashes only (empty without any)
 std::string packageFileName(const std::string& version);
 
+// Removes the update packages "Playfin-<version>.pkg" in `folder` whose version is `current` or older (installed:
+// they only fill GoldHEN's list), and nothing else. Returns how many went.
+int removeOldPackages(const std::string& folder, const std::string& current);
+
 core::Result<Release> fetchLatestRelease(const net::HttpClient& http, const std::string& url,
                                          const core::CancelToken& token = {});
 // The package to `path` (through `path`.part), checked against the release's size and digest as it arrives:

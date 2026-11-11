@@ -72,6 +72,19 @@ std::optional<std::string> packagePath(std::string_view name) {
     return resolveInside(folder, name);
 }
 
+std::optional<std::string> packageFolder() {
+#ifdef PLAYFIN_PS4
+    const std::string folder = "/data/pkg";
+#else
+    const auto inside = dataPath("pkg");
+    if (!inside) {
+        return std::nullopt;
+    }
+    const std::string folder = *inside;
+#endif
+    return isDirectory(folder) ? std::optional<std::string>(folder) : std::nullopt;
+}
+
 bool makeDirs(const std::string& path) {
 #ifdef PLAYFIN_PS4
     // a folder created under /data may not end up owned by the app's user: 0755 then forbids creating files in it

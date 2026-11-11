@@ -391,7 +391,8 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            last_ = Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body};
+            last_ = Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body,
+                         req.get_header_value("Range")};
             requests_.push_back(last_);
         }
         return serveShowcase(req, res) ? httplib::Server::HandlerResponse::Handled
@@ -514,7 +515,7 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     const auto report = [this](const httplib::Request& req, httplib::Response& res) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            reports_.push_back(Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body});
+            reports_.push_back(Seen{req.method, req.path, req.target, req.get_header_value("Authorization"), req.body, req.get_header_value("Range")});
         }
         res.status = 204;
     };
@@ -542,6 +543,17 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.Get(R"(/Items/([^/]+)/Download)", guarded([](const httplib::Request& req, httplib::Response& res) {
         if (req.matches[1] == "m-transcode") {
             res.status = 403;
+            return;
+        }
+        if (req.matches[1] == "m-resume") {  // 4 MB of a pattern (byte at offset o: o % 251), quickly, ranges answered
+            res.set_content_provider(4 * 1024 * 1024, "video/mp4", [](std::size_t offset, std::size_t length, httplib::DataSink& sink) {
+                std::string chunk(std::min<std::size_t>(length, 64 * 1024), '\0');
+                for (std::size_t i = 0; i < chunk.size(); ++i) {
+                    chunk[i] = static_cast<char>((offset + i) % 251);
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(15));
+                return sink.write(chunk.data(), chunk.size());
+            });
             return;
         }
         if (req.matches[1] == "m-sized") {  // 64 MB at about 3 MB/s, its length announced
@@ -599,6 +611,9 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
             res.set_content(readFixture("jellyfin/item_episode.json"), "application/json");
         } else if (id == "s-1") {
             res.set_content(readFixture("jellyfin/item_series.json"), "application/json");
+        } else if (id == "m-resume") {
+            res.set_content(R"({"Id":"m-resume","Name":"Resumed film","Type":"Movie","RunTimeTicks":40000000})",
+                            "application/json");
         } else if (id == "m-sized") {
             res.set_content(R"({"Id":"m-sized","Name":"Long film","Type":"Movie","RunTimeTicks":40000000})",
                             "application/json");

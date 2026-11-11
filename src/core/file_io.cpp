@@ -69,11 +69,34 @@ bool writeFileAtomic(const std::string& path, std::string_view text) {
     return true;
 }
 
-FileSink::FileSink(std::string path) : path_(std::move(path)) {
-    fd_ = ::open((path_ + ".part").c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+FileSink::FileSink(std::string path, bool resume) : path_(std::move(path)) {
+    fd_ = ::open((path_ + ".part").c_str(), O_WRONLY | O_CREAT | (resume ? O_APPEND : O_TRUNC), 0600);
     if (fd_ >= 0) {
         ::fchmod(fd_, 0600);
+        struct stat info {};
+        if (resume && ::fstat(fd_, &info) == 0) {
+            written_ = static_cast<long long>(info.st_size);
+        }
     }
+}
+
+void FileSink::keep() {
+    if (fd_ >= 0) {
+        flush();
+    }
+    if (fd_ >= 0) {
+        ::close(fd_);
+        fd_ = -1;
+    }
+}
+
+bool FileSink::restart() {
+    buffer_.clear();
+    if (fd_ < 0 || ::ftruncate(fd_, 0) != 0) {
+        return false;
+    }
+    written_ = 0;
+    return true;
 }
 
 FileSink::~FileSink() { abandon(); }

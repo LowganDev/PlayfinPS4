@@ -163,8 +163,11 @@ public:
     std::string imageUrl(const std::string& itemId, ImageType type, const std::string& tag, int maxWidth,
                          int maxHeight) const;
     // The item's original file (/Items/{id}/Download, the user needs the download right), to `sink` in pieces.
+    // `from` > 0 asks for the rest of it from that byte (a paused download); `started` says whether the server
+    // answered with that rest (206) or with the whole file again (200).
     core::Result<core::Unit> downloadItem(const std::string& itemId, net::HttpClient::Sink sink,
-                                          net::HttpClient::Progress progress, const core::CancelToken& token = {}) const;
+                                          net::HttpClient::Progress progress, const core::CancelToken& token = {},
+                                          std::int64_t from = 0, net::HttpClient::Started started = {}) const;
     // Authenticated GET of a URL of this server (images); refuses any other host.
     core::Result<std::string> fetch(const std::string& url, const core::CancelToken& token = {}) const;
 

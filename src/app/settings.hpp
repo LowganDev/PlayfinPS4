@@ -22,6 +22,8 @@ struct Settings {
     std::vector<std::string> recentChannels;  // Live TV channel ids, last watched first, at most 8
     std::string visualizer = "bars";  // the music visualizer: "bars", "mirror", "wave" or "off"
     std::string downloadTarget = "console";  // where downloads go: "console" or "usb" (the first USB drive)
+    std::string subtitleSize = "normal";  // text subtitles: "small", "normal", "large" or "larger"
+    bool subtitleBackground = false;      // a dark box behind them
     std::string playMethod = "auto";  // videos: "auto", "direct" (never a transcode) or "transcode" (always one)
     std::string xmltvUrl;  // a TV guide read on the console (http or https), "" = the server's only
     std::vector<std::string> libraryOrder;  // library ids in the order the user chose ("Mes médias", latest rows)
@@ -36,6 +38,9 @@ void addRecentSearch(Settings& settings, std::string term);
 
 // An XMLTV address the settings keep: http or https, no spaces, at most 2048 bytes.
 bool validGuideUrl(const std::string& url);
+
+// The player's scale of a subtitle size (1 for an unknown one).
+double subtitleScale(const std::string& size);
 
 // The palette entry with this id, else the default (PlayStation blue).
 const ui::AccentChoice& accentById(const std::string& id);

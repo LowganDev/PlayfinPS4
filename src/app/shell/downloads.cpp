@@ -1,6 +1,7 @@
 #include "app/shell/downloads.hpp"
 
 #include <dirent.h>
+#include <sys/stat.h>
 #ifdef PLAYFIN_PS4
 #include <sys/statfs.h>
 #else
@@ -112,8 +113,8 @@ std::string safe(const std::string& text) {
     return out.substr(0, 64);
 }
 
-// what a download stopped by the app's closing left behind ("<file>.part"); nothing runs yet
-void sweepParts(const std::string& dir) {
+// part files ("<file>.part") no download goes on from (`keep`: the files of those waiting or paused); nothing runs yet
+void sweepParts(const std::string& dir, const std::vector<std::string>& keep) {
     DIR* listing = ::opendir(dir.c_str());
     if (listing == nullptr) {
         return;
@@ -121,7 +122,8 @@ void sweepParts(const std::string& dir) {
     std::vector<std::string> parts;
     while (const dirent* file = ::readdir(listing)) {
         const std::string name = file->d_name;
-        if (name.size() > 5 && name.compare(name.size() - 5, 5, ".part") == 0 && name.find('/') == std::string::npos) {
+        if (name.size() > 5 && name.compare(name.size() - 5, 5, ".part") == 0 && name.find('/') == std::string::npos &&
+            std::find(keep.begin(), keep.end(), name.substr(0, name.size() - 5)) == keep.end()) {
             parts.push_back(name);
         }
     }
@@ -145,6 +147,8 @@ const char* stateName(Downloads::State state) {
         return "done";
     case Downloads::State::Failed:
         return "failed";
+    case Downloads::State::Paused:
+        return "paused";
     default:
         return "queued";
     }
@@ -160,15 +164,12 @@ Downloads::~Downloads() {
 }
 
 void Downloads::load() {
-    if (const auto dir = folder()) {
-        sweepParts(*dir);
-    }
     const auto path = core::dataPath("downloads.json");
     std::string text;
     if (!path || core::readSmallFile(*path, kMaxListBytes, text) != core::ReadStatus::Ok) {
-        return;
+        text.clear();  // no list: no download, and any part file goes
     }
-    const auto doc = json::Document::parse(text);
+    const auto doc = text.empty() ? std::nullopt : json::Document::parse(text);
     yyjson_val* items = doc ? json::array(doc->root(), "items") : nullptr;
     yyjson_arr_iter iter = yyjson_arr_iter_with(items);
     while (yyjson_val* value = items != nullptr ? yyjson_arr_iter_next(&iter) : nullptr) {
@@ -193,7 +194,10 @@ void Downloads::load() {
         entry.size = json::integer(value, "size");
         entry.positionTicks = json::integer(value, "position");
         const std::string state = json::string(value, "state");
-        entry.state = state == "done" ? State::Done : state == "failed" ? State::Failed : State::Queued;
+        entry.state = state == "done"     ? State::Done
+                      : state == "failed" ? State::Failed
+                      : state == "paused" ? State::Paused
+                                          : State::Queued;
         entry.error = json::string(value, "error");
         entry.drive = json::string(value, "drive");
         if (!entry.drive.empty() && usbDriveOf(entry.drive) != entry.drive) {
@@ -205,6 +209,22 @@ void Downloads::load() {
         }
         entry.received = entry.state == State::Done ? entry.size : 0;
         entries_.push_back(std::move(entry));
+    }
+    // what the downloads waiting or paused already have; any other part file goes
+    if (const auto dir = folder()) {
+        std::vector<std::string> keep;
+        for (Entry& entry : entries_) {
+            if (entry.state != State::Queued && entry.state != State::Paused) {
+                continue;
+            }
+            keep.push_back(entry.file);
+            struct stat info {};
+            const auto part = core::resolveInside(*dir, entry.file + ".part");
+            if (part && ::stat(part->c_str(), &info) == 0) {
+                entry.received = static_cast<std::int64_t>(info.st_size);
+            }
+        }
+        sweepParts(*dir, keep);
     }
     startNext();  // what was queued when the app closed
 }
@@ -327,7 +347,63 @@ void Downloads::retry(const std::string& id) {
     }
 }
 
-void Downloads::stop() { token_.cancel(); }
+void Downloads::stop() {
+    stopping_ = true;
+    if (keepPart_) {
+        keepPart_->store(true);  // it goes on from there at the next start
+    }
+    token_.cancel();
+}
+
+void Downloads::pause(const std::string& id) {
+    Entry* found = entry(id);
+    if (found == nullptr || (found->state != State::Running && found->state != State::Queued)) {
+        return;
+    }
+    if (running_ == id) {
+        if (keepPart_) {
+            keepPart_->store(true);
+        }
+        token_.cancel();  // its job ends with "cancelled"; the part file stays
+    }
+    found->state = State::Paused;
+    found->bytesPerSecond = 0;
+    found->secondsLeft = -1;
+    save();
+    notify();
+}
+
+void Downloads::resume(const std::string& id) {
+    if (Entry* found = entry(id); found != nullptr && found->state == State::Paused) {
+        found->state = State::Queued;
+        save();
+        notify();
+        startNext();
+    }
+}
+
+void Downloads::move(const std::string& id, int delta) {
+    const auto it = std::find_if(entries_.begin(), entries_.end(), [&](const Entry& e) { return e.item.id == id; });
+    if (it == entries_.end() || it->state == State::Done || it->state == State::Running || delta == 0) {
+        return;
+    }
+    const auto at = static_cast<std::ptrdiff_t>(it - entries_.begin());
+    // the next one not finished, that way
+    for (std::ptrdiff_t i = at + (delta < 0 ? -1 : 1); i >= 0 && i < static_cast<std::ptrdiff_t>(entries_.size());
+         i += delta < 0 ? -1 : 1) {
+        Entry& other = entries_[static_cast<std::size_t>(i)];
+        if (other.state == State::Done) {
+            continue;
+        }
+        if (other.state == State::Running) {
+            return;  // never above the one on its way
+        }
+        std::swap(entries_[static_cast<std::size_t>(at)], other);
+        save();
+        notify();
+        return;
+    }
+}
 
 void Downloads::remove(const std::string& id) {
     if (running_ == id) {
@@ -424,7 +500,7 @@ std::int64_t Downloads::freeBytes() {
 }
 
 void Downloads::startNext() {
-    if (!running_.empty()) {
+    if (!running_.empty() || stopping_) {
         return;
     }
     Entry* next = nullptr;
@@ -451,14 +527,15 @@ void Downloads::startNext() {
             return;
         }
     }
-    next->state = State::Running;
-    next->received = 0;
+    next->state = State::Running;  // `received` stays: what a paused one already has
     next->image = next->item.id + ".jpg";
     running_ = next->item.id;
     rate_.reset();
     next->bytesPerSecond = 0;
     next->secondsLeft = -1;
     token_ = core::CancelToken{};
+    keepPart_ = std::make_shared<std::atomic<bool>>(false);
+    const std::shared_ptr<std::atomic<bool>> keepPart = keepPart_;
     const std::string id = next->item.id;
     const auto filePath = core::resolveInside(*dir, next->file);
     const std::string imageName = id + ".jpg";
@@ -470,7 +547,7 @@ void Downloads::startNext() {
     ui::Application* app = ui::Application::current();
     const std::function<std::int64_t()> freeNow = freeSpace;
     const std::string fileName = next->file;
-    auto job = [client, id, filePath, imagePath, imageUrl, token, alive, app, freeNow, usb, fileName, this]() {
+    auto job = [client, id, filePath, imagePath, imageUrl, token, alive, app, freeNow, usb, fileName, keepPart, this]() {
         Outcome outcome;
         if (!filePath) {
             outcome.result = core::makeError(core::ErrorKind::Storage, "bad name");
@@ -501,10 +578,14 @@ void Downloads::startNext() {
             }
         };
         if (usb) {
-            outcome.result = toDrive(*client, *usb, id, fileName, progress, token, outcome.drive, outcome.received);
+            if (const auto local = filePath ? std::optional<std::string>(*filePath + ".part") : std::nullopt) {
+                ::unlink(local->c_str());  // a part kept on the console does not go to the drive
+            }
+            outcome.result = toDrive(*client, *usb, id, fileName, progress, token, outcome.drive, outcome.received,
+                                     *keepPart);
             return outcome;
         }
-        core::FileSink sink(*filePath);
+        core::FileSink sink(*filePath, true);  // on from what a paused download kept
         if (!sink.ok()) {
             outcome.result = core::makeError(core::ErrorKind::Storage, "cannot write");
             return outcome;
@@ -521,9 +602,16 @@ void Downloads::startNext() {
             const std::int64_t left = expected > written ? expected - written : 0;
             return free <= 0 || free >= left + kSpareBytes;
         };
+        // what is already there: the server is asked for the rest; it may send the whole file again (200)
+        const std::int64_t from = static_cast<std::int64_t>(sink.written());
+        std::int64_t offset = from;
+        bool restartFailed = false;
         auto result = client->downloadItem(
             id,
             [&](const char* data, std::size_t size) {
+                if (restartFailed) {
+                    return false;
+                }
                 if (static_cast<std::int64_t>(sink.written()) >= checkAt && !enoughSpace()) {
                     noSpace = true;
                     return false;
@@ -531,17 +619,24 @@ void Downloads::startNext() {
                 return sink.write(data, size);
             },
             [&](long long now, long long total) {
-                if (total > 0 && expected != total) {
-                    expected = total;
+                if (total > 0 && expected != total + offset) {
+                    expected = total + offset;
                     checkAt = 0;  // asked again at the next write, with the length
                 }
-                progress(now, total);
+                progress(now + offset, total > 0 ? total + offset : 0);
             },
-            token);
+            token, from, [&](long status) {
+                if (from > 0 && status != 206) {  // the whole file again: the part starts over
+                    offset = 0;
+                    restartFailed = !sink.restart();
+                }
+            });
         if (noSpace) {
             result = core::makeError(core::ErrorKind::Storage, kNoSpace);
         } else if (result.ok() && !sink.commit()) {
             result = core::makeError(core::ErrorKind::Storage, "the file could not be written");
+        } else if (!result.ok() && result.error().kind == core::ErrorKind::Cancelled && keepPart->load()) {
+            sink.keep();  // paused, or the app closing: it goes on from there
         }
         outcome.result = std::move(result);
         outcome.received = static_cast<std::int64_t>(sink.written());
@@ -563,7 +658,7 @@ core::Result<core::Unit> Downloads::toDrive(const jellyfin::Client& client, cons
                                             const std::string& id, const std::string& fileName,
                                             const std::function<void(long long, long long)>& progress,
                                             const core::CancelToken& token, std::string& drive,
-                                            std::int64_t& received) {
+                                            std::int64_t& received, const std::atomic<bool>& keepPart) {
     const auto drives = usbDrives(ftp, token);
     if (!drives.ok() || drives.value().empty()) {
         return core::makeError(core::ErrorKind::Storage, kNoDrive);
@@ -574,13 +669,22 @@ core::Result<core::Unit> Downloads::toDrive(const jellyfin::Client& client, cons
         return core::makeError(core::ErrorKind::Storage, kDriveFailed);
     }
     const std::string part = path + ".part";
+    // what a paused download left on the drive: the server is asked for the rest, written after it
+    const auto kept = ftp.size(part, token);
+    const std::int64_t from = kept.ok() && kept.value() > 0 ? kept.value() : 0;
+    std::int64_t offset = from;
+    received = from;
     Pipe pipe;
     core::Result<core::Unit> written = core::Unit{};
-    std::thread writer([&] {
-        written = ftp.upload(part, [&pipe](char* buffer, std::size_t size) { return pipe.pull(buffer, size); },
-                             false, token);
-        pipe.stop();  // a failed upload stops the transfer feeding it
-    });
+    std::thread writer;
+    // the upload starts with the answer: appended after the part when the server sends its rest (206)
+    const auto startWriter = [&](bool append) {
+        writer = std::thread([&, append] {
+            written = ftp.upload(part, [&pipe](char* buffer, std::size_t size) { return pipe.pull(buffer, size); },
+                                 append, token);
+            pipe.stop();  // a failed upload stops the transfer feeding it
+        });
+    };
     auto result = client.downloadItem(
         id,
         [&](const char* data, std::size_t size) {
@@ -590,13 +694,26 @@ core::Result<core::Unit> Downloads::toDrive(const jellyfin::Client& client, cons
             received += static_cast<std::int64_t>(size);
             return true;
         },
-        progress, token);
+        [&](long long now, long long total) { progress(now + offset, total > 0 ? total + offset : 0); }, token, from,
+        [&](long status) {
+            const bool rest = from > 0 && status == 206;
+            if (!rest) {
+                offset = 0;
+                received = 0;
+            }
+            startWriter(rest);
+        });
+    if (!writer.joinable() && result.ok()) {
+        startWriter(false);  // an empty file: nothing came, the upload still makes it
+    }
     if (result.ok()) {
         pipe.end();
     } else {
         pipe.stop();
     }
-    writer.join();
+    if (writer.joinable()) {
+        writer.join();
+    }
     if (result.ok() && !written.ok()) {
         PF_LOG_WARN("downloads: %s: %s", id.c_str(), written.error().message.c_str());
         result = core::makeError(core::ErrorKind::Storage, kDriveFailed);
@@ -604,7 +721,8 @@ core::Result<core::Unit> Downloads::toDrive(const jellyfin::Client& client, cons
     if (result.ok() && !ftp.rename(part, path).ok()) {
         result = core::makeError(core::ErrorKind::Storage, kDriveFailed);
     }
-    if (!result.ok()) {
+    const bool paused = !result.ok() && result.error().kind == core::ErrorKind::Cancelled && keepPart.load();
+    if (!result.ok() && !paused) {
         ftp.remove(part);
     }
     return result;
@@ -701,6 +819,19 @@ std::string speedText(double bytesPerSecond) {
     return ui::tr("downloads.speed", {number});
 }
 
+std::string Downloads::title(const jellyfin::Item& item) {
+    std::string text = cardTitle(item);
+    if (item.type == jellyfin::ItemType::Episode) {
+        text += " \xC2\xB7 " + cardSubtitle(item);
+    }
+    return text;
+}
+
+std::string Downloads::pausedText(const Entry& entry) {
+    return entry.size > 0 ? ui::tr("downloads.paused", {std::to_string(entry.received * 100 / entry.size)})
+                          : ui::tr("downloads.paused_bytes", {sizeText(entry.received)});
+}
+
 std::string Downloads::runningText(const Entry& entry, bool speed) {
     std::string text = entry.size > 0 ? ui::tr("downloads.progress", {std::to_string(entry.received * 100 / entry.size)})
                                       : ui::tr("downloads.progress_bytes", {sizeText(entry.received)});
@@ -727,7 +858,15 @@ void Downloads::finished(const std::string& id, Outcome outcome) {
             found->received = received;
             found->drive = outcome.drive;
             PF_LOG_INFO("downloads: %s done (%lld bytes)", id.c_str(), static_cast<long long>(received));
-        } else if (result.error().kind != core::ErrorKind::Cancelled) {
+            if (ui::Application* app = ui::Application::current()) {
+                app->toast(ui::tr("downloads.finished", {title(found->item)}));
+            }
+        } else if (result.error().kind == core::ErrorKind::Cancelled) {
+            if (found->state == State::Running) {  // stopped by the app's closing: it goes on at the next start
+                found->state = State::Queued;
+            }
+            found->received = received;
+        } else {
             const core::Error& error = result.error();
             found->state = State::Failed;
             found->error = error.kind == core::ErrorKind::Unauthorized ? ui::tr("downloads.not_allowed")

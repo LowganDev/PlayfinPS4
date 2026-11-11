@@ -47,7 +47,7 @@ std::string speedText(double bytesPerSecond);
 // downloadTarget when it starts. Owned by the AppSession; main thread.
 class Downloads {
 public:
-    enum class State { Queued, Running, Done, Failed };
+    enum class State { Queued, Running, Paused, Done, Failed };
     struct Entry {
         jellyfin::Item item;       // what the cards and the player need (name, series, numbers, length)
         std::string file;          // name in downloads/ ("<id>.mkv")
@@ -64,6 +64,10 @@ public:
     };
     // "Téléchargement… 9 % · reste 19 min" (with `speed`: "… 9 % · 4,5 Mo/s · reste 19 min"); what it knows only
     static std::string runningText(const Entry& entry, bool speed);
+    // "En pause · 12 %"
+    static std::string pausedText(const Entry& entry);
+    // what the Downloads tab and the finished message call it: a film's name, an episode's series, season and number
+    static std::string title(const jellyfin::Item& item);
 
     explicit Downloads(AppSession& session);
     ~Downloads();
@@ -87,12 +91,20 @@ public:
     void setPosition(const std::string& id, std::int64_t ticks);
     // A failed one queued again.
     void retry(const std::string& id);
+    // Stops a running or waiting one and keeps what it got (its part file); nothing starts it until resume().
+    void pause(const std::string& id);
+    // A paused one waits again, then goes on from where it was (the server sends the rest).
+    void resume(const std::string& id);
+    // Moves one by `delta` (-1 up, 1 down) among those not finished, never above the one running.
+    void move(const std::string& id, int delta);
+    // The id of the download on its way, empty when none.
+    const std::string& runningId() const { return running_; }
 
     // `changed` runs when an entry changes (progress at most once per percent); listeners are owners.
     void listen(const void* owner, std::function<void()> changed);
     void unlisten(const void* owner);
 
-    // At exit: the running download is cancelled (it stays queued for the next start).
+    // At exit: the running download is stopped, keeping its part file (it goes on from there at the next start).
     void stop();
 
     // Bytes free where downloads go (0 when unknown).
@@ -113,7 +125,7 @@ private:
                                             const std::string& id, const std::string& fileName,
                                             const std::function<void(long long, long long)>& progress,
                                             const core::CancelToken& token, std::string& drive,
-                                            std::int64_t& received);
+                                            std::int64_t& received, const std::atomic<bool>& keepPart);
     void progress(const std::string& id, std::int64_t received, std::int64_t total);
     TransferRate rate_;  // the running download's
     void save() const;
@@ -124,6 +136,8 @@ private:
     std::vector<Entry> entries_;
     std::string running_;     // id of the download on its way (until its job ends, even when removed meanwhile)
     core::CancelToken token_;  // cancels it
+    std::shared_ptr<std::atomic<bool>> keepPart_;
+    bool stopping_ = false;  // the app closes: nothing starts any more  // when it is cancelled: its part file stays (paused, closing)
     std::vector<std::pair<const void*, std::function<void()>>> listeners_;
     std::shared_ptr<bool> alive_ = std::make_shared<bool>(true);
 };

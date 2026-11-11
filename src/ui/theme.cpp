@@ -87,6 +87,7 @@ std::vector<ThemeChoice> makeThemes() {
     slate.focusStyle = FocusStyle::Ring;
     slate.focusSheen = true;
     slate.cardBorderWidth = 2;
+    slate.cardShadow = 0.35f;
     slate.cardBorder = rgb(0x31373F);
     slate.tabStyle = TabStyle::Pill;
     themes.push_back({"slate", "ElegantFin", slate, {"theme", rgb(0x5D55E7), white}, "lscambo13",
@@ -157,6 +158,7 @@ std::vector<ThemeChoice> makeThemes() {
     violet.backdropFollowsFocus = true;
     violet.radius = 13;
     violet.focusStyle = FocusStyle::Frame;
+    violet.cardShadow = 0.45f;
     violet.focusInAccent = false;
     violet.focusColor = white;
     themes.push_back({"violet", "Finimalism", violet, {"theme", rgb(0x8564FF), white}, "tedhinklater",

@@ -234,3 +234,62 @@ TEST_CASE("a file written in small pieces is written to disk in large blocks, wh
     REQUIRE(core::readSmallFile(path, 8u << 20, text) == core::ReadStatus::Ok);
     CHECK(text == expected);
 }
+
+TEST_CASE("a part file kept, then completed: written on after what it had, then whole") {
+    TempDir dir;
+    const std::string path = dir.path + "/film.mkv";
+    {
+        core::FileSink sink(path);
+        REQUIRE(sink.write("hello ", 6));
+        sink.keep();  // paused: the part stays
+    }
+    CHECK(std::filesystem::file_size(path + ".part") == 6);
+    {
+        core::FileSink sink(path, true);
+        CHECK(sink.written() == 6);
+        REQUIRE(sink.write("world", 5));
+        REQUIRE(sink.commit());
+    }
+    std::string text;
+    REQUIRE(core::readSmallFile(path, 1024, text) == core::ReadStatus::Ok);
+    CHECK(text == "hello world");
+    // the server sends the whole file again: the part starts over
+    {
+        core::FileSink sink(dir.path + "/again.mkv");
+        REQUIRE(sink.write("old", 3));
+        sink.keep();
+    }
+    {
+        core::FileSink sink(dir.path + "/again.mkv", true);
+        REQUIRE(sink.restart());
+        CHECK(sink.written() == 0);
+        REQUIRE(sink.write("new", 3));
+        REQUIRE(sink.commit());
+    }
+    REQUIRE(core::readSmallFile(dir.path + "/again.mkv", 1024, text) == core::ReadStatus::Ok);
+    CHECK(text == "new");
+}
+
+TEST_CASE("subtitle size and background: saved, read back, unknown values give the defaults") {
+    TempDir dir;
+    const std::string path = dir.path + "/settings.json";
+    app::Settings settings;
+    CHECK(settings.subtitleSize == "normal");
+    CHECK_FALSE(settings.subtitleBackground);
+    settings.subtitleSize = "large";
+    settings.subtitleBackground = true;
+    REQUIRE(app::saveSettings(path, settings));
+    const app::Settings loaded = app::loadSettings(path);
+    CHECK(loaded.subtitleSize == "large");
+    CHECK(loaded.subtitleBackground);
+    {
+        std::ofstream out(path);
+        out << R"({"version":1,"subtitleSize":"huge"})";
+    }
+    CHECK(app::loadSettings(path).subtitleSize == "normal");
+    CHECK(app::subtitleScale("small") == doctest::Approx(0.75));
+    CHECK(app::subtitleScale("normal") == doctest::Approx(1.0));
+    CHECK(app::subtitleScale("large") == doctest::Approx(1.25));
+    CHECK(app::subtitleScale("larger") == doctest::Approx(1.5));
+    CHECK(app::subtitleScale("nope") == doctest::Approx(1.0));
+}

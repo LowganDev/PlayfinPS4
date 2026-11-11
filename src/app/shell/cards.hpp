@@ -42,6 +42,7 @@ public:
 
 private:
     void drawBorder(NVGcontext* vg, const ui::Rect& picture) const;
+    void drawShadow(NVGcontext* vg, const ui::Rect& picture) const;
     float focus_ = 0;
     jellyfin::Item item_;
     ui::ImageView* image_;

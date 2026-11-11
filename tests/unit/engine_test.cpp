@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "player/engine.hpp"
@@ -199,4 +200,63 @@ TEST_CASE("the engine plays faster at a higher speed, within 0.5 to 2") {
     CHECK(pump.engine->speed() == doctest::Approx(2.0));
     pump.engine->setSpeed(0.1);
     CHECK(pump.engine->speed() == doctest::Approx(0.5));
+}
+
+namespace {
+// the clip with "Bonjour" at 1 s: how many pixels of the bottom third differ from the same picture without it
+int subtitlePixels(const player::EngineOptions& base) {
+    const auto frameAt = [](player::EngineOptions options, bool withSubtitle) {
+        options.audioOutput = "null";
+        auto engine = player::Engine::create(options, [] {});
+        REQUIRE(engine != nullptr);
+        engine->load(kClip, 1.0);
+        player::VideoFrame frame;
+        const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(8);
+        bool added = false;
+        while (std::chrono::steady_clock::now() < end) {
+            for (player::EngineEvent e : engine->drainEvents()) {
+                if (e == player::EngineEvent::FileLoaded && withSubtitle && !added) {
+                    engine->addSubtitle(kSubtitle, true);
+                    added = true;
+                }
+            }
+            engine->setPaused(true);
+            engine->renderIfDue(frame);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        return frame;
+    };
+    const player::VideoFrame plain = frameAt(base, false);
+    const player::VideoFrame shown = frameAt(base, true);
+    REQUIRE(plain.pixels.size() == shown.pixels.size());
+    int changed = 0;
+    for (int y = plain.height * 2 / 3; y < plain.height; ++y) {
+        for (int x = 0; x < plain.width; ++x) {
+            const std::size_t at = (static_cast<std::size_t>(y) * static_cast<std::size_t>(plain.width) + static_cast<std::size_t>(x)) * 4;
+            int d = 0;
+            for (int c = 0; c < 3; ++c) {
+                d += std::abs(int(plain.pixels[at + static_cast<std::size_t>(c)]) - int(shown.pixels[at + static_cast<std::size_t>(c)]));
+            }
+            changed += d > 30 ? 1 : 0;
+        }
+    }
+    return changed;
+}
+}  // namespace
+
+TEST_CASE("subtitles: larger with a bigger scale, and a box behind them when asked") {
+    player::EngineOptions options;
+    options.fontsDir = std::string(PLAYFIN_SOURCE_DIR) + "/resources/fonts";
+    const int normal = subtitlePixels(options);
+    MESSAGE("normal " << normal);
+    REQUIRE(normal > 50);
+    options.subtitleScale = 1.5;
+    const int large = subtitlePixels(options);
+    MESSAGE("large " << large);
+    CHECK(large > normal * 3 / 2);
+    options.subtitleScale = 1.0;
+    options.subtitleBackground = true;
+    const int boxed = subtitlePixels(options);
+    MESSAGE("boxed " << boxed);
+    CHECK(boxed > normal * 2);
 }

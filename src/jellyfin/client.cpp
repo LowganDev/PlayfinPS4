@@ -432,15 +432,19 @@ std::string Client::userImageUrl(const std::string& userId, const std::string& t
 }
 
 core::Result<core::Unit> Client::downloadItem(const std::string& itemId, net::HttpClient::Sink sink,
-                                              net::HttpClient::Progress progress, const core::CancelToken& token) const {
+                                              net::HttpClient::Progress progress, const core::CancelToken& token,
+                                              std::int64_t from, net::HttpClient::Started started) const {
     net::HttpRequest req;
     req.url = session_.baseUrl + "/Items/" + net::urlEncode(itemId) + "/Download";
     req.connectTimeoutMs = session_.connectTimeoutMs;
     req.timeoutMs = 0;  // a film takes long: the low-speed limit stops a stalled transfer
     req.headers = {{"Authorization", authorizationHeader(session_)}};
+    if (from > 0) {
+        req.headers.emplace_back("Range", "bytes=" + std::to_string(from) + "-");
+    }
     const bool secure = session_.baseUrl.rfind("https://", 0) == 0;
     auto response = http_.download(req, std::move(sink), std::move(progress), secure ? session_.pin : std::string(),
-                                   token);
+                                   token, std::move(started));
     if (!response.ok()) {
         return response.error();
     }

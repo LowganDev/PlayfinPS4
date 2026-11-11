@@ -171,6 +171,15 @@ public:
         playMethod_ = column->add<ui::ValueRow>(ui::tr("settings.play_method"),
                                                 playMethodName(session_.settings().playMethod),
                                                 [this] { choosePlayMethod(); });
+        subtitleSize_ = column->add<ui::ValueRow>(ui::tr("settings.subtitle_size"),
+                                                  ui::tr("settings.subtitle_size." + session_.settings().subtitleSize),
+                                                  [this] { chooseSubtitleSize(); });
+        subtitleBackground_ = column->add<ui::ValueRow>(ui::tr("settings.subtitle_background"), "", [this] {
+            session_.settings().subtitleBackground = !session_.settings().subtitleBackground;
+            session_.saveSettings();
+            subtitleBackground_->setValue(ui::tr(session_.settings().subtitleBackground ? "settings.on" : "settings.off"));
+        });
+        subtitleBackground_->setValue(ui::tr(session_.settings().subtitleBackground ? "settings.on" : "settings.off"));
 
         // an XMLTV address for servers without a guide (Live TV)
         guide_ = column->add<ui::ValueRow>(ui::tr("settings.tv_guide"), "", [this] { pressGuide(); });
@@ -460,6 +469,22 @@ private:
         }));
     }
 
+    void chooseSubtitleSize() {
+        static const char* const kSizes[] = {"small", "normal", "large", "larger"};
+        std::vector<std::string> names;
+        int selected = 1;
+        for (int i = 0; i < 4; ++i) {
+            names.push_back(ui::tr(std::string("settings.subtitle_size.") + kSizes[i]));
+            selected = session_.settings().subtitleSize == kSizes[i] ? i : selected;
+        }
+        ui::Application::current()->showModal(
+            ui::makeChoiceDialog(ui::tr("settings.subtitle_size"), names, selected, [this](int index) {
+                session_.settings().subtitleSize = kSizes[index];
+                session_.saveSettings();
+                subtitleSize_->setValue(ui::tr("settings.subtitle_size." + session_.settings().subtitleSize));
+            }));
+    }
+
     void choosePlayMethod() {
         std::vector<std::string> names;
         int selected = 0;
@@ -509,6 +534,8 @@ private:
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
     ui::ValueRow* playMethod_;
+    ui::ValueRow* subtitleSize_ = nullptr;
+    ui::ValueRow* subtitleBackground_ = nullptr;
     ui::ValueRow* update_ = nullptr;
     ui::ValueRow* guide_ = nullptr;
     ui::ValueRow* share_ = nullptr;
