@@ -313,3 +313,30 @@ TEST_CASE("the episodes around one: across seasons, specials only around a speci
     CHECK(around.next->id == "a1");
     CHECK_FALSE(adjacentEpisodes(all, "missing").next);
 }
+
+TEST_CASE("an item's trickplay pictures: one entry per version and width; incomplete ones are left out") {
+    const auto item = parseItem(
+        R"({"Id":"m-1","Trickplay":{"ms-1":{"320":{"Width":320,"Height":180,"TileWidth":10,"TileHeight":10,)"
+        R"("ThumbnailCount":523,"Interval":10000,"Bandwidth":1000},"480":{"Width":480,"Height":270,"TileWidth":10,)"
+        R"("TileHeight":10,"ThumbnailCount":523,"Interval":0}},"ms-2":"nope"}})");
+    REQUIRE(item.ok());
+    REQUIRE(item.value().trickplay.count("ms-1") == 1);
+    const auto& widths = item.value().trickplay.at("ms-1");
+    REQUIRE(widths.size() == 1);  // 480: no interval
+    CHECK(widths[0].width == 320);
+    CHECK(widths[0].height == 180);
+    CHECK(widths[0].tileWidth == 10);
+    CHECK(widths[0].tileHeight == 10);
+    CHECK(widths[0].thumbnailCount == 523);
+    CHECK(widths[0].intervalMs == 10000);
+    CHECK(item.value().trickplay.count("ms-2") == 0);
+}
+
+TEST_CASE("trickplay pictures two minutes apart are kept") {
+    const auto item = parseItem(
+        R"({"Id":"m-1","Trickplay":{"ms-1":{"320":{"Width":320,"Height":180,"TileWidth":10,"TileHeight":10,)"
+        R"("ThumbnailCount":60,"Interval":120000}}}})");
+    REQUIRE(item.ok());
+    REQUIRE(item.value().trickplay.count("ms-1") == 1);
+    CHECK(item.value().trickplay.at("ms-1")[0].intervalMs == 120000);
+}

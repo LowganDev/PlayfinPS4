@@ -6,6 +6,7 @@
 #include "jellyfin/models.hpp"
 #include "player/seek.hpp"
 #include "player/session.hpp"
+#include "player/trickplay.hpp"
 #include "player/tracks.hpp"
 #include "support/files.hpp"
 
@@ -338,4 +339,64 @@ TEST_CASE("an item's chapters are read from the server's answer") {
     REQUIRE(item.value().chapters.size() == 2);
     CHECK(item.value().chapters[0].name == "Intro");
     CHECK(item.value().chapters[1].startTicks == 300000000);
+}
+
+TEST_CASE("playback speeds, and the time left at a speed") {
+    CHECK(player::speedChoices() == std::vector<double>{0.5, 0.75, 1.0, 1.25, 1.5, 2.0});
+    CHECK(player::remainingSeconds(100, 40, 1.0) == doctest::Approx(60));
+    CHECK(player::remainingSeconds(100, 40, 1.5) == doctest::Approx(40));
+    CHECK(player::remainingSeconds(100, 40, 0.5) == doctest::Approx(120));
+    CHECK(player::remainingSeconds(100, 120, 2.0) == doctest::Approx(0));
+    CHECK(player::remainingSeconds(100, 40, 0) == doctest::Approx(60));  // no speed: as 1
+}
+
+TEST_CASE("trickplay: the frame for a time, clamped to the last thumbnail") {
+    jellyfin::TrickplayInfo info;
+    info.width = 320;
+    info.height = 180;
+    info.tileWidth = 10;
+    info.tileHeight = 10;
+    info.thumbnailCount = 523;
+    info.intervalMs = 10000;
+    auto frame = player::trickplayFrame(info, 0);
+    CHECK(frame.sheet == 0);
+    CHECK(frame.x == 0);
+    CHECK(frame.y == 0);
+    CHECK(frame.width == 320);
+    CHECK(frame.height == 180);
+    frame = player::trickplayFrame(info, 1015);  // thumbnail 101: sheet 1, column 1, row 0
+    CHECK(frame.sheet == 1);
+    CHECK(frame.x == 320);
+    CHECK(frame.y == 0);
+    frame = player::trickplayFrame(info, 99999);  // past the end: thumbnail 522, sheet 5, column 2, row 2
+    CHECK(frame.sheet == 5);
+    CHECK(frame.x == 640);
+    CHECK(frame.y == 360);
+    CHECK(player::trickplayFrame(info, -5).sheet == 0);
+    CHECK(player::trickplaySheets(info) == 6);
+}
+
+TEST_CASE("trickplay: the smallest width that looks right") {
+    jellyfin::TrickplayInfo small;
+    small.width = 160;
+    jellyfin::TrickplayInfo medium;
+    medium.width = 320;
+    jellyfin::TrickplayInfo large;
+    large.width = 480;
+    CHECK(player::pickTrickplay({large, medium, small})->width == 320);
+    CHECK(player::pickTrickplay({small})->width == 160);
+    CHECK_FALSE(player::pickTrickplay({}).has_value());
+}
+
+TEST_CASE("trickplay: sheets too big to decode are never chosen") {
+    jellyfin::TrickplayInfo small;  // 3200 x 1800: fine
+    small.width = 320;
+    small.height = 180;
+    small.tileWidth = 10;
+    small.tileHeight = 10;
+    jellyfin::TrickplayInfo big = small;  // 4800 x 2700: over the decoder's 8 megapixels
+    big.width = 480;
+    big.height = 270;
+    CHECK(player::pickTrickplay({big, small})->width == 320);
+    CHECK_FALSE(player::pickTrickplay({big}).has_value());
 }

@@ -7,6 +7,8 @@
 #include "core/utf.hpp"
 #include "jellyfin/json.hpp"
 #include "support/files.hpp"
+#include "ui/nvg_backend.hpp"
+#include "ui/theme.hpp"
 
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -93,4 +95,35 @@ TEST_CASE("every character of every translation is in the shipped fonts") {
             }
         }
     }
+}
+
+// A theme's font: its files are shipped, and what it says it covers matches its glyphs (a wrong flag would show
+// empty boxes in Russian, Ukrainian or Vietnamese instead of falling back to Noto Sans).
+TEST_CASE("every theme's font is shipped and its script coverage is right") {
+    const std::string fonts = std::string(PLAYFIN_SOURCE_DIR) + "/resources/fonts/";
+    for (const auto& theme : playfin::ui::themeChoices()) {
+        const playfin::ui::ThemeFont& font = theme.tokens.font;
+        CAPTURE(std::string(font.family));
+        for (const char* file : font.files) {
+            REQUIRE(Face(fonts + file).ok);
+        }
+        const Face regular(fonts + font.files[0]);
+        CHECK(font.cyrillic == (regular.has(U'Ж') && regular.has(U'ы') && regular.has(U'ї')));
+        CHECK(font.vietnamese == (regular.has(U'ệ') && regular.has(U'ạ') && regular.has(U'ư')));
+    }
+}
+
+TEST_CASE("the UI's family: the theme's, or Noto Sans for a script it lacks") {
+    using playfin::ui::primaryFamily;
+    using playfin::ui::themeById;
+    const auto& outfit = themeById("violet").tokens.font;
+    const auto& inter = themeById("slate").tokens.font;
+    const auto& sora = themeById("projecteur").tokens.font;
+    CHECK(std::string(primaryFamily("fr-FR", outfit)) == "Outfit");
+    CHECK(std::string(primaryFamily("ru", outfit)) == "NotoSans");
+    CHECK(std::string(primaryFamily("vi", outfit)) == "NotoSans");
+    CHECK(std::string(primaryFamily("ja", outfit)) == "Outfit");  // CJK goes through the fallback
+    CHECK(std::string(primaryFamily("ru", inter)) == "Inter");
+    CHECK(std::string(primaryFamily("uk-UA", sora)) == "NotoSans");  // as before 2.2
+    CHECK(std::string(primaryFamily("de", sora)) == "Sora");
 }

@@ -2,6 +2,8 @@
 
 #include <nanovg.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -9,6 +11,7 @@
 #include "app/shell/format.hpp"
 #include "ui/animation.hpp"
 #include "ui/context.hpp"
+#include "ui/draw.hpp"
 #include "ui/halo.hpp"
 #include "ui/i18n.hpp"
 
@@ -80,9 +83,48 @@ void ItemCard::onFocusChanged(bool focused) {
 namespace {
 
 constexpr float kGlowFeather = 50;
-constexpr float kGlowStrength = 0.30f;  // of the accent under the picture (0.45 looked too strong on the console)
 constexpr float kRingWidth = 3;
 constexpr float kRingGap = 4;
+constexpr float kThemeRingWidth = 4;  // Ring and Frame
+
+// A light band across a picture (ElegantFin's sheen): white along a 115° line, 22 % at its middle (45 % of the
+// way), gone 15 % either side. Premultiplied RGBA, made once per size and theme like the glow.
+std::vector<std::uint8_t> sheenImage(int width, int height) {
+    std::vector<std::uint8_t> out(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4, 0);
+    const double angle = 115.0 * 3.14159265358979 / 180.0;
+    const double dx = std::sin(angle);
+    const double dy = -std::cos(angle);
+    const double length = std::fabs(width * dx) + std::fabs(height * dy);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const double t = ((x + 0.5 - width / 2.0) * dx + (y + 0.5 - height / 2.0) * dy) / length + 0.5;
+            const double a = 0.22 * std::max(0.0, 1.0 - std::fabs(t - 0.45) / 0.15);
+            const auto v = static_cast<std::uint8_t>(std::lround(255 * a));
+            std::uint8_t* p = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            p[0] = p[1] = p[2] = p[3] = v;
+        }
+    }
+    return out;
+}
+
+int sheenSprite(NVGcontext* vg, int width, int height) {
+    struct Entry {
+        NVGcontext* vg;
+        int width;
+        int height;
+        int image;
+    };
+    static std::vector<Entry> cache;  // the band does not depend on the theme's colours
+    for (const Entry& entry : cache) {
+        if (entry.vg == vg && entry.width == width && entry.height == height) {
+            return entry.image;
+        }
+    }
+    const std::vector<std::uint8_t> pixels = sheenImage(width, height);
+    const int image = nvgCreateImageRGBA(vg, width, height, NVG_IMAGE_PREMULTIPLIED, pixels.data());
+    cache.push_back({vg, width, height, image});
+    return image;
+}
 
 // The glow image of a picture size for the current accent, made once per canvas (a live box gradient costs
 // ~200 cycles per pixel on the PS4).
@@ -107,7 +149,7 @@ int glowSprite(NVGcontext* vg, int width, int height) {
         }
     }
     const std::vector<std::uint8_t> pixels =
-        ui::glowImage(width, height, ui::theme().radius, kGlowFeather, ui::theme().accent, kGlowStrength);
+        ui::glowImage(width, height, ui::theme().radius, kGlowFeather, ui::theme().accent, ui::theme().glowStrength);
     const int image = nvgCreateImageRGBA(vg, width + 2 * static_cast<int>(kGlowFeather),
                                          height + 2 * static_cast<int>(kGlowFeather), NVG_IMAGE_PREMULTIPLIED,
                                          pixels.data());
@@ -117,20 +159,38 @@ int glowSprite(NVGcontext* vg, int width, int height) {
 
 }  // namespace
 
-void ItemCard::draw(NVGcontext* vg) const {
-    const float p = focus_;
-    if (p <= 0.001f) {
-        ui::Box::draw(vg);
+void ItemCard::drawBorder(NVGcontext* vg, const ui::Rect& picture) const {
+    const ui::Theme& t = ui::theme();
+    if (t.cardBorderWidth <= 0) {
         return;
     }
+    const float half = t.cardBorderWidth / 2;
+    nvgBeginPath(vg);
+    nvgRoundedRect(vg, picture.x + half, picture.y + half, picture.width - 2 * half, picture.height - 2 * half,
+                   std::max(0.0f, t.radius - half));
+    nvgStrokeColor(vg, ui::nvgColor(t.cardBorder));
+    nvgStrokeWidth(vg, t.cardBorderWidth);
+    nvgStroke(vg);
+}
+
+void ItemCard::draw(NVGcontext* vg) const {
+    const ui::Theme& t = ui::theme();
+    const float p = focus_;
     const ui::Rect picture = children().front()->frame;
-    // the glow: accent at 30 %, 50 px soft, 18 px lower, under the grown picture
+    if (p <= 0.001f) {
+        ui::Box::draw(vg);
+        drawBorder(vg, picture);
+        return;
+    }
+    // the glow: accent at the theme's strength, 50 px soft, 18 px lower, under the grown picture
     const float grow = 0.07f * p;
     const float w = picture.width * (1 + grow);
     const float h = picture.height * (1 + grow);
     const float x = picture.x - (w - picture.width) / 2;
     const float y = picture.y - (h - picture.height) / 2 - 6 * p + 18 * p;
-    const int image = glowSprite(vg, static_cast<int>(picture.width), static_cast<int>(picture.height));
+    const int image = t.focusStyle == ui::FocusStyle::Glow
+                          ? glowSprite(vg, static_cast<int>(picture.width), static_cast<int>(picture.height))
+                          : 0;
     if (image > 0) {
         const float margin = kGlowFeather * (1 + grow);
         const NVGpaint paint = nvgImagePattern(vg, x - margin, y - margin, w + 2 * margin, h + 2 * margin, 0, image, p);
@@ -167,19 +227,33 @@ void ItemCard::draw(NVGcontext* vg) const {
     nvgScale(vg, 1 + grow, 1 + grow);
     nvgTranslate(vg, -cx, -cy);
     ui::Box::draw(vg);
-    // the outline: 3 px of the accent, 4 px away from the picture, fading in with the focus
-    const ui::Color accent = ui::theme().accent;
-    const float gap = kRingGap + kRingWidth / 2;
+    drawBorder(vg, picture);
+    if (t.focusSheen) {
+        const int sheen = sheenSprite(vg, static_cast<int>(picture.width), static_cast<int>(picture.height));
+        if (sheen > 0) {
+            nvgBeginPath(vg);
+            nvgRoundedRect(vg, picture.x, picture.y, picture.width, picture.height, t.radius);
+            nvgFillPaint(vg, nvgImagePattern(vg, picture.x, picture.y, picture.width, picture.height, 0, sheen, p));
+            nvgFill(vg);
+        }
+    }
+    // Glow: 3 px of the accent, 4 px away; Ring: 4 px of the accent (or the theme's colour), 4 px away; Frame: 4 px
+    // of the theme's colour on the picture's edge. Fading in with the focus.
+    const bool frame = t.focusStyle == ui::FocusStyle::Frame;
+    const ui::Color colour = t.focusStyle == ui::FocusStyle::Glow || t.focusInAccent ? t.accent : t.focusColor;
+    const float width = t.focusStyle == ui::FocusStyle::Glow ? kRingWidth : kThemeRingWidth;
+    const float gap = frame ? -width / 2 : kRingGap + width / 2;
     nvgBeginPath(vg);
     nvgRoundedRect(vg, picture.x - gap, picture.y - gap, picture.width + 2 * gap, picture.height + 2 * gap,
-                   ui::theme().radius + gap);
-    nvgStrokeColor(vg, nvgRGBA(accent.r, accent.g, accent.b, static_cast<unsigned char>(255 * p)));
-    nvgStrokeWidth(vg, kRingWidth);
+                   std::max(0.0f, t.radius + gap));
+    nvgStrokeColor(vg, nvgRGBA(colour.r, colour.g, colour.b, static_cast<unsigned char>(255 * p)));
+    nvgStrokeWidth(vg, width);
     nvgStroke(vg);
     nvgRestore(vg);
 }
 
 void ItemCard::show(const jellyfin::Item& item, const std::string& imageUrl, int utcOffsetMinutes) {
+    item_ = item;
     // a programme without its own picture shows its channel's logo whole
     image_->fit = item.type == jellyfin::ItemType::Program && item.images.primary.empty() ? ui::ImageView::Fit::Contain
                                                                                          : ui::ImageView::Fit::Cover;

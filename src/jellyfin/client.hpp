@@ -158,6 +158,8 @@ public:
 
     // Picture URLs carry no token: fetch() sends it in the header. A user's picture is square.
     std::string userImageUrl(const std::string& userId, const std::string& tag, int size) const;
+    // A sheet of a version's trickplay pictures at `width` (TrickplayInfo).
+    std::string trickplayUrl(const std::string& itemId, const std::string& mediaSourceId, int width, int sheet) const;
     std::string imageUrl(const std::string& itemId, ImageType type, const std::string& tag, int maxWidth,
                          int maxHeight) const;
     // The item's original file (/Items/{id}/Download, the user needs the download right), to `sink` in pieces.

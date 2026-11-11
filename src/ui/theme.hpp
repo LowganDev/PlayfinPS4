@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace playfin::ui {
@@ -14,9 +15,48 @@ struct Color {
 
 constexpr Color withAlpha(Color color, std::uint8_t alpha) { return {color.r, color.g, color.b, alpha}; }
 
+// What a theme's background is (baked into one opaque image, never drawn as a live gradient).
+enum class BackgroundKind { Halo, Gradient, Plain, Grain };
+// How a screen's backdrop picture is treated when decoded (Shade: the identity's shade from the top).
+enum class BackdropKind { Shade, Blur, Tint, Diagonal };
+// How a focused card stands out: the accent's glow under it, a ring around it, or a white frame.
+enum class FocusStyle { Glow, Ring, Frame };
+// The navigation bar's tabs: the current one underlined, in a pill, or only brighter.
+enum class TabStyle { Underline, Pill, Plain };
+
+// A theme's typeface: its family (the font faces' prefix) and the files of its three weights in resources/fonts
+// (Regular, SemiBold, Bold). Without the UI language's script (Cyrillic, Vietnamese marks) Noto Sans is used.
+struct ThemeFont {
+    const char* family = "Sora";
+    const char* files[3] = {"Sora-Regular.ttf", "Sora-SemiBold.ttf", "Sora-Bold.ttf"};
+    bool cyrillic = false;
+    bool vietnamese = false;
+};
+
 // Design tokens of the Playfin identity: widgets read these, never
 // hard-coded values.
 struct Theme {
+    std::string id = "projecteur";  // the theme setting's value (themeChoices())
+    ThemeFont font;
+    BackgroundKind backgroundKind = BackgroundKind::Halo;
+    Color gradientTop{0x0E, 0x0E, 0x11, 0xFF};  // Gradient: from the top...
+    Color gradientBottom{0x0E, 0x0E, 0x11, 0xFF};  // ...to the bottom
+    BackdropKind backdropKind = BackdropKind::Shade;
+    float backdropBrightness = 1;
+    float backdropSaturation = 1;
+    float backdropContrast = 1;
+    bool backdropFollowsFocus = false;  // the home and library screens show the focused item's backdrop
+    FocusStyle focusStyle = FocusStyle::Glow;
+    bool focusSheen = false;  // a light band across the focused card
+    bool focusInAccent = true;  // the ring in the accent; else in focusColor
+    Color focusColor{0xFF, 0xFF, 0xFF, 0xFF};
+    float glowStrength = 0.3f;  // Glow: the accent's alpha under the card
+    float cardBorderWidth = 0;
+    Color cardBorder{0, 0, 0, 0};
+    TabStyle tabStyle = TabStyle::Underline;
+    bool tabPillInAccent = false;  // Pill: the current tab in the accent (else in the text colour)
+    Color navBackground{0, 0, 0, 0};  // a pill behind the tabs when not transparent
+
     Color background{0x0E, 0x0E, 0x11, 0xFF};
     Color surface{0x1E, 0x1F, 0x25, 0xFF};
     Color surfaceRaised{0x27, 0x28, 0x30, 0xFF};
@@ -63,6 +103,26 @@ struct AccentChoice {
     Color onAccent;
 };
 const std::vector<AccentChoice>& accentPalette();
+
+// The theme setting's choices: an id (saved in settings.json), a name shown as is, the tokens and its own accent.
+struct ThemeChoice {
+    const char* id;
+    const char* name;
+    Theme tokens;
+    AccentChoice accent;
+    // the Jellyfin theme it takes its look from (credited in the licences page), null for Projecteur
+    const char* author = nullptr;
+    const char* source = nullptr;
+    const char* license = nullptr;
+};
+// Projecteur (the default), ElegantFin, Ultrachromic, Abyss, Zesty, Finimalism, in that order.
+const std::vector<ThemeChoice>& themeChoices();
+// The theme with this id, else Projecteur.
+const ThemeChoice& themeById(const std::string& id);
+// Takes the theme's tokens and its accent, and bumps themeGeneration().
+void applyTheme(const ThemeChoice& choice);
+// WCAG's contrast ratio of two opaque colours (1 to 21).
+double contrastRatio(Color a, Color b);
 // Sets the accent and what follows it (focus ring, focused controls), and bumps themeGeneration().
 void applyAccent(const AccentChoice& choice);
 // Changes whenever the theme does: views and images derived from it (the halo) rebuild when it differs.

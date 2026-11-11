@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -112,6 +113,17 @@ struct Chapter {
 
 constexpr std::size_t kMaxChapters = 256;
 
+// The server's trickplay pictures of a version at one width (Jellyfin 10.9+): sheets of tileWidth x tileHeight
+// pictures of width x height, one every intervalMs, thumbnailCount in all.
+struct TrickplayInfo {
+    int width = 0;
+    int height = 0;
+    int tileWidth = 0;
+    int tileHeight = 0;
+    int thumbnailCount = 0;
+    std::int64_t intervalMs = 0;
+};
+
 struct Item {
     std::string id;
     std::string name;
@@ -161,6 +173,7 @@ struct Item {
     std::vector<Person> people;
     std::vector<MediaSource> mediaSources;
     std::vector<Chapter> chapters;  // in the order of the file
+    std::map<std::string, std::vector<TrickplayInfo>> trickplay;  // media source id -> one per width
     // a file played without the server: a USB drive's ("pfusb:///mnt/usb0/Films/x.mkv"); never from a server
     std::string localUrl;
 };

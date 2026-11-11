@@ -384,7 +384,8 @@ void Application::draw(NVGcontext* vg) const {
         const NVGpaint paint = nvgImagePattern(vg, 0, 0, static_cast<float>(backgroundWidth_),
                                                static_cast<float>(backgroundHeight_), 0, backgroundImage_, 1);
         nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, static_cast<float>(backgroundWidth_), static_cast<float>(haloLitRows(backgroundHeight_)));
+        nvgRect(vg, 0, 0, static_cast<float>(backgroundWidth_),
+                static_cast<float>(backgroundLitRows(backgroundHeight_, theme())));
         nvgFillPaint(vg, paint);
         nvgFill(vg);
     }
@@ -400,7 +401,7 @@ void Application::draw(NVGcontext* vg) const {
         nvgStroke(vg);
     }
     if (toastLeftMs_ > 0 && !toastText_.empty()) {
-        nvgFontFace(vg, "regular");
+        nvgFontFace(vg, fontFace(FontWeight::Regular));
         nvgFontSize(vg, theme().fontBody);
         float bounds[4];
         const float textWidth = nvgTextBounds(vg, 0, 0, toastText_.c_str(), nullptr, bounds);

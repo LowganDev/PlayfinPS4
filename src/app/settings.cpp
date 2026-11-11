@@ -16,7 +16,15 @@ constexpr std::size_t kMaxFileBytes = 64 * 1024;
 constexpr std::size_t kMaxRecent = 8;
 constexpr std::size_t kMaxTermBytes = 200;
 
+bool knownTheme(const std::string& id) {
+    const auto& themes = ui::themeChoices();
+    return std::any_of(themes.begin(), themes.end(), [&](const ui::ThemeChoice& t) { return id == t.id; });
+}
+
 bool knownAccent(const std::string& id) {
+    if (id == "theme") {
+        return true;
+    }
     const auto& palette = ui::accentPalette();
     return std::any_of(palette.begin(), palette.end(), [&](const ui::AccentChoice& c) { return id == c.id; });
 }
@@ -49,6 +57,10 @@ Settings loadSettings(const std::string& path) {
         return settings;
     }
     yyjson_val* root = doc->root();
+    const std::string theme = jellyfin::json::string(root, "theme");
+    if (knownTheme(theme)) {
+        settings.theme = theme;
+    }
     const std::string accent = jellyfin::json::string(root, "accent");
     if (knownAccent(accent)) {
         settings.accent = accent;
@@ -104,6 +116,7 @@ bool saveSettings(const std::string& path, const Settings& settings) {
     jellyfin::json::Writer writer;
     writer.object();
     writer.key("version").value(1);
+    writer.key("theme").value(settings.theme);
     writer.key("accent").value(settings.accent);
     writer.key("maxBitrate").value(settings.maxBitrate);
     writer.key("language").value(settings.language);
@@ -153,6 +166,13 @@ const ui::AccentChoice& accentById(const std::string& id) {
         }
     }
     return ui::accentPalette().front();
+}
+
+void applyAppearance(const Settings& settings) {
+    ui::applyTheme(ui::themeById(settings.theme));
+    if (settings.accent != "theme") {
+        ui::applyAccent(accentById(settings.accent));
+    }
 }
 
 const std::vector<std::pair<std::string, std::string>>& uiLanguages() {

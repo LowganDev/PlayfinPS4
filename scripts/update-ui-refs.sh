@@ -19,6 +19,9 @@ for script in tests/ui/*.script; do
         screen=shell
         fakeOptions=--media
     fi
+    if [ "$name" = themes ]; then  # the shell, as shell.script, in each theme
+        screen=shell
+    fi
     if [ "$screen" = shell ]; then
         # shellcheck disable=SC2086
         build/linux-debug/tests/fake_jellyfin --https --port 48920 --url-file "$out/url" $fakeOptions > /dev/null &

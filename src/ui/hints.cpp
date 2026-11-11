@@ -185,7 +185,7 @@ float drawGlyph(NVGcontext* vg, Action action, float x, float cy) {
         return kGlyph;
     default: {
         const char* text = platform::actionName(action);
-        nvgFontFace(vg, "bold");
+        nvgFontFace(vg, fontFace(FontWeight::Bold));
         nvgFontSize(vg, 16);
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, cx, cy + middleAlignedShift(16), text, nullptr);
@@ -271,7 +271,7 @@ void drawHints(NVGcontext* vg, const std::vector<HintItem>& items, float width, 
         }
         x += theme().spacingS;
         float bounds[4];
-        nvgFontFace(vg, "regular");
+        nvgFontFace(vg, fontFace(FontWeight::Regular));
         nvgFontSize(vg, theme().fontSmall);
         nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgFillColor(vg, nvgColor(theme().textSecondary));

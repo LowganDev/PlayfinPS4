@@ -116,3 +116,115 @@ TEST_CASE("below its lit rows the halo is the plain background") {
     const std::uint8_t* above = &image[(static_cast<std::size_t>(lit / 2) * width + width / 2) * 4];
     CHECK(above[2] != background.b);  // light inside the lit rows
 }
+
+namespace {
+// back to Projecteur and its accent after a test
+struct ThemeGuard {
+    ~ThemeGuard() { applyTheme(themeById("projecteur")); }
+};
+}  // namespace
+
+TEST_CASE("six themes, in order, each a complete set of colours") {
+    const auto& themes = themeChoices();
+    REQUIRE(themes.size() == 6);
+    const char* ids[] = {"projecteur", "slate", "chroma", "abyss", "mint", "violet"};
+    const char* names[] = {"Projecteur", "ElegantFin", "Ultrachromic", "Abyss", "Zesty", "Finimalism"};
+    for (std::size_t i = 0; i < themes.size(); ++i) {
+        CHECK(std::string(themes[i].id) == ids[i]);
+        CHECK(std::string(themes[i].name) == names[i]);
+        CHECK(themes[i].tokens.id == ids[i]);
+        CHECK(themes[i].tokens.background.a == 255);
+        CHECK(themes[i].tokens.surface.a == 255);
+        REQUIRE(themes[i].tokens.font.family != nullptr);
+    }
+    CHECK(std::string(themeById("nope").id) == "projecteur");
+    CHECK(std::string(themeById("violet").tokens.font.family) == "Outfit");
+}
+
+TEST_CASE("Projecteur is today's look") {
+    const Theme& t = themeById("projecteur").tokens;
+    const Theme today;
+    CHECK(same(t.background, today.background));
+    CHECK(same(t.textSecondary, today.textSecondary));
+    CHECK(t.radius == doctest::Approx(12));
+    CHECK(t.backgroundKind == BackgroundKind::Halo);
+    CHECK(t.backdropKind == BackdropKind::Shade);
+    CHECK(t.focusStyle == FocusStyle::Glow);
+    CHECK(t.tabStyle == TabStyle::Underline);
+    CHECK(std::string(t.font.family) == "Sora");
+    CHECK(same(themeById("projecteur").accent.accent, accentPalette().front().accent));
+}
+
+TEST_CASE("every theme's text reads on its surfaces") {
+    for (const auto& t : themeChoices()) {
+        const std::string id = t.id;
+        CAPTURE(id);
+        CHECK(contrastRatio(t.tokens.text, t.tokens.background) >= 7.0);
+        CHECK(contrastRatio(t.tokens.text, t.tokens.surface) >= 4.5);
+        CHECK(contrastRatio(t.tokens.textSecondary, t.tokens.background) >= 4.5);
+        // settings rows draw their values in the dim colour on the control colour
+        CHECK(contrastRatio(t.tokens.textSecondary, t.tokens.surface) >= 4.5);
+        CHECK(contrastRatio(t.tokens.textSecondary, t.tokens.control) >= 4.5);
+        // text on an accent fill is always large (24 px SemiBold rows and buttons, the avatar's initial): WCAG's
+        // large-text level
+        CHECK(contrastRatio(t.accent.onAccent, t.accent.accent) >= 3.0);
+    }
+    CHECK(contrastRatio(Color{0, 0, 0, 255}, Color{255, 255, 255, 255}) == doctest::Approx(21.0));
+}
+
+TEST_CASE("a theme brings its own accent and bumps the generation") {
+    ThemeGuard guard;
+    const unsigned before = themeGeneration();
+    applyTheme(themeById("mint"));
+    CHECK(themeGeneration() != before);
+    CHECK(theme().id == "mint");
+    CHECK(same(theme().accent, Color{0xBB, 0xF1, 0xDD, 0xFF}));
+    CHECK(same(theme().focusRing, theme().accent));
+    CHECK(same(theme().background, Color{0x15, 0x1C, 0x19, 0xFF}));
+    applyTheme(themeById("projecteur"));
+    CHECK(same(theme().accent, Color{0x00, 0x70, 0xD1, 0xFF}));
+}
+
+TEST_CASE("theme backgrounds: Projecteur's halo, ElegantFin's gradient, nothing for a plain one, a fixed grain") {
+    const Theme& projecteur = themeById("projecteur").tokens;
+    Theme lit = projecteur;
+    lit.accent = accentPalette().front().accent;
+    CHECK(backgroundImage(192, 108, lit) == haloImage(192, 108, lit.background, lit.accent));
+    CHECK(backgroundLitRows(108, lit) == haloLitRows(108));
+
+    const Theme& slate = themeById("slate").tokens;
+    const std::vector<std::uint8_t> gradient = backgroundImage(64, 100, slate);
+    REQUIRE(gradient.size() == 64u * 100u * 4u);
+    const auto pixel = [&](const std::vector<std::uint8_t>& image, int x, int y) {
+        const std::size_t at = (static_cast<std::size_t>(y) * 64 + static_cast<std::size_t>(x)) * 4;
+        return Color{image[at], image[at + 1], image[at + 2], image[at + 3]};
+    };
+    const auto near = [](Color a, Color b) {
+        return std::abs(a.r - b.r) <= 1 && std::abs(a.g - b.g) <= 1 && std::abs(a.b - b.b) <= 1 && a.a == 255;
+    };
+    CHECK(near(pixel(gradient, 10, 0), slate.gradientTop));
+    CHECK(near(pixel(gradient, 50, 99), slate.gradientBottom));
+    CHECK(backgroundLitRows(100, slate) == 100);
+
+    CHECK(backgroundImage(64, 100, themeById("chroma").tokens).empty());
+    CHECK(backgroundLitRows(100, themeById("chroma").tokens) == 0);
+
+    const Theme& mint = themeById("mint").tokens;
+    const std::vector<std::uint8_t> grain = backgroundImage(64, 64, mint);
+    CHECK(grain == backgroundImage(64, 64, mint));  // the same every time (stable screenshots)
+    long sum[3] = {0, 0, 0};
+    bool varies = false;
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            const Color c = pixel(grain, x, y);
+            sum[0] += c.r;
+            sum[1] += c.g;
+            sum[2] += c.b;
+            varies = varies || c.g != mint.background.g;
+        }
+    }
+    CHECK(varies);
+    CHECK(std::abs(sum[0] / 4096 - mint.background.r) <= 2);
+    CHECK(std::abs(sum[1] / 4096 - mint.background.g) <= 2);
+    CHECK(std::abs(sum[2] / 4096 - mint.background.b) <= 2);
+}

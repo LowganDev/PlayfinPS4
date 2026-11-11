@@ -276,9 +276,9 @@ int run(const Options& options) {
         session.licensesDir = resources + "/licenses";
         session.noticesFile = resources + "/THIRD_PARTY_LICENSES";
         const std::string uiLanguage = session.settings().language.empty() ? language : session.settings().language;
-        ui::applyAccent(accentById(session.settings().accent));
+        applyAppearance(session.settings());
         ui::NanoVgText metrics(vg);
-        if (!metrics.loadFonts(resources + "/fonts", uiLanguage)) {
+        if (!metrics.useFont(resources + "/fonts", uiLanguage, ui::theme().font)) {
             exitCode = 1;
         }
         ui::translator().load(resources + "/i18n", uiLanguage);
@@ -317,21 +317,28 @@ int run(const Options& options) {
         }
         ui::Application application(ui::Application::Services{pool, mainQueue, metrics, &images});
         application.setTransitions(!testMode);  // screenshots of script tests show screens at rest
-        // the halo background, rebuilt when the accent changes
+        // the theme's background (Projecteur's halo...) and font, rebuilt when the theme or the accent changes
         unsigned haloGeneration = 0;
+        std::string fontFamily = ui::theme().font.family;
         int halo = 0;
         const auto refreshHalo = [&] {
             if (haloGeneration == ui::themeGeneration()) {
                 return;
             }
             haloGeneration = ui::themeGeneration();
+            if (ui::theme().font.family != fontFamily) {  // a theme of another font: views relayout with it
+                fontFamily = ui::theme().font.family;
+                metrics.useFont(resources + "/fonts", uiLanguage, ui::theme().font);
+            }
             if (halo > 0) {
                 nvgDeleteImage(vg, halo);
             }
-            const std::vector<std::uint8_t> pixels = ui::haloImage(1920, 1080, ui::theme().background,
-                                                                   ui::theme().accent);
-            halo = nvgCreateImageRGBA(vg, 1920, 1080, 0, pixels.data());
-            application.setBackgroundImage(halo, 1920, 1080);
+            halo = 0;
+            const std::vector<std::uint8_t> pixels = ui::backgroundImage(1920, 1080, ui::theme());
+            if (!pixels.empty()) {
+                halo = nvgCreateImageRGBA(vg, 1920, 1080, 0, pixels.data());
+            }
+            application.setBackgroundImage(halo, halo > 0 ? 1920 : 0, halo > 0 ? 1080 : 0);
         };
         refreshHalo();
         application.push(firstScreen(options.screen, session));

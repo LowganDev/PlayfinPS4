@@ -292,7 +292,7 @@ core::Result<ItemPage> Client::items(const ItemQuery& itemQuery, const core::Can
 
 core::Result<Item> Client::item(const std::string& id, const core::CancelToken& token) const {
     net::Query query = userQuery();
-    query.add("fields", kFields);
+    query.add("fields", std::string(kFields) + ",Chapters,Trickplay");
     return parsed<Item>(request("GET", "/Items/" + net::urlEncode(id) + query.str(), {}, token), parseItem);
 }
 
@@ -415,6 +415,14 @@ std::string Client::imageUrl(const std::string& itemId, ImageType type, const st
     net::Query query;
     query.add("tag", tag).add("maxWidth", maxWidth).add("maxHeight", maxHeight).add("format", "Jpg").add("quality", 90);
     return session_.baseUrl + "/Items/" + net::urlEncode(itemId) + "/Images/" + imageTypeName(type) + query.str();
+}
+
+std::string Client::trickplayUrl(const std::string& itemId, const std::string& mediaSourceId, int width,
+                                 int sheet) const {
+    net::Query query;
+    query.add("mediaSourceId", mediaSourceId);
+    return session_.baseUrl + "/Videos/" + net::urlEncode(itemId) + "/Trickplay/" + std::to_string(width) + "/" +
+           std::to_string(sheet) + ".jpg" + query.str();
 }
 
 std::string Client::userImageUrl(const std::string& userId, const std::string& tag, int size) const {

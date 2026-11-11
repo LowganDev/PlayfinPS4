@@ -93,6 +93,7 @@ press Right
 press Confirm
 wait 30
 screenshot settings
+press Down
 press Confirm
 wait 15
 screenshot settings_accent
@@ -116,6 +117,7 @@ wait 30
 screenshot licenses
 press Back
 wait 20
+press Up
 press Up
 press Up
 press Up

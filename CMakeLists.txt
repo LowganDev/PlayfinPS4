@@ -160,6 +160,7 @@ add_library(playfin_player STATIC
     src/player/audio_analysis.cpp
     src/player/queue.cpp
     src/player/session.cpp
+    src/player/trickplay.cpp
     src/player/tracks.cpp
 )
 target_link_libraries(playfin_player PUBLIC playfin_base playfin_jellyfin PRIVATE playfin_mpv playfin_av)
@@ -196,6 +197,8 @@ add_library(playfin_core STATIC
     src/app/shell/settings_screen.cpp
     src/app/shell/session.cpp
     src/app/shell/usb.cpp
+    src/app/shell/theme_backdrop.cpp
+    src/app/shell/trickplay_preview.cpp
     src/app/shell/usb_screen.cpp
 )
 target_link_libraries(playfin_core PUBLIC playfin_ui playfin_jellyfin playfin_player)

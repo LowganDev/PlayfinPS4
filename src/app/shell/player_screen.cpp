@@ -1,6 +1,8 @@
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -11,6 +13,7 @@
 
 #include "app/shell/downloads.hpp"
 #include "app/shell/usb.hpp"
+#include "app/shell/trickplay_preview.hpp"
 #include "app/shell/tv_guide.hpp"
 #include "app/shell/engine_options.hpp"
 #include "app/shell/format.hpp"
@@ -25,6 +28,7 @@
 #include "player/seek.hpp"
 #include "player/session.hpp"
 #include "player/tracks.hpp"
+#include "player/trickplay.hpp"
 #include "ui/context.hpp"
 #include "ui/i18n.hpp"
 #include "ui/image_view.hpp"
@@ -75,16 +79,19 @@ struct Extras {
     std::optional<jellyfin::Item> previous;
     std::optional<jellyfin::Item> next;
     std::vector<jellyfin::Item> channels;  // live: the channels to change to, with their programme on now
+    std::map<std::string, std::vector<jellyfin::TrickplayInfo>> trickplay;  // the server's preview pictures
 };
 
 class PlayerScreen : public ShellScreen, public ui::VideoSource {
 public:
-    PlayerScreen(AppSession& session, jellyfin::Item item, std::int64_t startTicks, std::string mediaSourceId)
+    PlayerScreen(AppSession& session, jellyfin::Item item, std::int64_t startTicks, std::string mediaSourceId,
+                 double speed)
         : ShellScreen(session),
           item_(std::move(item)),
           mediaSourceId_(std::move(mediaSourceId)),
           live_(item_.type == jellyfin::ItemType::TvChannel),
           startTicks_(startTicks),
+          speed_(item_.type == jellyfin::ItemType::TvChannel ? 1.0 : speed),
           reporter_([this](player::ReportKind kind, const jellyfin::PlaybackState& state) { send(kind, state); }) {
         focusable = true;
         buildOverlay();
@@ -168,6 +175,8 @@ private:
         progress_->width = ui::SizeSpec::fill();
         time_ = bar_->add<ui::Label>("", ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         time_->color = ui::theme().textSecondary;
+        preview_ = add<TrickplayPreview>();  // over the bar
+        preview_->setAnchor(progress_, bar_);
     }
 
     // L2 / R2 held: what comes after 3 s, filling up meanwhile
@@ -262,10 +271,11 @@ private:
             return;
         }
         const double position = seek_.pending() ? seek_.target() : state.position;
+        preview_->update(seek_.pending(), position, state.duration, lastDirection_, clockText(position));
         std::string text = clockText(position) + " / " + clockText(state.duration);
         if (state.duration > 0) {  // when it would end, playing on from here
             const std::int64_t at = session().now();
-            const auto end = at + static_cast<std::int64_t>(state.duration - position);
+            const auto end = at + static_cast<std::int64_t>(player::remainingSeconds(state.duration, position, speed_));
             text += " \xC2\xB7 " + ui::tr("player.ends_at", {clock24(end, session().utcOffsetMinutes(end))});
         }
         if (text != time_->text()) {
@@ -558,6 +568,20 @@ private:
                         }
                         return extras;
                     }
+                    // the item as the server gives it alone (chapters, trickplay pictures): asked once, if needed
+                    std::optional<jellyfin::Item> details;
+                    const auto fetchDetails = [&details, &client, &item, &token] {
+                        if (!details) {
+                            if (auto answer = client->item(item.id, token); answer.ok()) {
+                                details = std::move(answer.value());
+                            }
+                        }
+                        return details.has_value();
+                    };
+                    extras.trickplay = item.trickplay;
+                    if (extras.trickplay.empty() && fetchDetails()) {
+                        extras.trickplay = details->trickplay;
+                    }
                     auto segments = client->mediaSegments(item.id, token);
                     if (segments.ok()) {
                         extras.segments = std::move(segments.value());
@@ -566,11 +590,9 @@ private:
                     if (extras.segments.empty()) {
                         std::vector<jellyfin::Chapter> chapters = item.chapters;
                         std::int64_t runTicks = item.runTimeTicks;
-                        if (chapters.empty()) {
-                            if (auto details = client->item(item.id, token); details.ok()) {
-                                chapters = std::move(details.value().chapters);
-                                runTicks = details.value().runTimeTicks > 0 ? details.value().runTimeTicks : runTicks;
-                            }
+                        if (chapters.empty() && fetchDetails()) {
+                            chapters = details->chapters;
+                            runTicks = details->runTimeTicks > 0 ? details->runTimeTicks : runTicks;
                         }
                         extras.segments = player::segmentsFromChapters(chapters, runTicks);
                         if (!extras.segments.empty()) {
@@ -592,6 +614,8 @@ private:
                     segments_ = std::move(extras.segments);
                     previous_ = std::move(extras.previous);
                     next_ = std::move(extras.next);
+                    trickplay_ = std::move(extras.trickplay);
+                    setupPreview();
                     channels_ = std::move(extras.channels);
                     session().tvGuide().fill(channels_, session().now());
                     for (const auto& channel : channels_) {
@@ -621,6 +645,7 @@ private:
                     file.compare(0, std::strlen(player::kUsbScheme), player::kUsbScheme) == 0 ? "a USB drive"
                                                                                                : "the console");
         engine_->load(file, static_cast<double>(startTicks) / player::kTicksPerSecond);
+        applySpeed();
         if (session().synchronous) {
             showFirstPictureNow();
         }
@@ -660,6 +685,7 @@ private:
         choice_ = loaded.choice.value();
         liveClosed_ = false;
         source_ = loaded.info.value().sources.front();
+        setupPreview();
         if (audioIndex_ < 0) {
             audioIndex_ = source_.defaultAudioIndex;
         }
@@ -670,6 +696,7 @@ private:
             return;
         }
         engine_->load(choice_.url, static_cast<double>(startTicks) / player::kTicksPerSecond);
+        applySpeed();
         if (session().synchronous) {
             showFirstPictureNow();
         }
@@ -689,6 +716,7 @@ private:
         directSinceMs_ = now();
         PF_LOG_INFO("player: the channel's own stream, without the server");
         engine_->load(choice_.sourceUrl, 0);
+        applySpeed();
         if (session().synchronous) {
             showFirstPictureNow();
         }
@@ -710,6 +738,7 @@ private:
             }
             frameShown_ = false;
             engine_->load(choice_.url, 0);
+            applySpeed();
             if (session().synchronous) {
                 showFirstPictureNow();
             }
@@ -732,6 +761,7 @@ private:
             PF_LOG_WARN("player: no picture for %lld s, the channel is opened again",
                         static_cast<long long>(kStallMs / 1000));
             engine_->load(direct_ ? choice_.sourceUrl : choice_.url, 0);
+            applySpeed();
         }
     }
 
@@ -882,6 +912,9 @@ private:
                 markDirty();
             }
         }
+        if (!bar_->visible) {  // hidden (□ included): no preview without its bar
+            preview_->update(false, 0, 0, 0, {});
+        }
         updateSkip(state, t);
         updateNextCard(state);
         logStats(freshPicture, t);
@@ -1005,10 +1038,11 @@ private:
         leaving_ = true;
         AppSession* appSession = &session();
         const jellyfin::Item next = *item;
-        later([appSession, next] {
+        const double speed = speed_;  // the episodes that follow keep the speed
+        later([appSession, next, speed] {
             if (ui::Application* app = ui::Application::current()) {
                 app->pop();
-                app->push(makePlayer(*appSession, next, 0));
+                app->push(makePlayer(*appSession, next, 0, {}, speed));
             }
         });
     }
@@ -1103,6 +1137,8 @@ private:
             if (count(false) > 0) {
                 buttons.emplace_back(ui::tr("player.subtitles"), [this] { later([this] { chooseLocalTrack(false); }); });
             }
+            buttons.emplace_back(ui::tr("player.speed_value", {speedName(speed_)}),
+                                 [this] { later([this] { chooseSpeed(); }); });
             buttons.emplace_back(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
                                  [this] { later([this] { chooseVolume(); }); });
             buttons.emplace_back(ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); });
@@ -1118,15 +1154,21 @@ private:
         for (const auto& track : player::subtitleTracks(source_, subtitleIndex_, ui::tr("player.subtitles_off"))) {
             subtitleName = track.current ? track.label : subtitleName;
         }
+        std::vector<std::pair<std::string, std::function<void()>>> buttons{
+            {ui::tr("player.audio"), [this] { chooseTrack(jellyfin::StreamType::Audio); }},
+            {ui::tr("player.subtitles"), [this] { chooseTrack(jellyfin::StreamType::Subtitle); }}};
+        if (!live_) {
+            buttons.emplace_back(ui::tr("player.speed_value", {speedName(speed_)}),
+                                 [this] { later([this] { chooseSpeed(); }); });
+        }
+        buttons.emplace_back(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
+                             [this] { later([this] { chooseVolume(); }); });
+        buttons.emplace_back(ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); });
+        buttons.emplace_back(ui::tr("ui.cancel"), std::function<void()>{});
         ui::Application::current()->showModal(ui::makeDialog(
             barTitle(), ui::tr("player.audio") + " : " + audioName + "\n" + ui::tr("player.subtitles") + " : " +
                             subtitleName,
-            {{ui::tr("player.audio"), [this] { chooseTrack(jellyfin::StreamType::Audio); }},
-             {ui::tr("player.subtitles"), [this] { chooseTrack(jellyfin::StreamType::Subtitle); }},
-             {ui::tr("player.volume_value", {std::to_string(session().settings().volume)}),
-              [this] { later([this] { chooseVolume(); }); }},
-             {ui::tr("player.picture"), [this] { later([this] { choosePicture(); }); }},
-             {ui::tr("ui.cancel"), {}}}));
+            std::move(buttons)));
     }
 
     // a file's own audio or subtitle tracks (mpv's ids), subtitles with "Off" first
@@ -1191,6 +1233,66 @@ private:
         if (ui::Application* app = ui::Application::current()) {
             app->toast(ui::tr("player.volume_value", {std::to_string(session().settings().volume)}), 1500);
         }
+    }
+
+    // "1,5×" with the language's decimal separator, "Normale" for 1×
+    static std::string speedName(double speed) {
+        if (speed == 1.0) {
+            return ui::tr("player.speed.normal");
+        }
+        char text[16];
+        std::snprintf(text, sizeof(text), "%g", speed);
+        std::string name = text;
+        if (const auto dot = name.find('.'); dot != std::string::npos) {
+            name.replace(dot, 1, ui::tr("settings.decimal_separator"));
+        }
+        return name + "\xC3\x97";
+    }
+
+    // the server's pictures of the playing version, for the preview while seeking (not for live channels nor files
+    // played without the server)
+    void setupPreview() {
+        if (live_ || source_.id.empty() || preview_ == nullptr) {
+            return;
+        }
+        const auto found = trickplay_.find(source_.id);
+        if (found == trickplay_.end()) {
+            return;
+        }
+        const auto info = player::pickTrickplay(found->second);
+        const auto client = session().client();
+        if (!info || !client) {
+            return;
+        }
+        const std::string itemId = item_.id;
+        const std::string sourceId = source_.id;
+        const int width = info->width;
+        preview_->setPictures(*info, [client, itemId, sourceId, width](int sheet) {
+            return client->trickplayUrl(itemId, sourceId, width, sheet);
+        });
+        PF_LOG_INFO("player: trickplay pictures at %d px", width);
+    }
+
+    void applySpeed() {
+        if (engine_ && !live_) {
+            engine_->setSpeed(speed_);
+        }
+    }
+
+    void chooseSpeed() {
+        std::vector<std::string> names;
+        int selected = 0;
+        const auto& speeds = player::speedChoices();
+        for (std::size_t i = 0; i < speeds.size(); ++i) {
+            names.push_back(speedName(speeds[i]));
+            selected = speeds[i] == speed_ ? static_cast<int>(i) : selected;
+        }
+        ui::Application::current()->showModal(
+            ui::makeChoiceDialog(ui::tr("player.speed"), names, selected, [this](int index) {
+                speed_ = player::speedChoices()[static_cast<std::size_t>(index)];
+                applySpeed();
+                PF_LOG_INFO("player: speed %.2f", speed_);
+            }));
     }
 
     void chooseVolume() {
@@ -1327,6 +1429,7 @@ private:
     std::shared_ptr<LiveHandOff> handOff_ = std::make_shared<LiveHandOff>();
     std::vector<jellyfin::Item> channels_;
     std::int64_t startTicks_;
+    double speed_;  // the playback speed (1 for live channels); the next episode keeps it
     player::Reporter reporter_;
     std::unique_ptr<player::Engine> engine_;
     player::VideoFrame frame_;
@@ -1349,6 +1452,8 @@ private:
     ui::Box* bar_ = nullptr;
     ui::Label* title_ = nullptr;
     ui::ProgressBar* progress_ = nullptr;
+    TrickplayPreview* preview_ = nullptr;
+    std::map<std::string, std::vector<jellyfin::TrickplayInfo>> trickplay_;
     ui::Label* time_ = nullptr;
 
     bool started_ = false;
@@ -1385,8 +1490,8 @@ private:
 }  // namespace
 
 std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks,
-                                       std::string mediaSourceId) {
-    return std::make_unique<PlayerScreen>(session, std::move(item), startTicks, std::move(mediaSourceId));
+                                       std::string mediaSourceId, double speed) {
+    return std::make_unique<PlayerScreen>(session, std::move(item), startTicks, std::move(mediaSourceId), speed);
 }
 
 }  // namespace playfin::app

@@ -71,7 +71,25 @@ OpenOrbis PS4 Toolchain (files in the package) — GPL-3.0 (GPL-3.0.txt).
 
 Sora — SIL Open Font License 1.1 (OFL-Sora.txt)
   Copyright 2019 The Sora Project Authors. https://github.com/sora-xor/sora-font
-  Static instances (Regular, SemiBold, Bold) made from the variable font with scripts/make-sora.py.
+  Static instances (Regular, SemiBold, Bold) made from the variable font with scripts/make-fonts.py.
+
+Inter, Plus Jakarta Sans, Figtree and Outfit (the themes' fonts) — SIL Open Font License 1.1 (OFL-Inter.txt,
+  OFL-PlusJakartaSans.txt, OFL-Figtree.txt, OFL-Outfit.txt)
+  Inter: Copyright 2020 The Inter Project Authors. https://github.com/rsms/inter
+  Plus Jakarta Sans: Copyright 2020 The Plus Jakarta Sans Project Authors. https://github.com/tokotype/PlusJakartaSans
+  Figtree: Copyright 2022 The Figtree Project Authors. https://github.com/erikdkennedy/figtree
+  Outfit: Copyright 2021 The Outfit Project Authors. https://github.com/Outfitio/Outfit-Fonts
+  Static instances (Regular, SemiBold, Bold) made with scripts/make-fonts.py from the variable fonts of
+  github.com/google/fonts at commit 6075c541ae124d86c540ee31cc8c91d843989859 (sha256: Inter[opsz,wght].ttf
+  29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031, PlusJakartaSans[wght].ttf
+  89b3fb38aa0d275d7a731d0d817a4f1622b316b4d7fbdedcf02ee9099ff68bc8, Figtree[wght].ttf
+  26ad3db9b31ff7dde67a91ff515d022d2f495cd506590699cf264f0bfe6fb714, Outfit[wght].ttf
+  fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade).
+
+Quicksand (Zesty's font) — SIL Open Font License 1.1 (OFL-Quicksand.txt)
+  Copyright 2011 The Quicksand Project Authors, with Reserved Font Name "Quicksand".
+  https://github.com/andrew-paglinawan/QuicksandFamily
+  Its own static fonts (Regular, Medium, Bold), unmodified, from commit be4b9d638e1c79fa42d4a0ab0aa7fe29466419c7.
 
 Noto Sans and Noto Sans CJK — SIL Open Font License 1.1 (OFL-Noto.txt)
   Noto Sans: Copyright 2022 The Noto Project Authors. https://github.com/notofonts/latin-greek-cyrillic

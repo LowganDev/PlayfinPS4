@@ -181,3 +181,22 @@ TEST_CASE("a hardening option this mpv does not know is a warning, except ytdl (
         }
     }
 }
+
+TEST_CASE("the engine plays faster at a higher speed, within 0.5 to 2") {
+    Pump pump;
+    REQUIRE(pump.engine != nullptr);
+    pump.engine->load(kClip, 0);
+    REQUIRE(pump.until(8000, [&] { return pump.saw(player::EngineEvent::FirstFrame); }));
+    pump.engine->setSpeed(2.0);
+    CHECK(pump.engine->speed() == doctest::Approx(2.0));
+    const double from = pump.engine->state().position;
+    const auto start = std::chrono::steady_clock::now();
+    pump.until(800, [] { return false; });
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    const double advanced = pump.engine->state().position - from;
+    CHECK(advanced / wall > 1.4);  // about 2 (sanitizer builds are slower to start)
+    pump.engine->setSpeed(3.0);
+    CHECK(pump.engine->speed() == doctest::Approx(2.0));
+    pump.engine->setSpeed(0.1);
+    CHECK(pump.engine->speed() == doctest::Approx(0.5));
+}

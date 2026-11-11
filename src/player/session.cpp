@@ -228,4 +228,14 @@ void sendReport(const jellyfin::Client& client, ReportKind kind, const jellyfin:
     }
 }
 
+const std::vector<double>& speedChoices() {
+    static const std::vector<double> speeds{0.5, 0.75, 1.0, 1.25, 1.5, 2.0};
+    return speeds;
+}
+
+double remainingSeconds(double duration, double position, double speed) {
+    const double left = duration > position ? duration - position : 0.0;
+    return left / (speed > 0 ? speed : 1.0);
+}
+
 }  // namespace playfin::player

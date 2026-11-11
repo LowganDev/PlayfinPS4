@@ -13,12 +13,14 @@ struct FontStyle {
     FontWeight weight = FontWeight::Regular;
 };
 
-// NanoVG face name of a weight: "regular", "semibold", "bold".
+// NanoVG face name of a weight in the current family: "Sora-regular", "Sora-semibold", "Sora-bold"...
 const char* fontFace(FontWeight weight);
+// The family fontFace() names ("Sora" until NanoVgText::useFont sets another).
+void setFontFamily(const std::string& family);
 
 // Where the loaded typeface's capitals sit, as fractions of the font size (fontstash's ascender and descender are
 // fractions of ascender − descender while glyphs are scaled to the em: text drawn at the top of a line box sits
-// high). Set by NanoVgText::loadFonts; unknown (no shift) otherwise.
+// high). Set by NanoVgText::useFont; unknown (no shift) otherwise.
 struct TextGeometry {
     float capHeight = 0;  // em fraction
     float ascender = 0;   // fontstash's, size fraction

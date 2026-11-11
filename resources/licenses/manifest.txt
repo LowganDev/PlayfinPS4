@@ -20,5 +20,10 @@ musl (PacBrew PS4 port)|1.5|MIT|musl.txt|c
 LLVM libc++ and compiler-rt|12|Apache-2.0 WITH LLVM-exception|llvm.txt|c++,clang_rt.builtins-x86_64
 OpenOrbis PS4 Toolchain (files in the package)|0.5|GPL-3.0|GPL-3.0.txt|
 Sora|google/fonts (variable font, static instances)|OFL-1.1|OFL-Sora.txt|
+Inter|google/fonts 6075c54 (variable font, static instances)|OFL-1.1|OFL-Inter.txt|
+Plus Jakarta Sans|google/fonts 6075c54 (variable font, static instances)|OFL-1.1|OFL-PlusJakartaSans.txt|
+Figtree|google/fonts 6075c54 (variable font, static instances)|OFL-1.1|OFL-Figtree.txt|
+Quicksand|andrew-paglinawan/QuicksandFamily be4b9d6 (static fonts, unmodified)|OFL-1.1|OFL-Quicksand.txt|
+Outfit|google/fonts 6075c54 (variable font, static instances)|OFL-1.1|OFL-Outfit.txt|
 Noto Sans and Noto Sans CJK|notofonts|OFL-1.1|OFL-Noto.txt|
 Mozilla CA certificate list|2026-09-25|MPL-2.0|MPL-2.0.txt|

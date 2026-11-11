@@ -51,9 +51,10 @@ std::unique_ptr<ui::Screen> makeDetails(AppSession& session, jellyfin::Item item
 class ShellScreen;
 void openPeek(ShellScreen& screen, const jellyfin::Item& item);
 // Plays an item full screen from `startTicks` (video under the UI); ○ goes back.
-// `mediaSourceId`: the version chosen on the details page (empty: the server's first).
+// `mediaSourceId`: the version chosen on the details page (empty: the server's first). `speed`: the episode before
+// this one's (the next episode keeps it); a video started from the menus plays at 1.
 std::unique_ptr<ui::Screen> makePlayer(AppSession& session, jellyfin::Item item, std::int64_t startTicks,
-                                       std::string mediaSourceId = {});
+                                       std::string mediaSourceId = {}, double speed = 1.0);
 // A person: their picture and biography, then the films and series they are in (pushed).
 std::unique_ptr<ui::Screen> makePerson(AppSession& session, jellyfin::Item person);
 

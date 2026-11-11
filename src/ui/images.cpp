@@ -15,6 +15,7 @@
 #include <sstream>
 
 #include "core/log.hpp"
+#include "ui/halo.hpp"
 
 namespace playfin::ui {
 
@@ -119,8 +120,138 @@ void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::
     }
 }
 
+namespace {
+
+std::uint8_t toByte(double value) { return static_cast<std::uint8_t>(std::lround(std::min(255.0, std::max(0.0, value)))); }
+
+// box-filtered down to 1/32 of the size, then bilinear back up: a wide, even blur for little work
+void softBlur(std::vector<std::uint8_t>& rgba, int width, int height) {
+    const int sw = std::max(1, width / 32);
+    const int sh = std::max(1, height / 32);
+    std::vector<double> small(static_cast<std::size_t>(sw) * static_cast<std::size_t>(sh) * 3, 0.0);
+    std::vector<int> counts(static_cast<std::size_t>(sw) * static_cast<std::size_t>(sh), 0);
+    for (int y = 0; y < height; ++y) {
+        const int sy = std::min(sh - 1, y * sh / height);
+        for (int x = 0; x < width; ++x) {
+            const int sx = std::min(sw - 1, x * sw / width);
+            const std::size_t cell = static_cast<std::size_t>(sy) * static_cast<std::size_t>(sw) + static_cast<std::size_t>(sx);
+            const std::uint8_t* p = &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            for (int c = 0; c < 3; ++c) {
+                small[cell * 3 + static_cast<std::size_t>(c)] += p[c];
+            }
+            ++counts[cell];
+        }
+    }
+    for (std::size_t cell = 0; cell < counts.size(); ++cell) {
+        for (int c = 0; c < 3; ++c) {
+            small[cell * 3 + static_cast<std::size_t>(c)] /= std::max(1, counts[cell]);
+        }
+    }
+    const auto sample = [&](int sx, int sy, int c) {
+        sx = std::min(sw - 1, std::max(0, sx));
+        sy = std::min(sh - 1, std::max(0, sy));
+        return small[(static_cast<std::size_t>(sy) * static_cast<std::size_t>(sw) + static_cast<std::size_t>(sx)) * 3 +
+                     static_cast<std::size_t>(c)];
+    };
+    for (int y = 0; y < height; ++y) {
+        const double fy = (y + 0.5) * sh / height - 0.5;
+        const int y0 = static_cast<int>(std::floor(fy));
+        const double ty = fy - y0;
+        for (int x = 0; x < width; ++x) {
+            const double fx = (x + 0.5) * sw / width - 0.5;
+            const int x0 = static_cast<int>(std::floor(fx));
+            const double tx = fx - x0;
+            std::uint8_t* p = &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            for (int c = 0; c < 3; ++c) {
+                const double top = sample(x0, y0, c) * (1 - tx) + sample(x0 + 1, y0, c) * tx;
+                const double bottom = sample(x0, y0 + 1, c) * (1 - tx) + sample(x0 + 1, y0 + 1, c) * tx;
+                p[c] = toByte(top * (1 - ty) + bottom * ty);
+            }
+            p[3] = 255;
+        }
+    }
+}
+
+}  // namespace
+
+namespace {
+// a backdrop's shade colour in its cache key (the shade is baked into the picture)
+std::string groundKey(Color ground) {
+    char text[8];
+    std::snprintf(text, sizeof(text), "%02x%02x%02x", ground.r, ground.g, ground.b);
+    return text;
+}
+}  // namespace
+
+BackdropTreatment backdropTreatment(const Theme& theme) {
+    BackdropTreatment t;
+    t.kind = theme.backdropKind;
+    t.brightness = theme.backdropBrightness;
+    t.saturation = theme.backdropSaturation;
+    t.contrast = theme.backdropContrast;
+    t.ground = theme.background;
+    return t;
+}
+
+void bakeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, const BackdropTreatment& treatment) {
+    const Color g = treatment.ground;
+    switch (treatment.kind) {
+    case BackdropKind::Shade:
+        shadeBackdrop(rgba, width, height, g.r, g.g, g.b);
+        return;
+    case BackdropKind::Blur:
+    case BackdropKind::Tint: {
+        softBlur(rgba, width, height);
+        const bool tint = treatment.kind == BackdropKind::Tint;
+        for (std::size_t i = 0; i + 3 < rgba.size(); i += 4) {
+            double c[3] = {static_cast<double>(rgba[i]), static_cast<double>(rgba[i + 1]), static_cast<double>(rgba[i + 2])};
+            if (tint) {
+                const double ground[3] = {static_cast<double>(g.r), static_cast<double>(g.g), static_cast<double>(g.b)};
+                for (int k = 0; k < 3; ++k) {
+                    c[k] = c[k] * 0.3 + ground[k] * 0.7;
+                }
+            } else {  // as CSS filters in order: saturate, contrast, brightness
+                const double luma = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+                for (double& v : c) {
+                    v = luma + (v - luma) * treatment.saturation;
+                    v = (v - 127.5) * treatment.contrast + 127.5;
+                    v *= treatment.brightness;
+                }
+            }
+            for (int k = 0; k < 3; ++k) {
+                rgba[i + static_cast<std::size_t>(k)] = toByte(c[k]);
+            }
+            rgba[i + 3] = 255;
+        }
+        if (tint) {
+            addGrain(rgba, width, height);
+        }
+        return;
+    }
+    case BackdropKind::Diagonal: {
+        // CSS linear-gradient(54deg, ground 42 %, ground at 70 % opacity 100 %)
+        const double angle = 54.0 * 3.14159265358979 / 180.0;
+        const double dx = std::sin(angle);
+        const double dy = -std::cos(angle);
+        const double length = std::fabs(width * dx) + std::fabs(height * dy);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const double t = ((x + 0.5 - width / 2.0) * dx + (y + 0.5 - height / 2.0) * dy) / length + 0.5;
+                const double alpha = t <= 0.42 ? 1.0 : 1.0 - 0.3 * std::min(1.0, (t - 0.42) / 0.58);
+                std::uint8_t* p = &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+                p[0] = toByte(g.r * alpha + p[0] * (1 - alpha));
+                p[1] = toByte(g.g * alpha + p[1] * (1 - alpha));
+                p[2] = toByte(g.b * alpha + p[2] * (1 - alpha));
+                p[3] = 255;
+            }
+        }
+        return;
+    }
+    }
+}
+
 std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height, ImageShape shape,
-                                        Color ground) {
+                                        const BackdropTreatment& treatment) {
     if (!looksLikeImage(bytes)) {
         return std::nullopt;
     }
@@ -169,7 +300,7 @@ std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int
         }
     }
     stbi_image_free(data);
-    const bool crop = shape == ImageShape::Crop || shape == ImageShape::Backdrop;
+    const bool crop = shape == ImageShape::Crop || shape == ImageShape::Backdrop || shape == ImageShape::ThemedBackdrop;
     if (crop && (out.width > width || out.height > height)) {
         const int cw = std::min(out.width, std::max(width, 1));
         const int ch = std::min(out.height, std::max(height, 1));
@@ -190,8 +321,8 @@ std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int
     if (crop && width > 0 && height > 0 && (out.width != width || out.height != height)) {
         out = coverResize(out, width, height);  // smaller than the frame: scaled up to cover it, centre kept
     }
-    if (shape == ImageShape::Backdrop) {
-        shadeBackdrop(out.rgba, out.width, out.height, ground.r, ground.g, ground.b);
+    if (shape == ImageShape::Backdrop || shape == ImageShape::ThemedBackdrop) {
+        bakeBackdrop(out.rgba, out.width, out.height, treatment);
     }
     out.opaque = true;
     for (std::size_t i = 3; i < out.rgba.size() && out.opaque; i += 4) {
@@ -373,7 +504,7 @@ struct ImageLoader::Shared {
         }
         if (disk) {
             if (auto cached = disk->read(job.url)) {
-                job.image = decodeImage(*cached, job.width, job.height, job.shape, job.ground);
+                job.image = decodeImage(*cached, job.width, job.height, job.shape, job.treatment);
                 if (job.image) {
                     return job;
                 }
@@ -396,7 +527,7 @@ struct ImageLoader::Shared {
             job.skipped = true;
             return job;
         }
-        job.image = decodeImage(bytes, job.width, job.height, job.shape, job.ground);
+        job.image = decodeImage(bytes, job.width, job.height, job.shape, job.treatment);
         return job;
     }
 };
@@ -424,7 +555,10 @@ std::unique_ptr<ImageRequest> ImageLoader::request(const std::string& url, int w
     core::CancelToken token;
     auto handle = std::make_unique<ImageRequest>(token);
     const std::string key = url + "|" + std::to_string(width) + "x" + std::to_string(height) +
-                            (shape == ImageShape::Crop ? "c" : shape == ImageShape::Backdrop ? "b" : "");
+                            (shape == ImageShape::Crop       ? "c"
+                             : shape == ImageShape::Backdrop ? "b:" + groundKey(theme().background)
+                             : shape == ImageShape::ThemedBackdrop ? "t:" + theme().id
+                                                                   : std::string());
     if (auto hit = cache_.find(key); hit != cache_.end()) {
         lru_.splice(lru_.begin(), lru_, hit->second);
         ready(hit->second->second);
@@ -449,7 +583,11 @@ void ImageLoader::start(const std::string& key, const std::string& url, int widt
     job.width = width;
     job.height = height;
     job.shape = shape;
-    job.ground = theme().background;
+    if (shape == ImageShape::ThemedBackdrop) {
+        job.treatment = backdropTreatment(theme());
+    } else {  // Backdrop: the identity's shade into the theme's background
+        job.treatment.ground = theme().background;
+    }
     std::shared_ptr<Job> wanted = jobs_[key];
     if (config_.synchronous) {
         shared_->decoded.push_back(shared_->work(std::move(job), *wanted));

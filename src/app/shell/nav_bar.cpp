@@ -50,9 +50,35 @@ void NavTab::onThemeChanged() {
 }
 
 void NavTab::refresh() {
-    background = focused_ ? ui::theme().controlFocused : ui::Color{0, 0, 0, 0};
-    label_->color = focused_ ? ui::theme().onAccent : current_ ? ui::theme().text : ui::theme().textSecondary;
+    const ui::Theme& t = ui::theme();
+    const bool pill = t.tabStyle == ui::TabStyle::Pill;
+    background = ui::Color{0, 0, 0, 0};
+    label_->color = current_ ? t.text : t.textSecondary;
+    if (focused_) {
+        background = t.controlFocused;
+        label_->color = t.onAccent;
+    } else if (pill && current_) {
+        background = t.tabPillInAccent ? t.accent : t.text;
+        label_->color = t.tabPillInAccent ? t.onAccent : t.background;
+    } else if (pill) {
+        background = t.navBackground.a > 0 ? ui::Color{0, 0, 0, 0} : t.surface;  // inside the bar's pill, or its own
+        label_->color = t.text;
+    }
+    cornerRadius = pill ? frame.height / 2 : t.radius;  // pills: half the height (set again once laid out)
     label_->markDirty();
+}
+
+// A pill's radius is exactly half its height: NanoVG clamps a larger radius on each axis apart, which draws an
+// ellipse instead of round ends.
+void NavTab::layout(ui::TextMetrics& metrics) {
+    ui::Box::layout(metrics);
+    cornerRadius = ui::theme().tabStyle == ui::TabStyle::Pill ? frame.height / 2 : ui::theme().radius;
+}
+
+ui::Color NavTab::labelColor() const { return label_->color; }
+
+bool NavTab::underlineVisible() const {
+    return current_ && !focused_ && ui::theme().tabStyle == ui::TabStyle::Underline;
 }
 
 void NavTab::draw(NVGcontext* vg) const {
@@ -63,7 +89,7 @@ void NavTab::draw(NVGcontext* vg) const {
         nvgFillColor(vg, ui::nvgColor(focused_ ? ui::theme().onAccent : ui::theme().accent));
         nvgFill(vg);
     }
-    if (current_ && !focused_) {
+    if (underlineVisible()) {
         const float inset = ui::theme().spacingL;
         nvgBeginPath(vg);
         nvgRoundedRect(vg, inset, frame.height - kUnderline, frame.width - 2 * inset, kUnderline, kUnderline / 2);
@@ -119,6 +145,37 @@ NavBar::NavBar(AppSession& session, Tab current) : ui::Box(ui::Axis::Row) {
     label->color = ui::theme().textSecondary;
     label->margin = {0, ui::theme().spacingS, 0, 0};
     addChild(makeAvatar(userName));
+}
+
+void NavBar::draw(NVGcontext* vg) const {
+    const ui::Color pill = ui::theme().navBackground;
+    if (pill.a > 0) {
+        float left = 0;
+        float right = 0;
+        float top = 0;
+        float bottom = 0;
+        bool any = false;
+        for (const auto& child : children()) {
+            if (dynamic_cast<const NavTab*>(child.get()) == nullptr) {
+                continue;
+            }
+            const ui::Rect& r = child->frame;
+            left = any ? std::min(left, r.x) : r.x;
+            right = any ? std::max(right, r.x + r.width) : r.x + r.width;
+            top = any ? std::min(top, r.y) : r.y;
+            bottom = any ? std::max(bottom, r.y + r.height) : r.y + r.height;
+            any = true;
+        }
+        if (any) {
+            const float pad = ui::theme().spacingS;
+            nvgBeginPath(vg);
+            nvgRoundedRect(vg, left - pad, top - pad, right - left + 2 * pad, bottom - top + 2 * pad,
+                           (bottom - top) / 2 + pad);
+            nvgFillColor(vg, ui::nvgColor(pill));
+            nvgFill(vg);
+        }
+    }
+    ui::Box::draw(vg);
 }
 
 namespace {

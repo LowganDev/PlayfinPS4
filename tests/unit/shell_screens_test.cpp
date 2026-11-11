@@ -21,6 +21,8 @@
 #include "app/shell/screens.hpp"
 #include "app/shell/screensaver.hpp"
 #include "app/shell/session.hpp"
+#include "app/shell/theme_backdrop.hpp"
+#include "app/shell/trickplay_preview.hpp"
 #include "app/shell/tv_guide.hpp"
 #include "app/shell/usb.hpp"
 #include "app/settings.hpp"
@@ -1081,7 +1083,7 @@ struct SettingsShell {
 TEST_CASE("the accent colour applies at once and is saved") {
     SettingsShell s;
     CHECK(shows(*s.shell.application, "Accent colour"));
-    CHECK(shows(*s.shell.application, "PlayStation blue"));
+    CHECK(shows(*s.shell.application, "Theme colour"));  // the theme's own, by default
     pressAnywhere(s.shell, "Accent colour");
     REQUIRE(s.shell.application->hasModal());
     pressAnywhere(s.shell, "Red");
@@ -2672,4 +2674,350 @@ TEST_CASE("downloads: to a USB drive that is not there, a clear failure") {
     REQUIRE(entry != nullptr);
     CHECK(entry->state == app::Downloads::State::Failed);
     CHECK(entry->error == "the USB drive is not plugged in");
+}
+
+namespace {
+bool sameColor(ui::Color a, ui::Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+struct ThemeReset {
+    ~ThemeReset() { ui::applyTheme(ui::themeById("projecteur")); }
+};
+}  // namespace
+
+TEST_CASE("theme tabs: a pill for ElegantFin and Zesty, no underline for Ultrachromic, Projecteur's underline") {
+    ThemeReset reset;
+    ui::applyTheme(ui::themeById("slate"));
+    app::NavTab current("Home", true, {});
+    app::NavTab other("Search", false, [] {});
+    CHECK(sameColor(current.background, ui::theme().text));
+    CHECK(sameColor(current.labelColor(), ui::theme().background));
+    CHECK_FALSE(current.underlineVisible());
+    CHECK(sameColor(other.background, ui::theme().surface));  // no bar behind the tabs: each its own pill
+    CHECK(sameColor(other.labelColor(), ui::theme().text));
+
+    ui::applyTheme(ui::themeById("mint"));
+    app::NavTab mint("Home", true, {});
+    app::NavTab mintOther("Search", false, [] {});
+    CHECK(sameColor(mint.background, ui::theme().accent));
+    CHECK(sameColor(mint.labelColor(), ui::theme().onAccent));
+    CHECK(mintOther.background.a == 0);  // inside the bar's pill
+
+    ui::applyTheme(ui::themeById("chroma"));
+    app::NavTab plain("Home", true, {});
+    CHECK_FALSE(plain.underlineVisible());
+    CHECK(plain.background.a == 0);
+    CHECK(sameColor(plain.labelColor(), ui::theme().text));
+
+    ui::applyTheme(ui::themeById("projecteur"));
+    app::NavTab underlined("Home", true, {});
+    CHECK(underlined.underlineVisible());
+    CHECK(underlined.background.a == 0);
+}
+
+TEST_CASE("an item card keeps the item it shows") {
+    app::ItemCard card(false);
+    jellyfin::Item item;
+    item.id = "m-1";
+    item.name = "A film";
+    card.show(item, "", 0);
+    CHECK(card.item().id == "m-1");
+}
+
+namespace {
+std::vector<app::ItemCard*> itemCards(ui::View& root) {
+    std::vector<app::ItemCard*> out;
+    std::function<void(ui::View&)> collect = [&](ui::View& view) {
+        if (auto* card = dynamic_cast<app::ItemCard*>(&view)) {
+            out.push_back(card);
+        }
+        for (const auto& child : view.children()) {
+            collect(*child);
+        }
+    };
+    collect(root);
+    return out;
+}
+}  // namespace
+
+// the theme backdrop of the top screen, shown or not
+app::ThemeBackdrop* themeBackdrop(ui::Application& app) {
+    std::function<app::ThemeBackdrop*(ui::View&)> find = [&](ui::View& view) -> app::ThemeBackdrop* {
+        if (auto* found = dynamic_cast<app::ThemeBackdrop*>(&view)) {
+            return found;
+        }
+        for (const auto& child : view.children()) {
+            if (app::ThemeBackdrop* found = find(*child)) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+    return app.top() != nullptr ? find(*app.top()) : nullptr;
+}
+
+TEST_CASE("Ultrachromic: the home's background follows the focused card's backdrop, after a pause") {
+    ThemeReset reset;
+    ui::applyTheme(ui::themeById("chroma"));
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->replace(app::makeHome(shell.session));
+    shell.frames(10);
+    app::ThemeBackdrop* backdrop = themeBackdrop(*shell.application);
+    REQUIRE(backdrop != nullptr);
+    CHECK(backdrop->visible);
+    app::ItemCard* card = nullptr;
+    for (app::ItemCard* candidate : itemCards(*shell.application->top())) {
+        if (!candidate->item().images.backdrops.empty()) {
+            card = candidate;
+            break;
+        }
+    }
+    REQUIRE(card != nullptr);
+    REQUIRE(shell.application->focus().focus(card));
+    shell.frames(5);  // 83 ms: not yet
+    CHECK(backdrop->shownUrl().find(card->item().id) == std::string::npos);
+    shell.frames(25);  // past 400 ms
+    CHECK(backdrop->shownUrl().find(card->item().id) != std::string::npos);
+}
+
+TEST_CASE("Projecteur: no background follows the focus") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->replace(app::makeHome(shell.session));
+    shell.frames(10);
+    app::ThemeBackdrop* backdrop = themeBackdrop(*shell.application);
+    REQUIRE(backdrop != nullptr);
+    CHECK_FALSE(backdrop->visible);
+    for (app::ItemCard* card : itemCards(*shell.application->top())) {
+        if (!card->item().images.backdrops.empty()) {
+            REQUIRE(shell.application->focus().focus(card));
+            break;
+        }
+    }
+    shell.frames(30);
+    CHECK(backdrop->shownUrl().empty());
+}
+
+TEST_CASE("the Theme row: choosing Zesty applies it with its own accent; an accent then goes on top") {
+    ThemeReset reset;
+    SettingsShell s;
+    CHECK(shows(*s.shell.application, "Theme"));
+    CHECK(shows(*s.shell.application, "Projecteur"));
+    pressAnywhere(s.shell, "Theme");
+    REQUIRE(s.shell.application->hasModal());
+    CHECK(shows(*s.shell.application, "ElegantFin"));
+    pressAnywhere(s.shell, "Zesty");
+    s.shell.frames(10);
+    CHECK(s.shell.session.settings().theme == "mint");
+    CHECK(s.shell.session.settings().accent == "theme");
+    CHECK(ui::theme().id == "mint");
+    CHECK(shows(*s.shell.application, "Zesty"));
+    CHECK(shows(*s.shell.application, "Theme colour"));
+    CHECK(app::loadSettings(s.shell.dir.path + "/settings.json").theme == "mint");
+    pressAnywhere(s.shell, "Accent colour");
+    REQUIRE(s.shell.application->hasModal());
+    pressAnywhere(s.shell, "Red");
+    s.shell.frames(5);
+    CHECK(ui::theme().id == "mint");
+    CHECK(ui::theme().accent.r == 0xE5);
+    CHECK(s.shell.session.settings().accent == "red");
+    pressAnywhere(s.shell, "Accent colour");
+    pressAnywhere(s.shell, "Theme colour");
+    s.shell.frames(5);
+    CHECK(ui::theme().accent.r == 0xBB);
+}
+
+TEST_CASE("the licences page credits each theme's authors") {
+    SettingsShell s;
+    s.shell.application->push(app::makeLicenses(s.shell.session));
+    s.shell.frames(5);
+    CHECK(shows(*s.shell.application, "Themes"));
+    CHECK(showsSomewhere(*s.shell.application, "ElegantFin · lscambo13"));
+    CHECK(showsSomewhere(*s.shell.application, "Zesty · stpnwf, Casper Talvio"));
+    CHECK(showsSomewhere(*s.shell.application, "Finimalism · tedhinklater"));
+}
+
+TEST_CASE("player speed: chosen in the menu, kept for the next episode, back to normal for another video") {
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    p.frames(10);
+    p.shell.press(Action::Options);
+    p.frames(2);
+    REQUIRE(p.shell.application->hasModal());
+    CHECK(shows(*p.shell.application, "Speed: Normal"));
+    pressAnywhere(p.shell, "Speed: Normal");
+    p.frames(2);
+    REQUIRE(p.shell.application->hasModal());
+    pressAnywhere(p.shell, "1.5\xC3\x97");
+    p.frames(2);
+    CHECK_FALSE(p.shell.application->hasModal());
+    p.shell.press(Action::Options);
+    p.frames(2);
+    CHECK(shows(*p.shell.application, "Speed: 1.5\xC3\x97"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    // the next episode, from its card: still 1.5×
+    CHECK(shows(*p.shell.application, "Next episode"));
+    p.shell.press(Action::Confirm);
+    p.frames(10);
+    REQUIRE(p.server.count("/Items/e-2/PlaybackInfo") == 1);
+    p.shell.press(Action::Options);
+    p.frames(2);
+    CHECK(shows(*p.shell.application, "Speed: 1.5\xC3\x97"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    p.shell.press(Action::Back);
+    p.frames(5);
+    // another video from the menus: normal speed
+    jellyfin::Item film = episode();
+    film.id = "m-1";
+    film.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 0));
+    p.frames(10);
+    p.shell.press(Action::Options);
+    p.frames(2);
+    CHECK(shows(*p.shell.application, "Speed: Normal"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("player speed: a live channel offers none") {
+    Playing p;
+    p.server.showMediaViews();
+    p.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    p.shell.session.fixedUtcOffset = 120;
+    p.shell.application->push(app::makePlayer(p.shell.session, channel("Playfin Info"), 0));
+    p.frames(10);
+    p.shell.press(Action::Options);
+    p.frames(2);
+    CHECK_FALSE(showsSomewhere(*p.shell.application, "Speed"));
+    p.shell.press(Action::Back);
+    p.frames(2);
+    p.shell.press(Action::Back);
+    p.frames(5);
+}
+
+namespace {
+ui::View* anyNamed(ui::View& view, const std::string& name) {
+    if (view.name == name) {
+        return &view;
+    }
+    for (const auto& child : view.children()) {
+        if (ui::View* found = anyNamed(*child, name)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+}  // namespace
+
+TEST_CASE("trickplay: while seeking, the picture at the target shows above the bar; gone once the seek is done") {
+    Playing p;
+    jellyfin::Item film = episode();
+    film.id = "m-trick";
+    film.type = jellyfin::ItemType::Movie;
+    p.shell.application->push(app::makePlayer(p.shell.session, film, 0));
+    p.frames(10);
+    auto* preview = dynamic_cast<app::TrickplayPreview*>(anyNamed(*p.shell.application->top(), "trickplay preview"));
+    REQUIRE(preview != nullptr);
+    CHECK_FALSE(preview->visible);
+    p.shell.press(Action::Right);
+    p.frames(1);
+    CHECK(preview->visible);
+    CHECK(preview->wantedUrl().find("/Videos/m-trick/Trickplay/320/0.jpg?mediaSourceId=ms-1") != std::string::npos);
+    for (int i = 0; i < 100 && preview->visible; ++i) {  // the seek applies 300 ms (real time) after the last press
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        p.frames(1);
+    }
+    CHECK_FALSE(preview->visible);
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("trickplay: nothing shows for a video the server has no pictures for") {
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    p.frames(10);
+    auto* preview = dynamic_cast<app::TrickplayPreview*>(anyNamed(*p.shell.application->top(), "trickplay preview"));
+    REQUIRE(preview != nullptr);
+    p.shell.press(Action::Right);
+    p.frames(1);
+    CHECK_FALSE(preview->visible);
+    CHECK(preview->wantedUrl().empty());
+    p.shell.press(Action::Back);
+}
+
+TEST_CASE("trickplay: the picture keeps the video's shape (a scope film's tiles are 320 x 134)") {
+    app::TrickplayPreview preview;
+    jellyfin::TrickplayInfo scope;
+    scope.width = 320;
+    scope.height = 134;
+    scope.tileWidth = 10;
+    scope.tileHeight = 10;
+    scope.thumbnailCount = 50;
+    scope.intervalMs = 10000;
+    preview.setPictures(scope, [](int sheet) { return "sheet-" + std::to_string(sheet); });
+    preview.update(true, 30, 600, 1, "0:30");
+    CHECK(preview.pictureSize().width == doctest::Approx(320));
+    CHECK(preview.pictureSize().height == doctest::Approx(134));
+    jellyfin::TrickplayInfo old = scope;
+    old.height = 240;  // 4:3
+    preview.setPictures(old, [](int sheet) { return "sheet-" + std::to_string(sheet); });
+    preview.update(true, 30, 600, 1, "0:30");
+    CHECK(preview.pictureSize().height == doctest::Approx(240));
+}
+
+TEST_CASE("Ultrachromic: a new backdrop comes over the last one, which stays under it meanwhile") {
+    ThemeReset reset;
+    ui::applyTheme(ui::themeById("chroma"));
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    shell.application->replace(app::makeHome(shell.session));
+    shell.frames(10);
+    app::ThemeBackdrop* backdrop = themeBackdrop(*shell.application);
+    REQUIRE(backdrop != nullptr);
+    jellyfin::Item first;
+    first.id = "m-1";
+    first.images.backdrops = {"b-m1"};
+    jellyfin::Item second;
+    second.id = "m-2";
+    second.images.backdrops = {"b-m2"};
+    backdrop->follow(first);
+    shell.frames(30);
+    backdrop->follow(second);
+    shell.frames(30);
+    const std::vector<std::string> layers = backdrop->layerUrls();  // bottom first
+    REQUIRE(layers.size() == 2);
+    CHECK(layers[0].find("m-1") != std::string::npos);
+    CHECK(layers[1].find("m-2") != std::string::npos);
+}
+
+TEST_CASE("the Theme row: choosing the theme already used keeps the accent chosen") {
+    ThemeReset reset;
+    SettingsShell s;
+    pressAnywhere(s.shell, "Accent colour");
+    pressAnywhere(s.shell, "Red");
+    s.shell.frames(5);
+    REQUIRE(s.shell.session.settings().accent == "red");
+    pressAnywhere(s.shell, "Theme");
+    REQUIRE(s.shell.application->hasModal());
+    pressAnywhere(s.shell, "Projecteur");
+    s.shell.frames(10);
+    CHECK(s.shell.session.settings().accent == "red");
+    CHECK(ui::theme().accent.r == 0xE5);
+}
+
+TEST_CASE("theme tabs: a pill's ends are half circles (its radius is half its height), not an ellipse") {
+    ThemeReset reset;
+    ui::applyTheme(ui::themeById("slate"));
+    test::FixedMetrics metrics;
+    app::NavTab tab("Settings", true, {});
+    tab.place(ui::Rect{0, 0, 220, 52}, metrics);
+    CHECK(tab.cornerRadius == doctest::Approx(26));
+    ui::applyTheme(ui::themeById("projecteur"));
+    app::NavTab plain("Settings", true, {});
+    plain.place(ui::Rect{0, 0, 220, 52}, metrics);
+    CHECK(plain.cornerRadius == doctest::Approx(ui::theme().radius));
 }

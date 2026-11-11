@@ -71,7 +71,8 @@ TEST_CASE("settings round trip") {
 TEST_CASE("missing settings give the defaults") {
     TempDir dir;
     const app::Settings settings = app::loadSettings(dir.path + "/settings.json");
-    CHECK(settings.accent == "playstation");
+    CHECK(settings.theme == "projecteur");
+    CHECK(settings.accent == "theme");
     CHECK(settings.maxBitrate == 40000000);
     CHECK(settings.language.empty());
     CHECK(settings.recentSearches.empty());
@@ -88,7 +89,7 @@ TEST_CASE("damaged settings are kept aside and the defaults used") {
         out << "{not json";
     }
     const app::Settings settings = app::loadSettings(path);
-    CHECK(settings.accent == "playstation");
+    CHECK(settings.accent == "theme");
     CHECK(std::filesystem::exists(path + ".bad"));
     CHECK_FALSE(std::filesystem::exists(path));
 }
@@ -106,7 +107,7 @@ TEST_CASE("out of range values fall back to the defaults") {
     CHECK(settings.pictureFit == "fit");
     CHECK(settings.pictureSize == 100);
     CHECK(settings.playMethod == "auto");
-    CHECK(settings.accent == "playstation");
+    CHECK(settings.accent == "theme");
     CHECK(settings.maxBitrate == 40000000);
     CHECK(settings.recentSearches == std::vector<std::string>{"a", "b"});
 }
@@ -159,4 +160,50 @@ TEST_CASE("a file written in pieces appears only once committed; an abandoned on
     CHECK_FALSE(std::filesystem::exists(dir.path + "/gone.bin.part"));
     core::FileSink nowhere(dir.path + "/missing/dir/file.bin");
     CHECK_FALSE(nowhere.ok());
+}
+
+TEST_CASE("a 2.1 settings file keeps its accent, on Projecteur") {
+    TempDir dir;
+    const std::string path = dir.path + "/settings.json";
+    {
+        std::ofstream out(path);
+        out << R"({"version":1,"accent":"red","volume":80})";
+    }
+    const app::Settings settings = app::loadSettings(path);
+    CHECK(settings.theme == "projecteur");
+    CHECK(settings.accent == "red");
+}
+
+TEST_CASE("the theme round-trips; an unknown theme gives Projecteur") {
+    TempDir dir;
+    const std::string path = dir.path + "/settings.json";
+    app::Settings settings;
+    settings.theme = "violet";
+    settings.accent = "theme";
+    REQUIRE(app::saveSettings(path, settings));
+    const app::Settings loaded = app::loadSettings(path);
+    CHECK(loaded.theme == "violet");
+    CHECK(loaded.accent == "theme");
+    {
+        std::ofstream out(path);
+        out << R"({"version":1,"theme":"neon","accent":"green"})";
+    }
+    const app::Settings unknown = app::loadSettings(path);
+    CHECK(unknown.theme == "projecteur");
+    CHECK(unknown.accent == "green");
+}
+
+TEST_CASE("the accent applies on top of the theme") {
+    app::Settings settings;
+    settings.theme = "mint";
+    settings.accent = "red";
+    app::applyAppearance(settings);
+    CHECK(ui::theme().id == "mint");
+    CHECK(ui::theme().accent.r == 0xE5);
+    settings.accent = "theme";
+    app::applyAppearance(settings);
+    CHECK(ui::theme().accent.r == 0xBB);
+    app::applyAppearance(app::Settings{});
+    CHECK(ui::theme().id == "projecteur");
+    CHECK(ui::theme().accent.b == 0xD1);
 }

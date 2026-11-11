@@ -22,6 +22,8 @@ public:
     Color placeholder;
     // a screen's backdrop: the picture comes with the backdrop shade baked in (ImageShape::Backdrop)
     bool backdrop = false;
+    // with `backdrop`: the current theme's treatment instead of the shade (ImageShape::ThemedBackdrop)
+    bool themedBackdrop = false;
     // the picture is shown, opaque, over the whole frame (what is under it need not be drawn)
     bool coversFrame() const;
 

@@ -127,6 +127,45 @@ Item parseItemValue(yyjson_val* value, int depth = 0) {
             }
         }
     }
+    if (yyjson_val* trickplay = json::object(value, "Trickplay")) {
+        yyjson_obj_iter sources = yyjson_obj_iter_with(trickplay);
+        yyjson_val* sourceKey = nullptr;
+        while ((sourceKey = yyjson_obj_iter_next(&sources)) != nullptr && item.trickplay.size() < 16) {
+            yyjson_val* widths = yyjson_obj_iter_get_val(sourceKey);
+            if (!yyjson_is_obj(widths)) {
+                continue;
+            }
+            std::vector<TrickplayInfo> infos;
+            yyjson_obj_iter iter = yyjson_obj_iter_with(widths);
+            yyjson_val* widthKey = nullptr;
+            while ((widthKey = yyjson_obj_iter_next(&iter)) != nullptr && infos.size() < 8) {
+                yyjson_val* entry = yyjson_obj_iter_get_val(widthKey);
+                if (!yyjson_is_obj(entry)) {
+                    continue;
+                }
+                TrickplayInfo info;
+                const auto field = [entry](const char* key) {
+                    const std::int64_t v = json::integer(entry, key);
+                    return v > 0 && v <= 100000 ? static_cast<int>(v) : 0;
+                };
+                info.width = field("Width");
+                info.height = field("Height");
+                info.tileWidth = field("TileWidth");
+                info.tileHeight = field("TileHeight");
+                info.thumbnailCount = field("ThumbnailCount");
+                const std::int64_t interval = json::integer(entry, "Interval");
+                info.intervalMs = interval > 0 && interval <= 24LL * 3600 * 1000 ? interval : 0;
+                if (info.width > 0 && info.height > 0 && info.tileWidth > 0 && info.tileHeight > 0 &&
+                    info.thumbnailCount > 0 && info.intervalMs > 0) {
+                    infos.push_back(info);
+                }
+            }
+            const char* id = yyjson_get_str(sourceKey);
+            if (!infos.empty() && id != nullptr && yyjson_get_len(sourceKey) <= 128) {
+                item.trickplay[id] = infos;
+            }
+        }
+    }
     if (yyjson_val* chapters = json::array(value, "Chapters")) {
         yyjson_arr_iter iter = yyjson_arr_iter_with(chapters);
         yyjson_val* entry = nullptr;

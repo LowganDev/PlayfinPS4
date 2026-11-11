@@ -33,6 +33,69 @@ std::vector<std::uint8_t> haloImage(int width, int height, Color background, Col
     return image;
 }
 
+namespace {
+
+std::uint8_t clampByte(int value) { return static_cast<std::uint8_t>(std::min(255, std::max(0, value))); }
+
+}  // namespace
+
+void addGrain(std::vector<std::uint8_t>& rgba, int width, int height) {
+    std::uint32_t state = 0x2545F491u;  // fixed: the same grain on every run
+    const std::size_t count = static_cast<std::size_t>(std::max(width, 0)) * static_cast<std::size_t>(std::max(height, 0));
+    for (std::size_t i = 0; i < count && i * 4 + 3 < rgba.size(); ++i) {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        const int delta = static_cast<int>(state % 13) - 6;  // -6 to 6, the same on each channel (no colour noise)
+        for (int c = 0; c < 3; ++c) {
+            rgba[i * 4 + static_cast<std::size_t>(c)] = clampByte(rgba[i * 4 + static_cast<std::size_t>(c)] + delta);
+        }
+    }
+}
+
+std::vector<std::uint8_t> backgroundImage(int width, int height, const Theme& theme) {
+    switch (theme.backgroundKind) {
+    case BackgroundKind::Halo:
+        return haloImage(width, height, theme.background, theme.accent);
+    case BackgroundKind::Plain:
+        return {};
+    case BackgroundKind::Gradient:
+    case BackgroundKind::Grain:
+        break;
+    }
+    std::vector<std::uint8_t> image(static_cast<std::size_t>(std::max(width, 0)) *
+                                    static_cast<std::size_t>(std::max(height, 0)) * 4);
+    const bool gradient = theme.backgroundKind == BackgroundKind::Gradient;
+    for (int y = 0; y < height; ++y) {
+        const double t = gradient && height > 1 ? static_cast<double>(y) / (height - 1) : 0.0;
+        const Color from = gradient ? theme.gradientTop : theme.background;
+        const Color to = gradient ? theme.gradientBottom : theme.background;
+        const auto mix = [t](std::uint8_t a, std::uint8_t b) { return static_cast<std::uint8_t>(std::lround(a + (b - a) * t)); };
+        const std::uint8_t row[4] = {mix(from.r, to.r), mix(from.g, to.g), mix(from.b, to.b), 255};
+        for (int x = 0; x < width; ++x) {
+            std::copy(row, row + 4, &image[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                                            static_cast<std::size_t>(x)) * 4]);
+        }
+    }
+    if (!gradient) {
+        addGrain(image, width, height);
+    }
+    return image;
+}
+
+int backgroundLitRows(int height, const Theme& theme) {
+    switch (theme.backgroundKind) {
+    case BackgroundKind::Halo:
+        return haloLitRows(height);
+    case BackgroundKind::Plain:
+        return 0;
+    case BackgroundKind::Gradient:
+    case BackgroundKind::Grain:
+        break;
+    }
+    return height;
+}
+
 int haloLitRows(int height) {
     // centre at -10 %, light gone at 70 % of the 55 % radius: -0.1 + 0.385 = 0.285 of the height
     return std::min(height, static_cast<int>(std::ceil(0.285 * height)) + 1);

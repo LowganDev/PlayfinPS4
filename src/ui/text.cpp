@@ -4,16 +4,19 @@
 
 namespace playfin::ui {
 
-const char* fontFace(FontWeight weight) {
-    switch (weight) {
-    case FontWeight::SemiBold:
-        return "semibold";
-    case FontWeight::Bold:
-        return "bold";
-    case FontWeight::Regular:
-        break;
-    }
-    return "regular";
+namespace {
+std::string& faceName(FontWeight weight) {
+    static std::string names[3] = {"Sora-regular", "Sora-semibold", "Sora-bold"};
+    return names[static_cast<int>(weight)];
+}
+}  // namespace
+
+const char* fontFace(FontWeight weight) { return faceName(weight).c_str(); }
+
+void setFontFamily(const std::string& family) {
+    faceName(FontWeight::Regular) = family + "-regular";
+    faceName(FontWeight::SemiBold) = family + "-semibold";
+    faceName(FontWeight::Bold) = family + "-bold";
 }
 
 

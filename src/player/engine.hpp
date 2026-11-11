@@ -76,6 +76,10 @@ public:
     void setAudioTrack(int mpvId);     // mpv track ids start at 1
     void setSubtitleTrack(int mpvId);  // 0: no subtitles
     void setVolume(int percent);       // 0 to 100
+    // 0.5 to 2 (clamped); the voice keeps its pitch (mpv's default). Above what the device decodes, mpv drops
+    // pictures and the sound stays in step.
+    void setSpeed(double speed);
+    double speed() const;
 
     struct State {
         double position = 0;

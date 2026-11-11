@@ -30,9 +30,11 @@ void ImageView::layout(TextMetrics& metrics) {
     (void)metrics;
     const int w = static_cast<int>(frame.width);
     const int h = static_cast<int>(frame.height);
-    const ImageShape shape = backdrop ? ImageShape::Backdrop : fit == Fit::Cover ? ImageShape::Crop : ImageShape::Whole;
+    const ImageShape shape = backdrop ? (themedBackdrop ? ImageShape::ThemedBackdrop : ImageShape::Backdrop)
+                             : fit == Fit::Cover ? ImageShape::Crop
+                                                 : ImageShape::Whole;
     const std::string key = url_ + "|" + std::to_string(w) + "x" + std::to_string(h) + "/" +
-                            std::to_string(static_cast<int>(shape));
+                            std::to_string(static_cast<int>(shape)) + (themedBackdrop ? "/" + theme().id : std::string());
     if (url_.empty() || w <= 0 || h <= 0 || key == requested_ || context().images == nullptr) {
         return;
     }

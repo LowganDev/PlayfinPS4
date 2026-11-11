@@ -1,6 +1,7 @@
 #include "app/shell/cards.hpp"
 #include "app/shell/chrome.hpp"
 #include "app/shell/downloads.hpp"
+#include "app/shell/theme_backdrop.hpp"
 #include "app/shell/format.hpp"
 #include "app/shell/library_query.hpp"
 #include "app/shell/music_player.hpp"
@@ -52,6 +53,7 @@ std::vector<jellyfin::Item> driveCards(const std::vector<std::string>& drives) {
 class HomeScreen : public ShellScreen {
 public:
     explicit HomeScreen(AppSession& session) : ShellScreen(session) {
+        backdrop_ = add<ThemeBackdrop>(session_);  // behind everything (themes whose background follows the focus)
         scroll_ = add<ui::VScroll>();
         scroll_->leadingInset = ui::theme().spacingXxl;
         auto content = std::make_unique<ui::Box>(ui::Axis::Column);
@@ -86,6 +88,10 @@ public:
         }
     }
 
+    void onDescendantFocused(ui::View* view) override {
+        ShellScreen::onDescendantFocused(view);
+        backdrop_->followFocus(view);
+    }
 private:
     // the rows of Resume and Next up get their new items in place (the focus stays where it was)
     void refresh() {
@@ -264,6 +270,7 @@ private:
              {ui::tr("ui.cancel"), {}}}));
     }
 
+    ThemeBackdrop* backdrop_;
     ui::VScroll* scroll_;
     ui::Box* column_;
     NavBar* navBar_;
@@ -277,6 +284,7 @@ class LibraryScreen : public ShellScreen {
 public:
     LibraryScreen(AppSession& session, jellyfin::Item library)
         : ShellScreen(session), library_(std::move(library)), choice_(session.libraryChoices[library_.id]) {
+        backdrop_ = add<ThemeBackdrop>(session_);  // behind the page (themes whose background follows the focus)
         auto* column = addPage(*this, library_.name);
         count_ = column->add<ui::Label>(ui::tr("shell.loading"), ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
         count_->color = ui::theme().textSecondary;
@@ -329,6 +337,10 @@ public:
         }
     }
 
+    void onDescendantFocused(ui::View* view) override {
+        ShellScreen::onDescendantFocused(view);
+        backdrop_->followFocus(view);
+    }
 private:
     void refreshBar() {
         sort_->setText(ui::tr("shell.library.sort", {sortName(choice_.sort)}));
@@ -496,6 +508,7 @@ private:
 
     jellyfin::Item library_;
     LibraryChoice choice_;
+    ThemeBackdrop* backdrop_;
     ui::Label* count_;
     ui::Button* sort_;
     ui::Button* order_;
@@ -547,6 +560,7 @@ public:
         backdrop_->cornerRadius = 0;
         backdrop_->placeholder = ui::Color{0, 0, 0, 0};
         backdrop_->backdrop = true;
+        backdrop_->themedBackdrop = true;  // Projecteur and ElegantFin: the identity's shade, as before
         shade->setPicture(backdrop_);
         scroll_ = add<ui::VScroll>();
         auto content = std::make_unique<ui::Box>(ui::Axis::Column);

@@ -566,6 +566,22 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
     http.Get(R"(/Items/([^/]+)/Images/([A-Za-z]+))", [](const httplib::Request&, httplib::Response& res) {
         res.set_content(posterJpeg(), "image/jpeg");
     });
+    // a trickplay sheet: 2 x 2 pictures of 320 x 180, red, green, blue and white
+    http.Get(R"(/Videos/([^/]+)/Trickplay/(\d+)/(\d+)\.jpg)", [](const httplib::Request&, httplib::Response& res) {
+        std::vector<unsigned char> pixels(640 * 360 * 3);
+        for (int y = 0; y < 360; ++y) {
+            for (int x = 0; x < 640; ++x) {
+                const int cell = (y / 180) * 2 + x / 320;
+                unsigned char* p = &pixels[static_cast<std::size_t>((y * 640 + x) * 3)];
+                p[0] = cell == 0 || cell == 3 ? 255 : 0;
+                p[1] = cell == 1 || cell == 3 ? 255 : 0;
+                p[2] = cell == 2 || cell == 3 ? 255 : 0;
+            }
+        }
+        std::string out;
+        stbi_write_jpg_to_func(writeToString, &out, 640, 360, 3, pixels.data(), 90);
+        res.set_content(out, "image/jpeg");
+    });
     http.Get(R"(/Items/([^/]+))", guarded([](const httplib::Request& req, httplib::Response& res) {
         const std::string id = req.matches[1];
         if (id == "m-1") {
@@ -574,6 +590,11 @@ FakeJellyfin::FakeJellyfin(TlsMode mode, std::string version, int port)
             res.set_content(readFixture("jellyfin/item_episode.json"), "application/json");
         } else if (id == "s-1") {
             res.set_content(readFixture("jellyfin/item_series.json"), "application/json");
+        } else if (id == "m-trick") {  // trickplay pictures for version ms-1: 2 x 2 per sheet, one a second
+            res.set_content(R"({"Id":"m-trick","Name":"Previewed","Type":"Movie","RunTimeTicks":40000000,)"
+                            R"("Trickplay":{"ms-1":{"320":{"Width":320,"Height":180,"TileWidth":2,"TileHeight":2,)"
+                            R"("ThumbnailCount":4,"Interval":1000,"Bandwidth":2000}}}})",
+                            "application/json");
         } else if (id == "m-chapters") {  // no media segments; an intro chapter over the 4 s clip's first 3 s
             res.set_content(R"({"Id":"m-chapters","Name":"Chaptered","Type":"Movie","RunTimeTicks":40000000,)"
                             R"("Chapters":[{"StartPositionTicks":0,"Name":"Opening"},)"

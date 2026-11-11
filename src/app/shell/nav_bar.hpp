@@ -21,6 +21,12 @@ public:
     void onFocusChanged(bool focused) override;
     void onThemeChanged() override;
     void draw(NVGcontext* vg) const override;
+    ui::Color labelColor() const;
+    // the current tab's underline of the accent (TabStyle::Underline, not focused)
+    bool underlineVisible() const;
+
+protected:
+    void layout(ui::TextMetrics& metrics) override;
 
 private:
     void refresh();
@@ -35,6 +41,8 @@ class NavBar : public ui::Box {
 public:
     NavBar(AppSession& session, Tab current);
     NavTab* currentTab() const { return current_; }
+    // a pill of the theme's navBackground behind the tabs, when it has one
+    void draw(NVGcontext* vg) const override;
 
 private:
     NavTab* current_ = nullptr;

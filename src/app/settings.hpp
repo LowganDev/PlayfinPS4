@@ -11,7 +11,8 @@ namespace playfin::app {
 
 // The user's choices, kept in settings.json in the data folder.
 struct Settings {
-    std::string accent = "playstation";  // id in ui::accentPalette()
+    std::string theme = "projecteur";  // id in ui::themeChoices()
+    std::string accent = "theme";      // "theme" (the theme's own) or an id in ui::accentPalette()
     std::int64_t maxBitrate = 40000000;  // bits/s, sent as MaxStreamingBitrate
     std::string language;                // UI language tag, "" = the console's
     std::vector<std::string> recentSearches;  // newest first, at most 8
@@ -38,6 +39,9 @@ bool validGuideUrl(const std::string& url);
 
 // The palette entry with this id, else the default (PlayStation blue).
 const ui::AccentChoice& accentById(const std::string& id);
+
+// The theme of the settings, then their accent on top of it (unless "theme": the theme's own).
+void applyAppearance(const Settings& settings);
 
 // The UI languages (tag of resources/i18n, name in that language), English first.
 const std::vector<std::pair<std::string, std::string>>& uiLanguages();

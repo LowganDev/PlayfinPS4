@@ -42,6 +42,14 @@ add_test(NAME ui_shell
         "" "--fixed-time 2026-10-16T19:45:00Z --utc-offset 120")
 set_tests_properties(ui_shell PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
 
+# every theme but Projecteur: the settings and the home on the fake server, at the same fixed clock
+add_test(NAME ui_themes
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ui/run_shell.sh $<TARGET_FILE:playfin> $<TARGET_FILE:playfin_imgdiff>
+        $<TARGET_FILE:fake_jellyfin> ${CMAKE_CURRENT_SOURCE_DIR}/ui/themes.script
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/references/themes ${CMAKE_BINARY_DIR}/ui-out/themes
+        "" "--fixed-time 2026-10-16T19:45:00Z --utc-offset 120")
+set_tests_properties(ui_themes PROPERTIES TIMEOUT 180 RUN_SERIAL TRUE)
+
 # music and Live TV on the fake server with the test server's views, the guide's clock fixed (Paris, UTC+2)
 add_test(NAME ui_media
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ui/run_shell.sh $<TARGET_FILE:playfin> $<TARGET_FILE:playfin_imgdiff>

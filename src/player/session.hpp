@@ -81,6 +81,11 @@ struct SegmentButton {
 // For a video the server has no segments for: its chapters named as an intro (intro, opening, recap, générique…,
 // in the first half) or as credits (credits, ending, outro, générique…, in the second half), each up to the next
 // chapter (the last one to `runTicks`); next to each other, they make one segment. Empty without a length.
+// The player's speeds, slowest first (1: normal).
+const std::vector<double>& speedChoices();
+// Seconds of real time until a video ends, played on from `position` at `speed` (<= 0 counts as 1).
+double remainingSeconds(double duration, double position, double speed);
+
 std::vector<jellyfin::MediaSegment> segmentsFromChapters(const std::vector<jellyfin::Chapter>& chapters,
                                                          std::int64_t runTicks);
 

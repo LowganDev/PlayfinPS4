@@ -261,6 +261,17 @@ void Engine::setVolume(int percent) {
     mpv_set_property(impl_->mpv, "volume", MPV_FORMAT_DOUBLE, &value);
 }
 
+void Engine::setSpeed(double speed) {
+    double value = speed < 0.5 ? 0.5 : speed > 2.0 ? 2.0 : speed;
+    mpv_set_property(impl_->mpv, "speed", MPV_FORMAT_DOUBLE, &value);
+}
+
+double Engine::speed() const {
+    double value = 1.0;
+    mpv_get_property(impl_->mpv, "speed", MPV_FORMAT_DOUBLE, &value);
+    return value;
+}
+
 void Engine::setSubtitleTrack(int mpvId) {
     mpv_set_property_string(impl_->mpv, "sid", mpvId > 0 ? std::to_string(mpvId).c_str() : "no");
 }

@@ -8,6 +8,9 @@
 
 #include "render/nvg_sw.hpp"
 #include "render/raster.hpp"
+#include "ui/nvg_backend.hpp"
+#include "ui/text.hpp"
+#include "ui/theme.hpp"
 
 using namespace playfin;
 
@@ -229,4 +232,24 @@ TEST_CASE("an image deleted while the frame is recorded is still drawn by that f
     int h = 0;
     nvgImageSize(c.vg, image, &w, &h);
     CHECK(w == 0);  // gone after the frame
+}
+
+TEST_CASE("theme fonts switch at runtime: each family loaded once, text measured with the current one") {
+    Canvas c;
+    ui::NanoVgText metrics(c.vg);
+    const std::string dir = std::string(PLAYFIN_SOURCE_DIR) + "/resources/fonts";
+    const ui::FontStyle style{24, ui::FontWeight::Regular};
+    REQUIRE(metrics.useFont(dir, "fr", ui::themeById("projecteur").tokens.font));
+    CHECK(std::string(ui::fontFace(ui::FontWeight::SemiBold)) == "Sora-semibold");
+    const float sora = metrics.measure("Accueil", style);
+    const int soraFace = nvgFindFont(c.vg, "Sora-regular");
+    REQUIRE(soraFace >= 0);
+    REQUIRE(metrics.useFont(dir, "fr", ui::themeById("mint").tokens.font));
+    CHECK(std::string(ui::fontFace(ui::FontWeight::Regular)) == "Quicksand-regular");
+    CHECK(metrics.measure("Accueil", style) != doctest::Approx(sora));
+    REQUIRE(metrics.useFont(dir, "fr", ui::themeById("projecteur").tokens.font));
+    CHECK(metrics.measure("Accueil", style) == doctest::Approx(sora));
+    CHECK(nvgFindFont(c.vg, "Sora-regular") == soraFace);  // not loaded twice
+    REQUIRE(metrics.useFont(dir, "ru", ui::themeById("violet").tokens.font));
+    CHECK(std::string(ui::fontFace(ui::FontWeight::Bold)) == "NotoSans-bold");
 }

@@ -48,8 +48,23 @@ constexpr long long kMaxImagePixels = 8LL * 1024 * 1024;  // a progressive JPEG 
 // Whole: the full picture, box-filtered down so it still covers width x height. Crop: the same, then the centre
 // cut to width x height, so a covering view shows it pixel for pixel (the CPU renderer then copies rows).
 // Backdrop: Crop with the backdrop shade baked in (the ground colour from 143 to 255 over the top 70 %, the ground
-// below), once, instead of a shade blended over 1.45 million pixels every frame.
-enum class ImageShape { Whole, Crop, Backdrop };
+// below), once, instead of a shade blended over 1.45 million pixels every frame. ThemedBackdrop: Crop with the
+// current theme's treatment baked in (backdropTreatment()); a theme change asks for it again.
+enum class ImageShape { Whole, Crop, Backdrop, ThemedBackdrop };
+
+// How a theme treats a backdrop picture (see BackdropKind): Shade, the identity's shade into `ground`; Blur, very
+// soft, then saturation, contrast and brightness; Tint, soft and 70 % `ground`, with grain; Diagonal, sharp, with
+// `ground` laid over it along a 54° line (opaque over the bottom-left 42 %, 70 % at the top-right corner).
+struct BackdropTreatment {
+    BackdropKind kind = BackdropKind::Shade;
+    float brightness = 1;
+    float saturation = 1;
+    float contrast = 1;
+    Color ground;
+};
+BackdropTreatment backdropTreatment(const Theme& theme);
+// In place, opaque afterwards. Runs on a worker (a blur over a whole screen costs a few milliseconds).
+void bakeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, const BackdropTreatment& treatment);
 
 // Shades a picture as a backdrop (in place, opaque afterwards): see ImageShape::Backdrop.
 void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::uint8_t groundR, std::uint8_t groundG,
@@ -60,7 +75,7 @@ constexpr std::uint8_t kBackdropTopAlpha = 143;
 
 // JPEG/PNG → RGBA, box-filtered down (never upscaled). nullopt on bad data or over the limits above.
 std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height,
-                                        ImageShape shape = ImageShape::Whole, Color ground = {});
+                                        ImageShape shape = ImageShape::Whole, const BackdropTreatment& treatment = {});
 // The header names a supported format within the limits (cheap: nothing is decoded).
 bool looksLikeImage(const std::string& bytes);
 std::uint64_t fnv1a(std::string_view text);
@@ -135,7 +150,7 @@ private:
         int width = 0;
         int height = 0;
         ImageShape shape = ImageShape::Whole;
-        Color ground;  // Backdrop: the shade's colour (the theme's background, read on the main thread)
+        BackdropTreatment treatment;  // Backdrop, ThemedBackdrop: read from the theme on the main thread
         bool skipped = false;  // nobody wanted it any more when the worker got to it
         std::optional<DecodedImage> image;
     };

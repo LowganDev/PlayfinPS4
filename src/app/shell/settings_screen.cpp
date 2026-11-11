@@ -154,6 +154,8 @@ public:
         banner_->margin = {ui::theme().spacingS, 0, 0, 0};
 
         addHeading(*column, ui::tr("settings.display"));
+        theme_ = column->add<ui::ValueRow>(ui::tr("settings.theme"), ui::themeById(session_.settings().theme).name,
+                                           [this] { chooseTheme(); });
         accent_ = column->add<ui::ValueRow>(ui::tr("settings.accent"), accentName(session_.settings().accent),
                                             [this] { chooseAccent(); });
         language_ = column->add<ui::ValueRow>(ui::tr("settings.language"), "", [this] { chooseLanguage(); });
@@ -161,7 +163,7 @@ public:
         column->add<ui::ValueRow>(ui::tr("settings.library_order"), "", [this] {
             ui::Application::current()->push(makeLibraryOrder(session_));
         });
-        remembered = accent_;  // the first setting, not the bar above it
+        remembered = theme_;  // the first setting, not the bar above it
 
         addHeading(*column, ui::tr("settings.playback"));
         quality_ = column->add<ui::ValueRow>(ui::tr("settings.quality"), bitrateName(session_.settings().maxBitrate),
@@ -396,22 +398,48 @@ private:
                                                 });
     }
 
-    void chooseAccent() {
+    // a theme changes every colour, and views take theirs when built: the screens are built again with it
+    void chooseTheme() {
         std::vector<std::string> names;
+        int selected = 0;
+        const auto& themes = ui::themeChoices();
+        for (std::size_t i = 0; i < themes.size(); ++i) {
+            names.push_back(themes[i].name);
+            if (session_.settings().theme == themes[i].id) {
+                selected = static_cast<int>(i);
+            }
+        }
+        ui::Application::current()->showModal(ui::makeChoiceDialog(ui::tr("settings.theme"), names, selected, [this](int index) {
+            const std::string chosen = ui::themeChoices()[static_cast<std::size_t>(index)].id;
+            if (chosen == session_.settings().theme) {
+                return;  // the theme in use: its accent setting stays as it is
+            }
+            session_.settings().theme = chosen;
+            session_.settings().accent = "theme";  // the theme's own, until another is chosen
+            session_.saveSettings();
+            applyAppearance(session_.settings());
+            AppSession* session = &session_;
+            later([session] { ui::Application::current()->replace(makeSettings(*session)); });
+        }));
+    }
+
+    // "Couleur du thème" (the theme's own), then the palette
+    void chooseAccent() {
+        std::vector<std::string> names{accentName("theme")};
         int selected = 0;
         const auto& palette = ui::accentPalette();
         for (std::size_t i = 0; i < palette.size(); ++i) {
             names.push_back(accentName(palette[i].id));
             if (session_.settings().accent == palette[i].id) {
-                selected = static_cast<int>(i);
+                selected = static_cast<int>(i) + 1;
             }
         }
         ui::Application::current()->showModal(ui::makeChoiceDialog(ui::tr("settings.accent"), names, selected, [this](int index) {
-            const ui::AccentChoice& choice = ui::accentPalette()[static_cast<std::size_t>(index)];
-            session_.settings().accent = choice.id;
+            session_.settings().accent =
+                index == 0 ? std::string("theme") : std::string(ui::accentPalette()[static_cast<std::size_t>(index - 1)].id);
             session_.saveSettings();
-            ui::applyAccent(choice);  // the halo and every view follow on the next frame
-            accent_->setValue(accentName(choice.id));
+            applyAppearance(session_.settings());  // the halo and every view follow on the next frame
+            accent_->setValue(accentName(session_.settings().accent));
         }));
     }
 
@@ -476,6 +504,7 @@ private:
                                                                  : ui::tr("settings.language.next_start", {name}));
     }
 
+    ui::ValueRow* theme_;
     ui::ValueRow* accent_;
     ui::ValueRow* language_;
     ui::ValueRow* quality_;
@@ -580,6 +609,19 @@ public:
                     ui::Application::current()->push(std::make_unique<LicenseTextScreen>(
                         *shared, notices, std::vector<std::string>{shared->noticesFile}));
                 });
+            }
+        }
+        // the Jellyfin themes Playfin's take their look from, with their authors
+        addHeading(*content, ui::tr("settings.licenses.themes"));
+        auto* themesIntro = content->add<ui::Label>(ui::tr("settings.licenses.themes_intro"),
+                                                    ui::FontStyle{ui::theme().fontBody, ui::FontWeight::Regular});
+        themesIntro->color = ui::theme().textSecondary;
+        themesIntro->width = ui::SizeSpec::fixed(1100);
+        themesIntro->maxLines = 0;
+        for (const ui::ThemeChoice& theme : ui::themeChoices()) {
+            if (theme.author != nullptr) {
+                content->add<ui::ValueRow>(std::string(theme.name) + " \xC2\xB7 " + theme.author,
+                                           std::string(theme.source) + " \xC2\xB7 " + theme.license, nullptr);
             }
         }
         scroll->setContent(std::move(content));

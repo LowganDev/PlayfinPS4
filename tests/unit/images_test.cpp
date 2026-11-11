@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -355,4 +356,120 @@ TEST_CASE("a write cut short leaves no temporary file behind at the next start")
     ui::DiskCache cache(dir.path, 1u << 20);
     CHECK_FALSE(std::ifstream(leftover).good());
     CHECK(std::ifstream(other).good());
+}
+
+namespace {
+
+std::vector<std::uint8_t> solid(int width, int height, ui::Color c) {
+    std::vector<std::uint8_t> out(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+    for (std::size_t i = 0; i < out.size(); i += 4) {
+        out[i] = c.r;
+        out[i + 1] = c.g;
+        out[i + 2] = c.b;
+        out[i + 3] = 255;
+    }
+    return out;
+}
+
+std::vector<std::uint8_t> checkerboard(int width, int height) {
+    std::vector<std::uint8_t> out(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const std::uint8_t v = ((x / 8 + y / 8) % 2) != 0 ? 255 : 0;
+            std::uint8_t* p = &out[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+            p[0] = p[1] = p[2] = v;
+            p[3] = 255;
+        }
+    }
+    return out;
+}
+
+// mean and standard deviation of the red channel
+std::pair<double, double> stats(const std::vector<std::uint8_t>& rgba) {
+    double sum = 0;
+    double squares = 0;
+    const double n = static_cast<double>(rgba.size() / 4);
+    for (std::size_t i = 0; i < rgba.size(); i += 4) {
+        sum += rgba[i];
+        squares += static_cast<double>(rgba[i]) * rgba[i];
+    }
+    const double mean = sum / n;
+    return {mean, std::sqrt(std::max(0.0, squares / n - mean * mean))};
+}
+
+const std::uint8_t* at(const std::vector<std::uint8_t>& rgba, int width, int x, int y) {
+    return &rgba[(static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4];
+}
+
+}  // namespace
+
+TEST_CASE("a backdrop's Shade treatment is the identity's shade, unchanged") {
+    std::vector<std::uint8_t> a = checkerboard(64, 40);
+    std::vector<std::uint8_t> b = a;
+    ui::shadeBackdrop(a, 64, 40, 0x0E, 0x0E, 0x11);
+    ui::BackdropTreatment shade;
+    shade.ground = ui::Color{0x0E, 0x0E, 0x11, 0xFF};
+    ui::bakeBackdrop(b, 64, 40, shade);
+    CHECK(a == b);
+}
+
+TEST_CASE("a blurred backdrop: soft, then saturated, contrasted and darkened") {
+    std::vector<std::uint8_t> image = checkerboard(320, 180);
+    const double before = stats(image).second;
+    ui::BackdropTreatment blur;
+    blur.kind = ui::BackdropKind::Blur;
+    blur.brightness = 0.4f;
+    blur.saturation = 1.2f;
+    blur.contrast = 1.2f;
+    ui::bakeBackdrop(image, 320, 180, blur);
+    const auto [mean, deviation] = stats(image);
+    CHECK(deviation < before * 0.2);
+    CHECK(mean == doctest::Approx(0.4 * 127.5).epsilon(0.08));
+    CHECK(at(image, 320, 100, 100)[3] == 255);
+}
+
+TEST_CASE("a diagonal backdrop: the ground over the bottom left, the picture showing at the top right") {
+    std::vector<std::uint8_t> image = solid(320, 180, ui::Color{255, 255, 255, 255});
+    ui::BackdropTreatment diagonal;
+    diagonal.kind = ui::BackdropKind::Diagonal;
+    diagonal.ground = ui::Color{0x11, 0x0E, 0x1E, 0xFF};
+    ui::bakeBackdrop(image, 320, 180, diagonal);
+    const std::uint8_t* corner = at(image, 320, 0, 179);
+    CHECK(corner[0] == 0x11);
+    CHECK(corner[2] == 0x1E);
+    const std::uint8_t* top = at(image, 320, 319, 0);  // the ground at 70 %: 30 % of the white shows
+    CHECK(top[0] == doctest::Approx(0x11 * 0.7 + 255 * 0.3).epsilon(0.04));
+    CHECK(at(image, 320, 300, 20)[0] > at(image, 320, 160, 90)[0]);
+}
+
+TEST_CASE("a tinted backdrop: blurred, mostly the ground colour, with grain") {
+    std::vector<std::uint8_t> image = solid(320, 180, ui::Color{200, 40, 40, 255});
+    ui::BackdropTreatment tint;
+    tint.kind = ui::BackdropKind::Tint;
+    tint.ground = ui::Color{0x15, 0x1C, 0x19, 0xFF};
+    ui::bakeBackdrop(image, 320, 180, tint);
+    const auto [mean, deviation] = stats(image);
+    CHECK(mean == doctest::Approx(0.3 * 200 + 0.7 * 0x15).epsilon(0.06));
+    CHECK(deviation > 0.5);  // the grain
+}
+
+TEST_CASE("a theme's backdrop treatment comes from its tokens") {
+    const ui::BackdropTreatment chroma = ui::backdropTreatment(ui::themeById("chroma").tokens);
+    CHECK(chroma.kind == ui::BackdropKind::Blur);
+    CHECK(chroma.brightness == doctest::Approx(0.4));
+    CHECK(ui::backdropTreatment(ui::themeById("projecteur").tokens).kind == ui::BackdropKind::Shade);
+    CHECK(ui::backdropTreatment(ui::themeById("violet").tokens).ground.r == 0x11);
+}
+
+TEST_CASE("a backdrop shaded into one theme's background is not reused for another") {
+    Rig rig;
+    TextureRef first;
+    auto a = rig.loader->request("http://x/b.jpg", 64, 36, [&](TextureRef t) { first = t; }, ui::ImageShape::Backdrop);
+    REQUIRE(rig.pumpUntil([&] { return first != nullptr; }));
+    ui::applyTheme(ui::themeById("mint"));  // another background colour
+    TextureRef second;
+    auto b = rig.loader->request("http://x/b.jpg", 64, 36, [&](TextureRef t) { second = t; }, ui::ImageShape::Backdrop);
+    REQUIRE(rig.pumpUntil([&] { return second != nullptr; }));
+    CHECK(second != first);
+    ui::applyTheme(ui::themeById("projecteur"));
 }

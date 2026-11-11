@@ -25,21 +25,25 @@ ui::Size cardSize(CardShape shape);
 inline ui::Size cardImageSize(bool wide) { return cardImageSize(shapeOf(wide)); }
 inline ui::Size cardSize(bool wide) { return cardSize(shapeOf(wide)); }
 
-// Focused, the card steps into the light: it grows to 1.07 and rises 6 px around its image's centre, with a
-// glow of the accent under it (no focus ring).
+// Focused, the card steps into the light: it grows to 1.07 and rises 6 px around its image's centre, and stands
+// out as the theme says (FocusStyle): the accent's glow under it and an outline (Glow), a ring (Ring, with a light
+// band across it when focusSheen), or a white frame on its edge (Frame). A theme's cardBorder outlines it always.
 class ItemCard : public ui::Box {
 public:
     explicit ItemCard(CardShape shape);
     explicit ItemCard(bool wide) : ItemCard(shapeOf(wide)) {}
     ~ItemCard() override;
     void show(const jellyfin::Item& item, const std::string& imageUrl, int utcOffsetMinutes);
+    const jellyfin::Item& item() const { return item_; }  // the one shown (empty before show())
     std::function<void()> onPress;
     float focusProgress() const { return focus_; }
     void onFocusChanged(bool focused) override;
     void draw(NVGcontext* vg) const override;
 
 private:
+    void drawBorder(NVGcontext* vg, const ui::Rect& picture) const;
     float focus_ = 0;
+    jellyfin::Item item_;
     ui::ImageView* image_;
     ui::ProgressBar* progress_;
     ui::Label* title_;

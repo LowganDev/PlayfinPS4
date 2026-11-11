@@ -22,9 +22,12 @@ int cjkFaceFor(std::string_view language) {
     return 0;
 }
 
-const char* primaryFamily(std::string_view language) {
+const char* primaryFamily(std::string_view language, const ThemeFont& font) {
     const std::string_view base = language.substr(0, language.find('-'));
-    return base == "ru" || base == "uk" || base == "vi" ? "NotoSans" : "Sora";
+    if (((base == "ru" || base == "uk") && !font.cyrillic) || (base == "vi" && !font.vietnamese)) {
+        return "NotoSans";
+    }
+    return font.family;
 }
 
 namespace {
@@ -62,24 +65,44 @@ float capHeightOf(const std::string& fontFile) {
     return static_cast<float>(read16(fontFile, os2 + 88)) / static_cast<float>(unitsPerEm);
 }
 
-bool NanoVgText::loadFonts(const std::string& fontDir, const std::string& language) {
-    const bool sora = std::string_view(primaryFamily(language)) == "Sora";
+bool NanoVgText::useFont(const std::string& fontDir, const std::string& language, const ThemeFont& font) {
+    const std::string family = primaryFamily(language, font);
+    const bool noto = family == "NotoSans";
     // Noto has no SemiBold: SemiBold uses Bold there
-    const char* files[3] = {sora ? "/Sora-Regular.ttf" : "/NotoSans-Regular.ttf",
-                            sora ? "/Sora-SemiBold.ttf" : "/NotoSans-Bold.ttf",
-                            sora ? "/Sora-Bold.ttf" : "/NotoSans-Bold.ttf"};
-    const FontWeight weights[3] = {FontWeight::Regular, FontWeight::SemiBold, FontWeight::Bold};
-    int faces[3];
-    for (int i = 0; i < 3; ++i) {
-        faces[i] = nvgCreateFont(vg_, fontFace(weights[i]), (fontDir + files[i]).c_str());
-        if (faces[i] < 0) {
-            PF_LOG_ERROR("cannot load the font %s%s", fontDir.c_str(), files[i]);
-            return false;
+    const std::string files[3] = {noto ? "NotoSans-Regular.ttf" : font.files[0],
+                                  noto ? "NotoSans-Bold.ttf" : font.files[1],
+                                  noto ? "NotoSans-Bold.ttf" : font.files[2]};
+    const char* suffixes[3] = {"-regular", "-semibold", "-bold"};
+    if (nvgFindFont(vg_, (family + suffixes[0]).c_str()) < 0) {
+        if (cjk_ == -2) {
+            cjk_ = nvgCreateFontAtIndex(vg_, "cjk", (fontDir + "/NotoSansCJK-Regular.ttc").c_str(), cjkFaceFor(language));
+            if (cjk_ < 0) {
+                PF_LOG_WARN("no CJK font: Chinese, Japanese and Korean text will not show");
+            }
+        }
+        if (!noto && noto_[0] == -2) {  // Cyrillic, Vietnamese marks, symbols
+            noto_[0] = nvgCreateFont(vg_, "noto-regular", (fontDir + "/NotoSans-Regular.ttf").c_str());
+            noto_[1] = nvgCreateFont(vg_, "noto-bold", (fontDir + "/NotoSans-Bold.ttf").c_str());
+        }
+        for (int i = 0; i < 3; ++i) {
+            const int face = nvgCreateFont(vg_, (family + suffixes[i]).c_str(), (fontDir + "/" + files[i]).c_str());
+            if (face < 0) {
+                PF_LOG_ERROR("cannot load the font %s/%s", fontDir.c_str(), files[i].c_str());
+                return false;
+            }
+            const int fallback = noto ? -1 : noto_[i == 0 ? 0 : 1];
+            if (fallback >= 0) {
+                nvgAddFallbackFontId(vg_, face, fallback);
+            }
+            if (cjk_ >= 0) {
+                nvgAddFallbackFontId(vg_, face, cjk_);
+            }
         }
     }
+    setFontFamily(family);
     // where the capitals sit (the text drawing centres them in their lines)
     std::string regular;
-    if (core::readSmallFile(fontDir + files[0], 32u << 20, regular) == core::ReadStatus::Ok) {
+    if (core::readSmallFile(fontDir + "/" + files[0], 32u << 20, regular) == core::ReadStatus::Ok) {
         TextGeometry geometry;
         geometry.capHeight = capHeightOf(regular);
         nvgFontFace(vg_, fontFace(FontWeight::Regular));
@@ -91,22 +114,6 @@ bool NanoVgText::loadFonts(const std::string& fontDir, const std::string& langua
         geometry.descender = descender / 100;
         geometry.known = geometry.capHeight > 0;
         setTextGeometry(geometry);
-    }
-    const int notoRegular = sora ? nvgCreateFont(vg_, "noto-regular", (fontDir + "/NotoSans-Regular.ttf").c_str()) : -1;
-    const int notoBold = sora ? nvgCreateFont(vg_, "noto-bold", (fontDir + "/NotoSans-Bold.ttf").c_str()) : -1;
-    const int cjk = nvgCreateFontAtIndex(vg_, "cjk", (fontDir + "/NotoSansCJK-Regular.ttc").c_str(),
-                                         cjkFaceFor(language));
-    if (cjk < 0) {
-        PF_LOG_WARN("no CJK font: Chinese, Japanese and Korean text will not show");
-    }
-    for (int i = 0; i < 3; ++i) {
-        const int noto = i == 0 ? notoRegular : notoBold;  // Cyrillic, Vietnamese marks, symbols
-        if (noto >= 0) {
-            nvgAddFallbackFontId(vg_, faces[i], noto);
-        }
-        if (cjk >= 0) {
-            nvgAddFallbackFontId(vg_, faces[i], cjk);
-        }
     }
     return true;
 }
