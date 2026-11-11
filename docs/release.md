@@ -39,6 +39,10 @@ The checklist for a release; release tags are the version number without "v" (`1
      PacBrew recipes, all checked against pinned checksums;
    - the changelog section as notes.
 
+   When an upstream host is down (download.savannah.gnu.org did not answer on 2026-11-10), its file may be taken
+   from the previous release's sources tar: the script still checks it against the recipe's sha256 (2.1.0 was
+   made so, with a `curl` on the PATH that copied FreeType from the 2.0.1 archive).
+
 ## Dependency packages
 
 `scripts/build-ps4.sh` installs the packages listed in `scripts/ps4/deps.txt` from `build-deps/` when they are

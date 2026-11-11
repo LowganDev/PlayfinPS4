@@ -24,7 +24,9 @@
   `playfin.log`. Quick Connect is covered by unit tests only. Runs serially (fixed port); the same references are
   used under ASan. `ui_media` plays `tests/ui/media.script` on `fake_jellyfin --media` (the test server's views:
   Live TV, music) with `--fixed-time 2026-10-16T19:45:00Z --utc-offset 120` (the guide's clock); in script tests
-  the music pauses at its first moment (`frozenPlayback`). After an interrupted run the port can stay in TIME-WAIT for up to a minute: the fake server
+  the music pauses at its first moment (`frozenPlayback`). `ui_themes` plays `tests/ui/themes.script` on the same
+  fake server: each theme but Projecteur chosen in the settings, then the home with a card focused (its backdrop
+  followed after 400 ms). After an interrupted run the port can stay in TIME-WAIT for up to a minute: the fake server
   then fails with "port in use" and every screenshot after the address shows "cannot reach the server".
 - The fake server (`tests/support/fake_jellyfin.*`) also answers what the app screens need: `/Items` honours
   `sortOrder=Descending` (reversed), `filters` (`IsFavorite`: every 10th movie, `IsUnplayed`: odd ones) and

@@ -26,6 +26,29 @@ Playfin is a C++17 application for the PS4 (OpenOrbis) with a Linux build used f
 - Background: `ui::haloImage` (accent light from above) drawn 1:1 by the Application on its lit rows only
   (`haloLitRows`, 28.5 % of the height); the frame is cleared to the background colour (`clearColor()`), and to
   transparent under a video.
+- Themes (2.2): `ui::themeChoices()` lists Projecteur (the default, the identity above) and five themes rebuilt from
+  community themes for jellyfin-web (ElegantFin `slate`, Ultrachromic `chroma`, Abyss `abyss`, Zesty `mint`,
+  Finimalism `violet`: the ids saved in settings.json are neutral). A `ThemeChoice` is a full `Theme` (colours,
+  radius, font, `BackgroundKind`, `BackdropKind` and its values, `FocusStyle`, card border, `TabStyle`, the nav bar's
+  pill), its own accent and its credit (author, source, licence, shown in the licences page). `applyTheme` copies the
+  tokens and applies its accent; `app::applyAppearance(settings)` applies the theme, then the accent setting unless it
+  is "theme". Every theme's text keeps a WCAG contrast of 7 on its background and 4.5 on its surface (theme_test).
+  Choosing a theme rebuilds the settings screen (`Application::replace`): views copy colours when they are built.
+- Theme backgrounds are baked once per theme change into one opaque image (`ui::backgroundImage`: the halo, a
+  vertical gradient, a fixed grain, or nothing for a plain colour; `backgroundLitRows` says how many rows to draw).
+  Backdrops of the themes whose background follows the focus are decoded with their treatment baked in
+  (`ImageShape::ThemedBackdrop`, `ui::bakeBackdrop`: blur by a 1/32 box filter and bilinear back up, then
+  saturation, contrast, brightness; a tint of 70 % ground with grain; or a 54° diagonal of the ground over a sharp
+  picture), keyed by the theme's id; the screensaver keeps the plain shade (`ImageShape::Backdrop`).
+  `app::ThemeBackdrop` sits first on the home and library screens and shows the focused card's backdrop 400 ms
+  after the focus settles; the details page uses the same treatment.
+- Fonts per theme: `ThemeFont` names three files and whether they cover Cyrillic and Vietnamese (checked against the
+  glyphs by fonts_test); `primaryFamily(language, font)` gives Noto Sans for a script the font lacks.
+  `NanoVgText::useFont` loads a family's three faces once (fallbacks Noto Sans, Noto Sans CJK) and switches
+  `fontFace()` to "<family>-regular|semibold|bold"; the app loop calls it when the theme's family changes, before
+  the views relayout. Inter, Plus Jakarta Sans, Figtree and Outfit are static instances made by
+  `scripts/make-fonts.py` from pinned google/fonts variable fonts; Quicksand reserves its name under the OFL, so its
+  own static files ship unmodified (Medium stands for SemiBold).
 - Focus: Buttons and fields fill with the accent (`drawsOwnFocus`, no ring); shell cards grow to 1.07, rise 6 px and
   glow (a cached `glowImage` sprite drawn around the picture only); lists draw their focused item last. Cover images
   are decoded to exactly their frame size (cut, or scaled up when smaller) so the renderer copies their rows.
@@ -305,6 +328,17 @@ The screens of the app.
   the first host name lookup calls an unresolved stub and the system kills the app (docs/ps4-notes.md).
 
 ## Player (src/player, app/shell/player_screen.cpp)
+
+- Speed (2.2): `Engine::setSpeed` (mpv `speed`, 0.5 to 2, the pitch kept); "Vitesse" in the player's menu except for
+  live channels; "Se termine à" uses `player::remainingSeconds`. The next episode (card, L2 / R2, the end) keeps
+  the speed through `makePlayer(..., speed)`; anything started from the menus plays at 1. Above what the console
+  decodes, mpv drops pictures and the sound stays in step (the user's choice over a lighter transcode).
+- Trickplay (2.2): `Client::item` asks for `Chapters,Trickplay`; `Item::trickplay` maps a version to its widths
+  (`TrickplayInfo`). `player::pickTrickplay` takes the smallest width of at least 240 px, `trickplayFrame` the
+  sheet and rectangle for a time (clamped to the last picture). `app::TrickplayPreview` shows the picture while
+  a seek is pending, above the player's bar at the target's place, with the time; sheets come through the image
+  loader (`Client::trickplayUrl`) and the next one in the seek's direction is fetched ahead. Nothing shows without
+  pictures, for files played without the server, or for live channels.
 
 - `player::Engine` wraps libmpv: `vo=libmpv`, no hardware decoding, its software render API converts each picture
   to rgb0 at the video's own size (swscale fast paths: `sws-fast`, `fast-bilinear`), never waiting for the

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.0 (unreleased)
+
+- Themes: Settings › Affichage › Thème offers Projecteur and five themes in the style of the Jellyfin community's
+  best-known ones (ElegantFin, Ultrachromic, Abyss, Zesty, Finimalism): colours, background, cards, focus, tabs and
+  font. The accent colour still goes on top of any theme. The themes' authors are credited in the licences page.
+- Seeking shows the picture at the target time above the bar, from the server's trickplay pictures (Jellyfin 10.9
+  and later, when the library has them).
+- Playback speed in the player's menu, from 0.5× to 2×, kept for the next episode.
+
 ## 2.1.0 (2026-11-10)
 
 - Software update: Settings › Mise à jour finds a newer Playfin, downloads its package to /data/pkg and checks it;
