@@ -1,6 +1,6 @@
 # Artwork of the README screenshots
 
-The README's screenshots (docs/images/screens/) show the Blender Foundation's open films. Their posters and
+The README's screenshots (images/screens/) show the Blender Foundation's open films. Their posters and
 pictures come from Wikimedia Commons under free licences; scripts/showcase/fetch-art.py downloads them and
 fake_jellyfin --showcase serves them to the Linux build (scripts/readme-shots.sh). The synopses are written for
 Playfin.

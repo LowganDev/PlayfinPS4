@@ -25,7 +25,10 @@ jobs:
           cmake --preset ${{ matrix.preset }}
           cmake --build --preset ${{ matrix.preset }} -j"$(nproc)"
       - name: Tests
-        run: ctest --preset ${{ matrix.preset }} --timeout 600
+        run: |
+          # the UI tests' fake server listens on 48920, inside Linux's range of outgoing ports: keep it free
+          sudo sysctl -w net.ipv4.ip_local_reserved_ports=48920
+          ctest --preset ${{ matrix.preset }} --timeout 600
       - name: Screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4

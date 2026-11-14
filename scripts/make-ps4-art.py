@@ -7,8 +7,8 @@ icon0.png (512x512) and pic1.png (1920x1080, shown by the PS4 behind the selecte
 soft edges, purple behind and blue in front (fast forward), in Jellyfin's purple-to-blue gradient, with "Playfin." and
 "JELLYFIN CLIENT FOR PS4" over them. Jellyfin's branding guide forbids its logo inside another logo without
 permission, allows its gradient on a shape of our own and its name to say what the app works with: only the
-gradient and the name are used. docs/images/logo-on-dark.png and logo-on-light.png: the "Playfin." wordmark on a
-transparent background for the README (GitHub's dark and light themes). docs/images/download.png: the README's download button. Colours from the theme (src/ui/theme.cpp).
+gradient and the name are used. images/logo-on-dark.png and logo-on-light.png: the "Playfin." wordmark on a
+transparent background for the README (GitHub's dark and light themes). images/download.png: the README's download button. Colours from the theme (src/ui/theme.cpp).
 """
 import os
 
@@ -127,7 +127,7 @@ def main():
     out = os.path.join(ROOT, "resources", "ps4", "sce_sys")
     home_art(512, 512, 36, 256, 470, 430, 80).save(os.path.join(out, "icon0.png"))
     home_art(1920, 1080, 560, 540, 940, 840, 160).save(os.path.join(out, "pic1.png"))
-    images = os.path.join(ROOT, "docs", "images")
+    images = os.path.join(ROOT, "images")
     os.makedirs(images, exist_ok=True)
     wordmark(TEXT, DOT).save(os.path.join(images, "logo-on-dark.png"))
     wordmark(BACKGROUND, ACCENT).save(os.path.join(images, "logo-on-light.png"))

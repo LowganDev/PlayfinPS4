@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The README's screenshots (docs/images/screens/), made by the Linux build, the English UI.
+# The README's screenshots (images/screens/), made by the Linux build, the English UI.
 #   scripts/readme-shots.sh            films from fake_jellyfin's showcase: the Blender Foundation's open films with
 #                                      their free artwork (scripts/showcase/CREDITS.md)
 #   scripts/readme-shots.sh DATA_DIR   films from a real server: DATA_DIR is a Playfin data folder signed in to it
@@ -14,7 +14,7 @@ cmake --build --preset linux-debug
 build=build/linux-debug
 out=$build/showcase-out
 rm -rf "$out"
-mkdir -p "$out" docs/images/screens
+mkdir -p "$out" images/screens
 run() {  # run DATA_DIR SCRIPT [OPTIONS...]
     local data=$1 script=$2
     shift 2
@@ -54,11 +54,11 @@ else
     echo "the showcase server is not running (SHOWCASE=1 scripts/test-server/up.sh): music and Live TV kept" >&2
 fi
 # JPEG for the README (a fifth of the PNG's size)
-python3 - "$out" docs/images/screens <<'PY'
+python3 - "$out" images/screens <<'PY'
 import glob, os, sys
 from PIL import Image
 for path in glob.glob(os.path.join(sys.argv[1], "*.png")):
     name = os.path.splitext(os.path.basename(path))[0] + ".jpg"
     Image.open(path).convert("RGB").save(os.path.join(sys.argv[2], name), quality=85, optimize=True)
 PY
-ls -l docs/images/screens/
+ls -l images/screens/

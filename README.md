@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-on-dark.png">
-    <img alt="Playfin" src="docs/images/logo-on-light.png" width="300">
+    <source media="(prefers-color-scheme: dark)" srcset="images/logo-on-dark.png">
+    <img alt="Playfin" src="images/logo-on-light.png" width="300">
   </picture>
 </h1>
 
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/LowganDev/PlayfinPS4/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="docs/images/download.png" width="281"></a>
+  <a href="https://github.com/LowganDev/PlayfinPS4/releases/latest/download/IV0001-PLFN00000_00-PLFN000000100000.pkg"><img alt="Download for PS4" src="images/download.png" width="281"></a>
 </p>
 
 - **Direct play** of H.264, HEVC, VP9 and AV1 up to 1080p; the server transcodes the rest.
@@ -33,14 +33,14 @@
 - **USB drives:** videos and music played straight from a USB drive, and downloads saved to it.
 - **Updates in the app:** a new version is offered at the top of the settings and downloaded in one press.
 
-![Home](docs/images/screens/home.jpg)
+![Home](images/screens/home.jpg)
 
 | | |
 |---|---|
-| ![Details](docs/images/screens/details.jpg) | ![A library](docs/images/screens/library.jpg) |
-| ![Quick look](docs/images/screens/peek.jpg) | ![Search](docs/images/screens/search.jpg) |
-| ![The player](docs/images/screens/player.jpg) | ![Now playing, with the visualizer](docs/images/screens/now_playing.jpg) |
-| ![Live TV](docs/images/screens/livetv.jpg) | ![Music](docs/images/screens/music.jpg) |
+| ![Details](images/screens/details.jpg) | ![A library](images/screens/library.jpg) |
+| ![Quick look](images/screens/peek.jpg) | ![Search](images/screens/search.jpg) |
+| ![The player](images/screens/player.jpg) | ![Now playing, with the visualizer](images/screens/now_playing.jpg) |
+| ![Live TV](images/screens/livetv.jpg) | ![Music](images/screens/music.jpg) |
 
 ## Requirements
 
@@ -61,12 +61,16 @@ GoldHEN's FTP server, which must be on; Playfin writes on a drive only in a `Pla
 
 ## Building
 
-Linux (development): `cmake --preset linux-debug && cmake --build --preset linux-debug`.
-PS4 package: `scripts/build-ps4.sh` (Docker). Details in [docs/building.md](docs/building.md), tests in
-[docs/testing.md](docs/testing.md), how the code is organised in [docs/architecture.md](docs/architecture.md),
-security notes in [docs/security.md](docs/security.md).
+Linux (development): `cmake --preset linux-debug && cmake --build --preset linux-debug`, then
+`ctest --preset linux-debug` for the tests.
+PS4 package: `scripts/build-ps4.sh` (Docker, with the OpenOrbis toolchain and the PS4 libraries of the
+`deps` release).
 
 ## Licence and source
 
 Playfin is free software under the GNU General Public License v3.0 (see [LICENSE](LICENSE)). It is built with
 third-party components under their own licences, listed in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
+
+Several features of Playfin 2.0 were inspired by [JellyFin [PS] for PS4](https://github.com/jw-notes/JellyFin-PS4)
+by jw-notes (the quick peek, the music visualizers, the player's picture and volume controls, the context button
+hints, per-console-user sign-in and the in-app update).

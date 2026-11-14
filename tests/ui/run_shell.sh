@@ -8,14 +8,23 @@ fakeOptions=${7:-}
 appOptions=${8:-}
 rm -rf "$out"
 mkdir -p "$out"
-# shellcheck disable=SC2086
-"$fake" --https --port 48920 --url-file "$out/url" $fakeOptions > /dev/null &
-server=$!
-trap 'kill $server 2>/dev/null || true; wait $server 2>/dev/null || true' EXIT
-for _ in $(seq 1 50); do
+# 48920 may be held for a moment by an outgoing connection (it is in Linux's range of local ports): tried again
+server=
+trap '[ -n "$server" ] && { kill $server 2>/dev/null || true; wait $server 2>/dev/null || true; }' EXIT
+for _ in $(seq 1 10); do
+    # shellcheck disable=SC2086
+    "$fake" --https --port 48920 --url-file "$out/url" $fakeOptions > /dev/null 2>&1 &
+    server=$!
+    for _ in $(seq 1 50); do
+        { [ -s "$out/url" ] || ! kill -0 $server 2>/dev/null; } && break
+        sleep 0.1
+    done
     [ -s "$out/url" ] && break
-    sleep 0.1
+    wait $server 2>/dev/null || true
+    server=
+    sleep 1
 done
+[ -s "$out/url" ] || { echo "the fake server could not listen on 48920" >&2; exit 1; }
 LC_ALL=fr_FR.UTF-8 SDL_VIDEODRIVER=offscreen MESA_LOADER_DRIVER_OVERRIDE=llvmpipe timeout 120 \
     "$playfin" --hidden --no-discovery --screen shell --data-dir "$out/data" --test-script "$script" --test-output "$out" \
     $appOptions

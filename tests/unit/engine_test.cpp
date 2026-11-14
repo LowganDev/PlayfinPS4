@@ -141,7 +141,7 @@ TEST_CASE("rendering never waits for the picture's display time") {
         return false;
     });
     CHECK(pump.frame.serial > first + 10);  // it keeps playing
-    CHECK(slowest < 15.0);                  // a 25 fps picture would block up to 40 ms
+    CHECK(slowest < 30.0);  // a 25 fps picture would block up to 40 ms (a busy CI runner under ASan: up to 18 ms)
 }
 
 TEST_CASE("the player never runs scripts or configuration, nor follows a file to other files or fonts") {
