@@ -101,12 +101,12 @@ DecodedImage coverResize(const DecodedImage& image, int width, int height) {
 int backdropSplit(int height) { return static_cast<int>(std::lround(height * 0.7)); }
 
 void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::uint8_t groundR, std::uint8_t groundG,
-                   std::uint8_t groundB) {
+                   std::uint8_t groundB, std::uint8_t topAlpha) {
     const int split = backdropSplit(height);
     for (int y = 0; y < height; ++y) {
         // as the shade drawn over it: NanoVG's gradient sampled at the pixel's centre, then the ground
         const float t = y < split ? (static_cast<float>(y) + 0.5f) / static_cast<float>(split) : 1.0f;
-        const float a = y < split ? (kBackdropTopAlpha + (255 - kBackdropTopAlpha) * t) / 255.0f : 1.0f;
+        const float a = y < split ? (topAlpha + (255 - topAlpha) * t) / 255.0f : 1.0f;
         const int keep = static_cast<int>(std::lround((1 - a) * 256));
         const int add[3] = {static_cast<int>(std::lround(groundR * a * 256)), static_cast<int>(std::lround(groundG * a * 256)),
                             static_cast<int>(std::lround(groundB * a * 256))};
@@ -220,8 +220,48 @@ std::string groundKey(Color ground) {
 }
 }  // namespace
 
+std::uint8_t backdropTopAlpha(const Theme& theme) {
+    const Color g = theme.background;
+    if (!isLightGround(g)) {
+        return kBackdropTopAlpha;  // a dark theme: the identity's shade
+    }
+    for (int a = kBackdropTopAlpha; a < 255; ++a) {
+        bool reads = true;
+        for (const int picture : {0, 255}) {  // as shadeBackdrop mixes them
+            const auto mix = [a, picture](std::uint8_t ground) {
+                return static_cast<std::uint8_t>(std::lround((ground * a + picture * (255 - a)) / 255.0));
+            };
+            const Color shaded{mix(g.r), mix(g.g), mix(g.b), 0xFF};
+            reads = reads && contrastRatio(theme.text, shaded) >= 7.0 &&
+                    contrastRatio(theme.textSecondary, shaded) >= 4.5;
+        }
+        if (reads) {
+            return static_cast<std::uint8_t>(a);
+        }
+    }
+    return 255;
+}
+
+namespace {
+unsigned gTopAlphaGeneration = 0;  // themeGeneration() starts at 1
+std::uint8_t gTopAlpha = kBackdropTopAlpha;
+}  // namespace
+
+std::uint8_t currentBackdropTopAlpha() {
+    if (gTopAlphaGeneration != themeGeneration()) {
+        gTopAlphaGeneration = themeGeneration();
+        gTopAlpha = backdropTopAlpha(theme());
+    }
+    return gTopAlpha;
+}
+
+std::string themedBackdropKey() {
+    return theme().id + ":" + groundKey(theme().background) + ":" + std::to_string(currentBackdropTopAlpha());
+}
+
 BackdropTreatment backdropTreatment(const Theme& theme) {
     BackdropTreatment t;
+    t.topAlpha = backdropTopAlpha(theme);
     t.kind = theme.backdropKind;
     t.brightness = theme.backdropBrightness;
     t.saturation = theme.backdropSaturation;
@@ -234,7 +274,7 @@ void bakeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, const 
     const Color g = treatment.ground;
     switch (treatment.kind) {
     case BackdropKind::Shade:
-        shadeBackdrop(rgba, width, height, g.r, g.g, g.b);
+        shadeBackdrop(rgba, width, height, g.r, g.g, g.b, treatment.topAlpha);
         return;
     case BackdropKind::Blur:
     case BackdropKind::Tint: {
@@ -593,8 +633,9 @@ std::unique_ptr<ImageRequest> ImageLoader::request(const std::string& url, int w
     auto handle = std::make_unique<ImageRequest>(token);
     const std::string key = url + "|" + std::to_string(width) + "x" + std::to_string(height) +
                             (shape == ImageShape::Crop       ? "c"
-                             : shape == ImageShape::Backdrop ? "b:" + groundKey(theme().background)
-                             : shape == ImageShape::ThemedBackdrop ? "t:" + theme().id
+                             : shape == ImageShape::Backdrop
+                                 ? "b:" + groundKey(theme().background) + std::to_string(currentBackdropTopAlpha())
+                             : shape == ImageShape::ThemedBackdrop ? "t:" + themedBackdropKey()
                                                                    : std::string());
     if (auto hit = cache_.find(key); hit != cache_.end()) {
         lru_.splice(lru_.begin(), lru_, hit->second);
@@ -624,6 +665,7 @@ void ImageLoader::start(const std::string& key, const std::string& url, int widt
         job.treatment = backdropTreatment(theme());
     } else {  // Backdrop: the identity's shade into the theme's background
         job.treatment.ground = theme().background;
+        job.treatment.topAlpha = currentBackdropTopAlpha();
     }
     std::shared_ptr<Job> wanted = jobs_[key];
     if (config_.synchronous) {

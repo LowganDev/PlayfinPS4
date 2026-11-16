@@ -86,14 +86,14 @@ void NavTab::draw(NVGcontext* vg) const {
     if (badge && badge()) {
         nvgBeginPath(vg);
         nvgCircle(vg, frame.width - 8, 8, 6);
-        nvgFillColor(vg, ui::nvgColor(focused_ ? ui::theme().onAccent : ui::theme().accent));
+        nvgFillColor(vg, ui::nvgColor(focused_ ? ui::theme().onAccent : ui::theme().focusRing));
         nvgFill(vg);
     }
     if (underlineVisible()) {
         const float inset = ui::theme().spacingL;
         nvgBeginPath(vg);
         nvgRoundedRect(vg, inset, frame.height - kUnderline, frame.width - 2 * inset, kUnderline, kUnderline / 2);
-        nvgFillColor(vg, ui::nvgColor(ui::theme().accent));
+        nvgFillColor(vg, ui::nvgColor(ui::theme().focusRing));
         nvgFill(vg);
     }
 }

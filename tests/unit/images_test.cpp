@@ -475,6 +475,30 @@ TEST_CASE("a theme's backdrop treatment comes from its tokens") {
     CHECK(ui::backdropTreatment(ui::themeById("violet").tokens).ground.r == 0x11);
 }
 
+TEST_CASE("text over a shaded backdrop: a light theme's text reads over black and white pictures") {
+    for (const ui::ThemeChoice& choice : ui::themeChoices()) {
+        const ui::Theme& t = choice.tokens;
+        CAPTURE(std::string(choice.id));
+        const std::uint8_t top = ui::backdropTopAlpha(t);
+        CHECK(top == ui::backdropTreatment(t).topAlpha);
+        for (const std::uint8_t value : {std::uint8_t{0}, std::uint8_t{255}}) {
+            CAPTURE(static_cast<int>(value));
+            std::vector<std::uint8_t> picture(4 * 100 * 4, value);
+            ui::shadeBackdrop(picture, 4, 100, t.background.r, t.background.g, t.background.b, top);
+            const ui::Color shaded{picture[0], picture[1], picture[2], 0xFF};  // the top row, the least ground
+            if (ui::isLightGround(t.background)) {
+                CHECK(ui::contrastRatio(t.text, shaded) >= 7.0);
+                CHECK(ui::contrastRatio(t.textSecondary, shaded) >= 4.5);
+            } else if (value == 0) {  // dark themes keep the identity's shade (143): their light text over a dark film
+                CHECK(top == ui::kBackdropTopAlpha);
+                CHECK(ui::contrastRatio(t.text, shaded) >= 7.0);
+                CHECK(ui::contrastRatio(t.textSecondary, shaded) >= 4.5);
+            }
+        }
+    }
+    CHECK(ui::backdropTopAlpha(ui::themeById("daylight").tokens) > ui::kBackdropTopAlpha);
+}
+
 TEST_CASE("a backdrop shaded into one theme's background is not reused for another") {
     Rig rig;
     TextureRef first;
@@ -486,6 +510,44 @@ TEST_CASE("a backdrop shaded into one theme's background is not reused for anoth
     REQUIRE(rig.pumpUntil([&] { return second != nullptr; }));
     CHECK(second != first);
     ui::applyTheme(ui::themeById("projecteur"));
+}
+
+TEST_CASE("a themed backdrop baked on the dark stage is not reused on the light page") {
+    Rig rig;
+    ui::applyTheme(ui::themeById("daylight"));
+    TextureRef onStage;
+    {
+        ui::DarkStage stage;  // the player's: Projecteur's ground, the same theme id
+        auto a = rig.loader->request("http://x/t.jpg", 64, 36, [&](TextureRef t) { onStage = t; },
+                                     ui::ImageShape::ThemedBackdrop);
+        REQUIRE(rig.pumpUntil([&] { return onStage != nullptr; }));
+    }
+    TextureRef light;
+    auto b = rig.loader->request("http://x/t.jpg", 64, 36, [&](TextureRef t) { light = t; },
+                                 ui::ImageShape::ThemedBackdrop);
+    REQUIRE(rig.pumpUntil([&] { return light != nullptr; }));
+    CHECK(light != onStage);
+    TextureRef again;
+    auto c = rig.loader->request("http://x/t.jpg", 64, 36, [&](TextureRef t) { again = t; },
+                                 ui::ImageShape::ThemedBackdrop);
+    CHECK(again == light);  // the light one, from memory
+    ui::applyTheme(ui::themeById("projecteur"));
+}
+
+TEST_CASE("the live shade's top alpha follows the theme, the accent and the dark stage") {
+    for (const ui::ThemeChoice& choice : ui::themeChoices()) {
+        CAPTURE(std::string(choice.id));
+        ui::applyTheme(choice);
+        CHECK(ui::currentBackdropTopAlpha() == ui::backdropTopAlpha(ui::theme()));
+        ui::DarkStage stage;
+        CHECK(ui::currentBackdropTopAlpha() == ui::backdropTopAlpha(ui::theme()));
+        CHECK(ui::currentBackdropTopAlpha() == ui::kBackdropTopAlpha);  // the stage is dark
+    }
+    ui::applyTheme(ui::themeById("daylight"));
+    CHECK(ui::currentBackdropTopAlpha() == ui::backdropTopAlpha(ui::themeById("daylight").tokens));
+    CHECK(ui::currentBackdropTopAlpha() > ui::kBackdropTopAlpha);
+    ui::applyTheme(ui::themeById("projecteur"));
+    CHECK(ui::currentBackdropTopAlpha() == ui::kBackdropTopAlpha);
 }
 
 TEST_CASE("an image view without its fade covers its frame as soon as its picture arrives; with it, after the fade") {

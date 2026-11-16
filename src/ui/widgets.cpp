@@ -68,7 +68,7 @@ void ProgressBar::draw(NVGcontext* vg) const {
     if (clamped > 0) {
         nvgBeginPath(vg);
         nvgRoundedRect(vg, 0, 0, frame.width * clamped, frame.height, frame.height / 2);
-        nvgFillColor(vg, nvgColor(theme().accent));
+        nvgFillColor(vg, nvgColor(theme().focusRing));  // a thin mark: darkened on a light theme if it would not show
         nvgFill(vg);
     }
 }
@@ -85,7 +85,7 @@ void Spinner::draw(NVGcontext* vg) const {
     const float start = context().timeMs / 1000.0f * kTurn;
     nvgBeginPath(vg);
     nvgArc(vg, frame.width / 2, frame.height / 2, radius, start, start + 4.2f, NVG_CW);
-    nvgStrokeColor(vg, nvgColor(theme().accent));
+    nvgStrokeColor(vg, nvgColor(theme().focusRing));
     nvgStrokeWidth(vg, 5);
     nvgLineCap(vg, NVG_ROUND);
     nvgStroke(vg);

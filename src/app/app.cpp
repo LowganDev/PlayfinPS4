@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "app/gallery.hpp"
@@ -318,15 +319,24 @@ int run(const Options& options) {
         }
         ui::Application application(ui::Application::Services{pool, mainQueue, metrics, &images});
         application.setTransitions(!testMode);  // screenshots of script tests show screens at rest
-        // the theme's background (Projecteur's halo...) and font, rebuilt when the theme or the accent changes
+        // the theme's background (Projecteur's halo...) and font, rebuilt when the theme or the accent changes; not
+        // for the dark stage (the player, the screensaver: the background is not shown), nor when it ends
         unsigned haloGeneration = 0;
+        std::string haloKey;
         std::string fontFamily = ui::theme().font.family;
         int halo = 0;
         const auto refreshHalo = [&] {
-            if (haloGeneration == ui::themeGeneration()) {
+            if (haloGeneration == ui::themeGeneration() || ui::darkStage()) {
                 return;
             }
             haloGeneration = ui::themeGeneration();
+            const ui::Color accent = ui::theme().accent;
+            const std::string key = ui::theme().id + ":" + std::to_string(accent.r) + "," + std::to_string(accent.g) +
+                                    "," + std::to_string(accent.b);
+            if (key == haloKey) {
+                return;
+            }
+            haloKey = key;
             if (ui::theme().font.family != fontFamily) {  // a theme of another font: views relayout with it
                 fontFamily = ui::theme().font.family;
                 metrics.useFont(resources + "/fonts", uiLanguage, ui::theme().font);

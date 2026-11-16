@@ -82,7 +82,8 @@ struct Extras {
     std::map<std::string, std::vector<jellyfin::TrickplayInfo>> trickplay;  // the server's preview pictures
 };
 
-class PlayerScreen : public ShellScreen, public ui::VideoSource {
+// over the video: on the dark stage whatever the theme (ui::DarkStage first, so its views are built on it)
+class PlayerScreen : private ui::DarkStage, public ShellScreen, public ui::VideoSource {
 public:
     PlayerScreen(AppSession& session, jellyfin::Item item, std::int64_t startTicks, std::string mediaSourceId,
                  double speed)
@@ -110,6 +111,7 @@ public:
         }
     }
     void onHide() override { release(); }
+    bool onStage() const override { return true; }
 
     bool renderVideo() override {
         if (!engine_) {

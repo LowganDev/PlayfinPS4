@@ -25,16 +25,77 @@ const std::vector<AccentChoice>& accentPalette() {
     return palette;
 }
 
+namespace {
+
+// The accent as a thin mark straight on the background (a ring, an underline, a dot): itself, except on a light
+// theme where it would hardly show (the pale "light" accent on Plein jour: 1.3), where it is darkened, keeping its
+// hue, until it reaches WCAG's 3 for marks that are not text.
+Color markOn(Color accent, Color background) {
+    if (!isLightGround(background)) {
+        return accent;  // a dark theme: every accent of the palette shows
+    }
+    Color mark = accent;
+    for (int step = 19; step >= 0 && contrastRatio(mark, background) < 3.0; --step) {
+        const auto scaled = [step](std::uint8_t channel) { return static_cast<std::uint8_t>(channel * step / 20); };
+        mark = {scaled(accent.r), scaled(accent.g), scaled(accent.b), accent.a};
+    }
+    return mark;
+}
+
+}  // namespace
+
 void applyAccent(const AccentChoice& choice) {
     Theme& t = mutableTheme();
     t.accent = choice.accent;
     t.onAccent = choice.onAccent;
-    t.focusRing = choice.accent;
+    t.focusRing = markOn(choice.accent, t.background);
     t.controlFocused = choice.accent;
     ++gGeneration;
 }
 
 unsigned themeGeneration() { return gGeneration; }
+
+namespace {
+int gStageDepth = 0;
+bool gStageOn = false;  // the theme's own tokens are kept aside meanwhile
+Theme& lightTokens() {
+    static Theme saved;
+    return saved;
+}
+}  // namespace
+
+void enterDarkStage() {
+    if (gStageDepth++ > 0 || !isLightGround(mutableTheme().background)) {
+        return;
+    }
+    Theme& t = mutableTheme();
+    lightTokens() = t;
+    const Theme dark;  // Projecteur's colours
+    t.background = dark.background;
+    t.gradientTop = dark.gradientTop;
+    t.gradientBottom = dark.gradientBottom;
+    t.surface = dark.surface;
+    t.surfaceRaised = dark.surfaceRaised;
+    t.surfaceFocused = dark.surfaceFocused;
+    t.text = dark.text;
+    t.textSecondary = dark.textSecondary;
+    t.control = dark.control;
+    t.scrim = dark.scrim;
+    t.focusRing = markOn(t.accent, t.background);
+    gStageOn = true;
+    ++gGeneration;
+}
+
+void leaveDarkStage() {
+    if (gStageDepth == 0 || --gStageDepth > 0 || !gStageOn) {
+        return;
+    }
+    mutableTheme() = lightTokens();
+    gStageOn = false;
+    ++gGeneration;
+}
+
+bool darkStage() { return gStageOn; }
 
 namespace {
 
@@ -163,6 +224,19 @@ std::vector<ThemeChoice> makeThemes() {
     violet.focusColor = white;
     themes.push_back({"violet", "Finimalism", violet, {"theme", rgb(0x8564FF), white}, "tedhinklater",
                       "github.com/tedhinklater/finimalism", "GPL-3.0"});
+
+    // Plein jour: ours, Projecteur's shapes and Sora in daylight (light surfaces, dark text, the halo and the
+    // backdrop shade turned towards the light background)
+    Theme daylight;
+    daylight.id = "daylight";
+    surfaces(daylight, 0xF3F3F6, 0xFFFFFF, 0xE9E9EE, 0xDCDCE4, 0x111114, 0x55576A, 0xE9E9EE);
+    daylight.backgroundKind = BackgroundKind::Halo;
+    daylight.backdropKind = BackdropKind::Shade;
+    daylight.focusStyle = FocusStyle::Glow;
+    daylight.tabStyle = TabStyle::Underline;
+    daylight.scrim = {0, 0, 0, 0x80};
+    daylight.cardShadow = 0.25f;
+    themes.push_back({"daylight", "Plein jour", daylight, accentPalette().front()});
     return themes;
 }
 
@@ -190,9 +264,12 @@ const ThemeChoice& themeById(const std::string& id) {
 }
 
 void applyTheme(const ThemeChoice& choice) {
+    gStageOn = false;  // the new theme is not set aside: leaving the stage keeps it
     mutableTheme() = choice.tokens;
     applyAccent(choice.accent);  // bumps the generation
 }
+
+bool isLightGround(Color background) { return luminance(background) > 0.5; }
 
 double contrastRatio(Color a, Color b) {
     const double la = luminance(a);

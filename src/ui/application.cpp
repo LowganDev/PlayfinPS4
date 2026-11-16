@@ -81,7 +81,7 @@ Color Application::clearColor() const {
 }
 
 bool Application::backgroundShown() const {
-    if (backgroundImage_ <= 0 || videoSource_ != nullptr) {
+    if (backgroundImage_ <= 0 || videoSource_ != nullptr || darkStage()) {  // the theme's own background
         return false;
     }
     const Screen* screen = top();

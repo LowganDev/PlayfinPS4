@@ -67,7 +67,8 @@ struct Theme {
     Color textSecondary{0x9A, 0x9C, 0xA8, 0xFF};
     Color accent{0x00, 0x70, 0xD1, 0xFF};  // the accent setting (PlayStation blue by default)
     Color onAccent{0xFF, 0xFF, 0xFF, 0xFF};
-    Color focusRing{0x00, 0x70, 0xD1, 0xFF};  // follows the accent
+    // the accent as a ring, underline or dot on the background: the accent, darkened on a light theme until it shows
+    Color focusRing{0x00, 0x70, 0xD1, 0xFF};
     Color control{0x1E, 0x1F, 0x25, 0xFF};    // buttons and fields
     Color controlFocused{0x00, 0x70, 0xD1, 0xFF};
     Color scrim{0x00, 0x00, 0x00, 0xB0};
@@ -117,7 +118,7 @@ struct ThemeChoice {
     const char* source = nullptr;
     const char* license = nullptr;
 };
-// Projecteur (the default), ElegantFin, Ultrachromic, Abyss, Zesty, Finimalism, in that order.
+// Projecteur (the default), ElegantFin, Ultrachromic, Abyss, Zesty, Finimalism, Plein jour, in that order.
 const std::vector<ThemeChoice>& themeChoices();
 // The theme with this id, else Projecteur.
 const ThemeChoice& themeById(const std::string& id);
@@ -125,10 +126,28 @@ const ThemeChoice& themeById(const std::string& id);
 void applyTheme(const ThemeChoice& choice);
 // WCAG's contrast ratio of two opaque colours (1 to 21).
 double contrastRatio(Color a, Color b);
+// A light theme's ground (Plein jour): its relative luminance over 0.5.
+bool isLightGround(Color background);
 // Sets the accent and what follows it (focus ring, focused controls), and bumps themeGeneration().
 void applyAccent(const AccentChoice& choice);
 // Changes whenever the theme does: views and images derived from it (the halo) rebuild when it differs.
 unsigned themeGeneration();
+
+// The player and the screensaver lie over a video or a picture: on a light theme they are shown on a dark stage,
+// Projecteur's colours (background, surfaces, text, scrim) with the theme's accent, its font and its shapes. From
+// enterDarkStage() to leaveDarkStage() (nested calls count); nothing changes on a dark theme. Each switch bumps
+// themeGeneration(); applyTheme() ends the stage.
+void enterDarkStage();
+void leaveDarkStage();
+bool darkStage();
+// Enters the dark stage for its lifetime: a first base of a screen, so that its views are built on the stage.
+class DarkStage {
+public:
+    DarkStage() { enterDarkStage(); }
+    ~DarkStage() { leaveDarkStage(); }
+    DarkStage(const DarkStage&) = delete;
+    DarkStage& operator=(const DarkStage&) = delete;
+};
 
 // Defined in theme.cpp, not inline: the static of an inline function gets a section of its own, and the PS4
 // packaging tool (create-fself) dropped that section's contents (the console saw an all-zero theme).

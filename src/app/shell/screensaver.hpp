@@ -10,12 +10,14 @@
 #include "ui/box.hpp"
 #include "ui/image_view.hpp"
 #include "ui/label.hpp"
+#include "ui/theme.hpp"
 
 namespace playfin::app {
 
 // After a few idle minutes (never over a video): the server's films and series in turn, full screen, with their
-// title, synopsis and the time; any button closes it. Shown as a modal.
-class Screensaver : public ui::Stack {
+// title, synopsis and the time; any button closes it. Shown as a modal, on the dark stage whatever the theme
+// (ui::DarkStage first, so its views are built on it).
+class Screensaver : private ui::DarkStage, public ui::Stack {
 public:
     static constexpr float kIdleMs = 5 * 60 * 1000;
 

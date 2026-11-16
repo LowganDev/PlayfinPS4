@@ -2633,6 +2633,119 @@ TEST_CASE("screensaver: the server's films with their backdrop, title, synopsis 
     CHECK_FALSE(app::Screensaver::shown());
 }
 
+namespace {
+// the first visible label whose text contains `part`
+const ui::Label* labelWith(const ui::View& view, const std::string& part) {
+    if (!view.visible) {
+        return nullptr;
+    }
+    if (const auto* label = dynamic_cast<const ui::Label*>(&view);
+        label != nullptr && label->text().find(part) != std::string::npos) {
+        return label;
+    }
+    for (const auto& child : view.children()) {
+        if (const ui::Label* found = labelWith(*child, part)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+bool sameColour(ui::Color a, ui::Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+
+struct LightTheme {
+    LightTheme() { ui::applyTheme(ui::themeById("daylight")); }
+    ~LightTheme() { ui::applyTheme(ui::themeById("projecteur")); }
+};
+}  // namespace
+
+TEST_CASE("on a light theme the player and the screensaver stand on the dark stage, and the theme comes back") {
+    LightTheme light;
+    const ui::Theme dark;  // Projecteur's colours
+    const ui::Color daylightText = ui::theme().text;
+    Playing p;
+    p.shell.session.fixedNow = jellyfin::parseUtc("2026-10-16T19:45:00Z");
+    p.shell.session.fixedUtcOffset = 120;
+    jellyfin::Item alone = episode();
+    alone.seriesId.clear();
+    p.shell.application->push(app::makePlayer(p.shell.session, alone, 0));
+    p.frames(10);
+    CHECK(ui::darkStage());
+    CHECK(sameColour(ui::theme().background, dark.background));
+    const ui::Label* title = labelWith(p.shell.application->root(), "Pilot");  // the bar's title
+    REQUIRE(title != nullptr);
+    CHECK(sameColour(title->color, dark.text));  // built on the stage
+    p.shell.press(Action::Back);
+    p.frames(3);
+    CHECK_FALSE(ui::darkStage());
+    CHECK(sameColour(ui::theme().text, daylightText));
+
+    p.shell.application->showModal(app::makeScreensaver(p.shell.session));
+    p.frames(3);
+    CHECK(ui::darkStage());
+    const ui::Label* film = labelWith(p.shell.application->root(), "Big Buck Bunny");
+    REQUIRE(film != nullptr);
+    CHECK(sameColour(film->color, dark.text));  // light text on its dark shade
+    p.shell.press(Action::R1);
+    CHECK_FALSE(ui::darkStage());
+    CHECK(ui::theme().id == "daylight");
+}
+
+TEST_CASE("next-episode countdown: in the accent, on the dark panel, even with the pale accent on a light theme") {
+    LightTheme light;
+    ui::applyAccent(ui::accentPalette()[1]);  // "light", 0xFFCF8A
+    const ui::Color accent = ui::theme().accent;
+    Playing p;
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));  // the 4 s clip: all last 10 s
+    p.frames(10);
+    const ui::Label* countdown = labelWith(p.shell.application->root(), "In 4 s");
+    REQUIRE(countdown != nullptr);
+    CHECK(sameColour(countdown->color, accent));
+    // the card behind it: the first ancestor with a background, the stage's dark raised surface
+    const ui::View* panel = countdown->parent();
+    while (panel != nullptr && panel->background.a == 0) {
+        panel = panel->parent();
+    }
+    REQUIRE(panel != nullptr);
+    const ui::Color behind = ui::withAlpha(panel->background, 0xFF);
+    CHECK(sameColour(behind, ui::Theme{}.surfaceRaised));
+    CHECK(ui::contrastRatio(accent, behind) >= 4.5);
+    p.shell.press(Action::Back);
+    p.frames(3);
+}
+
+TEST_CASE("a page whose content arrives while the player holds the dark stage is built in its own theme's colours") {
+    LightTheme light;
+    const ui::Color daylightText = ui::theme().text;
+    Playing p;
+    p.shell.session.synchronous = false;  // the page's content comes back through the main queue
+    jellyfin::Item series;
+    series.id = "s-1";
+    series.name = "Test Show";
+    series.type = jellyfin::ItemType::Series;
+    p.shell.application->push(app::makeDetails(p.shell.session, series));
+    p.shell.application->update(1000.0f / 60.0f);  // the page asks for its content
+    // Play pressed before the answer: the player puts up the dark stage over the page
+    p.shell.application->push(app::makePlayer(p.shell.session, episode(), 0));
+    REQUIRE(ui::darkStage());
+    p.shell.pool.finish(std::chrono::seconds(5));
+    p.frames(5);  // the page's answer arrives while the stage is up
+    p.shell.pool.finish(std::chrono::seconds(5));
+    p.frames(5);
+    p.shell.press(Action::Back);  // back to the page: the stage is gone
+    for (int i = 0; i < 20; ++i) {
+        p.shell.pool.finish(std::chrono::seconds(5));
+        p.frames(1);
+    }
+    CHECK_FALSE(ui::darkStage());
+    const ui::Label* seasons = labelWith(p.shell.application->root(), "Seasons");
+    REQUIRE(seasons != nullptr);
+    CHECK(sameColour(seasons->color, daylightText));
+    const ui::Label* title = labelWith(p.shell.application->root(), "Test Show");
+    REQUIRE(title != nullptr);
+    CHECK(sameColour(title->color, daylightText));
+}
+
 TEST_CASE("search: the on-screen keyboard searches while typing, a pause after the last letter") {
     test::FakeJellyfin server;
     Shell shell;

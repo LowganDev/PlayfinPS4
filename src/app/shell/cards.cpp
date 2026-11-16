@@ -360,7 +360,7 @@ void ItemCard::draw(NVGcontext* vg) const {
     // Glow: 3 px of the accent, 4 px away; Ring: 4 px of the accent (or the theme's colour), 4 px away; Frame: 4 px
     // of the theme's colour on the picture's edge. Fading in with the focus.
     const bool frame = t.focusStyle == ui::FocusStyle::Frame;
-    const ui::Color colour = t.focusStyle == ui::FocusStyle::Glow || t.focusInAccent ? t.accent : t.focusColor;
+    const ui::Color colour = t.focusStyle == ui::FocusStyle::Glow || t.focusInAccent ? t.focusRing : t.focusColor;
     const float width = t.focusStyle == ui::FocusStyle::Glow ? kRingWidth : kThemeRingWidth;
     const float gap = frame ? -width / 2 : kRingGap + width / 2;
     nvgBeginPath(vg);
@@ -457,7 +457,7 @@ void ProfileCard::draw(NVGcontext* vg) const {
     nvgScale(vg, 1 + grow, 1 + grow);
     nvgTranslate(vg, -cx, -cy);
     ui::Box::draw(vg);
-    const ui::Color accent = ui::theme().accent;
+    const ui::Color accent = ui::theme().focusRing;
     nvgBeginPath(vg);
     nvgCircle(vg, cx, cy, c.width / 2 + kRingGap + kRingWidth / 2);
     nvgStrokeColor(vg, nvgRGBA(accent.r, accent.g, accent.b, static_cast<unsigned char>(255 * p)));

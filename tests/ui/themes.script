@@ -1,4 +1,5 @@
-# Every theme but Projecteur (shell.script shows it): the settings and the home, against fake_jellyfin
+# Every theme but Projecteur (shell.script shows it): the settings and the home, against fake_jellyfin;
+# Plein jour, the light one, also a library and a details page
 wait 20
 press Confirm
 wait 10
@@ -174,4 +175,22 @@ press Right
 press Right
 press Confirm
 wait 30
+press Confirm
+wait 15
+press Down
+press Confirm
+wait 40
+screenshot settings_daylight
+press Up
+wait 10
+press Left
+press Left
+press Left
+press Confirm
+wait 40
+press Down
+press Down
+press Down
+wait 60
+screenshot home_daylight
 quit

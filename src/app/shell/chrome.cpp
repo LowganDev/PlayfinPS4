@@ -15,14 +15,14 @@ namespace playfin::app {
 
 namespace {
 
-// a label in the accent colour, following the accent setting
+// a label in the accent colour (as a mark on the background), following the accent setting
 class AccentLabel : public ui::Label {
 public:
     AccentLabel(std::string text, ui::FontStyle style) : ui::Label(std::move(text), style) {
-        color = ui::theme().accent;
+        color = ui::theme().focusRing;
     }
     void onThemeChanged() override {
-        color = ui::theme().accent;
+        color = ui::theme().focusRing;
         ui::Label::onThemeChanged();
     }
 };
@@ -105,7 +105,7 @@ void BackdropShade::draw(NVGcontext* vg) const {
     const float split = static_cast<float>(ui::backdropSplit(static_cast<int>(std::round(frame.height))));
     // a sprite: as a gradient over 70 % of the screen it cost more than all the rest of a details frame
     ui::drawVerticalFade(vg, 0, 0, static_cast<int>(std::round(frame.width)), static_cast<int>(split),
-                         static_cast<int>(split), bg, ui::kBackdropTopAlpha, 255);
+                         static_cast<int>(split), bg, ui::currentBackdropTopAlpha(), 255);
     nvgBeginPath(vg);
     nvgRect(vg, 0, split, frame.width, frame.height - split);
     nvgFillColor(vg, nvgRGBA(bg.r, bg.g, bg.b, 255));

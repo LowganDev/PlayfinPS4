@@ -47,9 +47,9 @@ constexpr long long kMaxImagePixels = 8LL * 1024 * 1024;  // a progressive JPEG 
 
 // Whole: the full picture, box-filtered down so it still covers width x height. Crop: the same, then the centre
 // cut to width x height, so a covering view shows it pixel for pixel (the CPU renderer then copies rows).
-// Backdrop: Crop with the backdrop shade baked in (the ground colour from 143 to 255 over the top 70 %, the ground
-// below), once, instead of a shade blended over 1.45 million pixels every frame. ThemedBackdrop: Crop with the
-// current theme's treatment baked in (backdropTreatment()); a theme change asks for it again.
+// Backdrop: Crop with the backdrop shade baked in (the ground colour from backdropTopAlpha() to 255 over the top
+// 70 %, the ground below), once, instead of a shade blended over 1.45 million pixels every frame. ThemedBackdrop:
+// Crop with the current theme's treatment baked in (backdropTreatment()); a theme change asks for it again.
 enum class ImageShape { Whole, Crop, Backdrop, ThemedBackdrop };
 
 // How a theme treats a backdrop picture (see BackdropKind): Shade, the identity's shade into `ground`; Blur, very
@@ -61,6 +61,7 @@ struct BackdropTreatment {
     float saturation = 1;
     float contrast = 1;
     Color ground;
+    std::uint8_t topAlpha = 143;  // Shade: the ground's alpha at the top (backdropTopAlpha())
 };
 BackdropTreatment backdropTreatment(const Theme& theme);
 // In place, opaque afterwards. Runs on a worker (a blur over a whole screen costs a few milliseconds).
@@ -68,10 +69,18 @@ void bakeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, const 
 
 // Shades a picture as a backdrop (in place, opaque afterwards): see ImageShape::Backdrop.
 void shadeBackdrop(std::vector<std::uint8_t>& rgba, int width, int height, std::uint8_t groundR, std::uint8_t groundG,
-                   std::uint8_t groundB);
+                   std::uint8_t groundB, std::uint8_t topAlpha = 143);
 // The backdrop's shade: where its gradient ends (70 % of the height) and its alpha at the top.
 int backdropSplit(int height);
 constexpr std::uint8_t kBackdropTopAlpha = 143;
+// The shade's alpha at the top for a theme: the identity's 143 on a dark theme; on a light one, enough ground for
+// its text to keep 7 and its secondary text 4.5 over any picture, black or white (dark text over a dark film).
+std::uint8_t backdropTopAlpha(const Theme& theme);
+// backdropTopAlpha(theme()), worked out once per themeGeneration() (the live shade asks for it every frame).
+std::uint8_t currentBackdropTopAlpha();
+// What a themed backdrop baked now depends on, for cache keys: the theme, its ground (the dark stage swaps it) and
+// its top alpha.
+std::string themedBackdropKey();
 
 // JPEG/PNG → RGBA, box-filtered down (never upscaled). nullopt on bad data or over the limits above.
 std::optional<DecodedImage> decodeImage(const std::string& bytes, int width, int height,

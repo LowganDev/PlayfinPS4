@@ -125,11 +125,11 @@ struct ThemeGuard {
 };
 }  // namespace
 
-TEST_CASE("six themes, in order, each a complete set of colours") {
+TEST_CASE("seven themes, in order, each a complete set of colours") {
     const auto& themes = themeChoices();
-    REQUIRE(themes.size() == 6);
-    const char* ids[] = {"projecteur", "slate", "chroma", "abyss", "mint", "violet"};
-    const char* names[] = {"Projecteur", "ElegantFin", "Ultrachromic", "Abyss", "Zesty", "Finimalism"};
+    REQUIRE(themes.size() == 7);
+    const char* ids[] = {"projecteur", "slate", "chroma", "abyss", "mint", "violet", "daylight"};
+    const char* names[] = {"Projecteur", "ElegantFin", "Ultrachromic", "Abyss", "Zesty", "Finimalism", "Plein jour"};
     for (std::size_t i = 0; i < themes.size(); ++i) {
         CHECK(std::string(themes[i].id) == ids[i]);
         CHECK(std::string(themes[i].name) == names[i]);
@@ -156,12 +156,27 @@ TEST_CASE("Projecteur is today's look") {
     CHECK(same(themeById("projecteur").accent.accent, accentPalette().front().accent));
 }
 
+TEST_CASE("Plein jour is light, our own (no credit)") {
+    const ThemeChoice& choice = themeById("daylight");
+    REQUIRE(std::string(choice.id) == "daylight");
+    CHECK(isLightGround(choice.tokens.background));
+    CHECK(contrastRatio(choice.tokens.text, choice.tokens.background) >= 15.0);  // near-black on near-white
+    CHECK(choice.author == nullptr);
+    CHECK(choice.source == nullptr);
+    CHECK(choice.license == nullptr);
+    for (const ThemeChoice& other : themeChoices()) {
+        CHECK((std::string(other.id) == "daylight") == isLightGround(other.tokens.background));
+    }
+}
+
 TEST_CASE("every theme's text reads on its surfaces") {
     for (const auto& t : themeChoices()) {
         const std::string id = t.id;
         CAPTURE(id);
         CHECK(contrastRatio(t.tokens.text, t.tokens.background) >= 7.0);
         CHECK(contrastRatio(t.tokens.text, t.tokens.surface) >= 4.5);
+        // the player's panels
+        CHECK(contrastRatio(t.tokens.text, t.tokens.surfaceRaised) >= 4.5);
         CHECK(contrastRatio(t.tokens.textSecondary, t.tokens.background) >= 4.5);
         // settings rows draw their values in the dim colour on the control colour
         CHECK(contrastRatio(t.tokens.textSecondary, t.tokens.surface) >= 4.5);
@@ -184,6 +199,90 @@ TEST_CASE("a theme brings its own accent and bumps the generation") {
     CHECK(same(theme().background, Color{0x15, 0x1C, 0x19, 0xFF}));
     applyTheme(themeById("projecteur"));
     CHECK(same(theme().accent, Color{0x00, 0x70, 0xD1, 0xFF}));
+}
+
+TEST_CASE("the accent's marks on a light theme are darkened until they show, and are the accent elsewhere") {
+    ThemeGuard guard;
+    for (const AccentChoice& a : accentPalette()) {
+        CAPTURE(std::string(a.id));
+        applyTheme(themeById("daylight"));
+        applyAccent(a);
+        CHECK(same(theme().accent, a.accent));  // fills keep the user's colour
+        CHECK(contrastRatio(theme().focusRing, theme().background) >= 3.0);
+        CHECK(contrastRatio(theme().focusRing, theme().surface) >= 3.0);  // the ring drawn round a white card or row
+        if (contrastRatio(a.accent, theme().background) >= 3.0) {
+            CHECK(same(theme().focusRing, a.accent));
+        } else {  // the same hue, darker: no channel grows, their order is kept
+            CHECK(theme().focusRing.r <= a.accent.r);
+            CHECK(theme().focusRing.g <= a.accent.g);
+            CHECK(theme().focusRing.b <= a.accent.b);
+            CHECK((theme().focusRing.r >= theme().focusRing.b) == (a.accent.r >= a.accent.b));
+        }
+        for (const ThemeChoice& dark : themeChoices()) {
+            if (std::string(dark.id) == "daylight") {
+                continue;
+            }
+            CAPTURE(std::string(dark.id));
+            applyTheme(dark);
+            applyAccent(a);
+            CHECK(same(theme().focusRing, a.accent));
+        }
+    }
+    applyTheme(themeById("daylight"));
+    CHECK(same(theme().focusRing, theme().accent));  // its own accent, PlayStation blue, shows as it is
+}
+
+TEST_CASE("the player's dark stage: Projecteur's colours on a light theme, nothing on a dark one") {
+    ThemeGuard guard;
+    const Theme projecteur;
+    applyTheme(themeById("daylight"));
+    applyAccent(accentPalette()[1]);  // the pale "light" accent
+    const Theme light = theme();
+    unsigned generation = themeGeneration();
+    {
+        DarkStage stage;
+        CHECK(darkStage());
+        CHECK(themeGeneration() != generation);
+        CHECK(same(theme().background, projecteur.background));
+        CHECK(same(theme().surfaceRaised, projecteur.surfaceRaised));
+        CHECK(same(theme().text, projecteur.text));
+        CHECK(same(theme().textSecondary, projecteur.textSecondary));
+        CHECK(same(theme().scrim, projecteur.scrim));
+        CHECK(same(theme().accent, light.accent));  // the user's accent stays
+        CHECK(same(theme().focusRing, light.accent));  // on a dark ground it needs no darkening
+        CHECK(theme().id == "daylight");
+        {
+            DarkStage nested;  // the next episode's player, built before the last one goes
+            CHECK(darkStage());
+        }
+        CHECK(darkStage());
+        CHECK(same(theme().background, projecteur.background));
+        generation = themeGeneration();
+    }
+    CHECK_FALSE(darkStage());
+    CHECK(themeGeneration() != generation);
+    CHECK(same(theme().background, light.background));
+    CHECK(same(theme().text, light.text));
+    CHECK(same(theme().focusRing, light.focusRing));
+
+    applyTheme(themeById("slate"));
+    const Theme slate = theme();
+    generation = themeGeneration();
+    {
+        DarkStage stage;
+        CHECK_FALSE(darkStage());
+        CHECK(themeGeneration() == generation);
+        CHECK(same(theme().background, slate.background));
+    }
+    CHECK(themeGeneration() == generation);
+
+    applyTheme(themeById("daylight"));
+    {
+        DarkStage stage;
+        applyTheme(themeById("mint"));  // a theme chosen meanwhile is kept when the stage ends
+    }
+    CHECK(theme().id == "mint");
+    CHECK_FALSE(darkStage());
 }
 
 TEST_CASE("theme backgrounds: Projecteur's halo, ElegantFin's gradient, nothing for a plain one, a fixed grain") {
