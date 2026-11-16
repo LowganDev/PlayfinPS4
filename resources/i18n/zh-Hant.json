@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "我的最愛",
   "shell.details.favorite": "我的最愛",
   "shell.details.watched": "已觀看",
+  "shell.details.season_watched": "本季已觀看",
   "shell.details.previous_episode": "上一集",
   "shell.details.next_episode": "下一集",
   "shell.search.title": "搜尋",

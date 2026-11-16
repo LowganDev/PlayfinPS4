@@ -88,6 +88,7 @@
   "shell.library.filter.favorites": "Избранное",
   "shell.details.favorite": "Избранное",
   "shell.details.watched": "Просмотрено",
+  "shell.details.season_watched": "Сезон просмотрен",
   "shell.details.previous_episode": "Предыдущая серия",
   "shell.details.next_episode": "Следующая серия",
   "shell.search.title": "Поиск",

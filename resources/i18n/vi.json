@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "Yêu thích",
   "shell.details.favorite": "Yêu thích",
   "shell.details.watched": "Đã xem",
+  "shell.details.season_watched": "Đã xem mùa",
   "shell.details.previous_episode": "Tập trước",
   "shell.details.next_episode": "Tập tiếp theo",
   "shell.search.title": "Tìm kiếm",

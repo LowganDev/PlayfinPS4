@@ -602,6 +602,8 @@ public:
         version_->visible = false;
         download_ = actions_->add<ui::Button>("", [this] { pressDownload(); });
         download_->visible = false;
+        seasonWatched_ = actions_->add<ui::Button>("", [this] { toggleSeasonWatched(); });
+        seasonWatched_->visible = false;
         favorite_ = actions_->add<ui::Button>("", [this] { toggleFavorite(); });
         watched_ = actions_->add<ui::Button>("", [this] { toggleWatched(); });
         previous_ = actions_->add<ui::Button>(ui::tr("shell.details.previous_episode"), [this] { openSibling(-1); });
@@ -619,6 +621,7 @@ public:
             later([this] { load(); });
         } else {
             reloadItem();  // back from the player: resume position and watched state changed
+            reloadSeasons();  // back from an episode's page: its season's state may have changed there
         }
     }
 
@@ -881,6 +884,9 @@ private:
                                           item_.userData.played = played;
                                           item_.userData.positionTicks = 0;  // the server forgets the position too
                                           refreshActions();
+                                          if (item_.type == jellyfin::ItemType::Series) {
+                                              markSeasons(played);  // the server marked every episode
+                                          }
                                       });
     }
 
@@ -930,8 +936,14 @@ private:
                     seasonName = season.name;
                 }
             }
-            addItemRow(*column_, ui::tr("shell.details.seasons"), session_, seasons, false,
-                       [this](const jellyfin::Item& season) { showSeason(season); });
+            season_ = seasons.front();
+            for (const auto& season : seasons) {
+                if (season.id == data.seasonId) {
+                    season_ = season;
+                }
+            }
+            seasonsRow_ = addItemRow(*column_, ui::tr("shell.details.seasons"), session_, seasons, false,
+                                     [this](const jellyfin::Item& season) { showSeason(season); });
             std::vector<jellyfin::Item> episodes = data.episodes.ok() ? data.episodes.value().items
                                                                       : std::vector<jellyfin::Item>{};
             episodesRow_ = addItemRow(*column_, seasonName, session_, std::move(episodes), true,
@@ -941,6 +953,7 @@ private:
             episodesTitle_ = dynamic_cast<ui::Label*>(episodesRow_->parent()->children().front().get());
         }
         refreshDownload();
+        refreshSeasonWatched();
         ui::revealChildren(*column_, firstRow);
         focusIfEmpty();
     }
@@ -949,6 +962,13 @@ private:
         if (episodesRow_ == nullptr) {
             return;
         }
+        season_ = season;
+        refreshSeasonWatched();
+        loadEpisodes(season);
+    }
+
+    // the episodes of a season into the row; a reply for a season no longer shown is dropped
+    void loadEpisodes(const jellyfin::Item& season) {
         const auto client = session_.client();
         const std::string seriesId = item_.id;
         const std::string seasonId = season.id;
@@ -956,8 +976,8 @@ private:
         const core::CancelToken token = token_;
         run<core::Result<jellyfin::ItemPage>>(
             [client, seriesId, seasonId, token] { return client->episodes(seriesId, seasonId, token); },
-            [this, seasonName](core::Result<jellyfin::ItemPage> page) {
-                if (!page.ok() || episodesRow_ == nullptr) {
+            [this, seasonId, seasonName](core::Result<jellyfin::ItemPage> page) {
+                if (!page.ok() || episodesRow_ == nullptr || season_.id != seasonId) {
                     return;
                 }
                 auto* source = static_cast<ItemsSource*>(episodesRow_->source());
@@ -966,6 +986,92 @@ private:
                 if (episodesTitle_ != nullptr) {
                     episodesTitle_->setText(seasonName);
                 }
+            });
+    }
+
+    // a series: its seasons asked again, the season shown kept (another may be first now), its episodes with it
+    void reloadSeasons() {
+        if (item_.type != jellyfin::ItemType::Series || seasonsRow_ == nullptr) {
+            return;
+        }
+        const auto client = session_.client();
+        const std::string seriesId = item_.id;
+        const core::CancelToken token = token_;
+        run<core::Result<jellyfin::ItemPage>>(
+            [client, seriesId, token] { return client->seasons(seriesId, token); },
+            [this](core::Result<jellyfin::ItemPage> page) {
+                if (!page.ok() || page.value().items.empty()) {
+                    return;
+                }
+                auto* source = static_cast<ItemsSource*>(seasonsRow_->source());
+                source->items() = page.value().items;
+                seasonsRow_->reload();
+                for (const jellyfin::Item& season : source->items()) {
+                    if (season.id == season_.id) {
+                        season_ = season;
+                    }
+                }
+                refreshSeasonWatched();
+                loadEpisodes(season_);
+            });
+    }
+
+    // the series marked watched or not: every season with it
+    void markSeasons(bool played) {
+        if (seasonsRow_ == nullptr) {
+            return;
+        }
+        for (jellyfin::Item& season : static_cast<ItemsSource*>(seasonsRow_->source())->items()) {
+            season.userData.played = played;
+        }
+        seasonsRow_->reload();
+        season_.userData.played = played;
+        refreshSeasonWatched();
+    }
+
+    // ---- "Season watched": marks every episode of the season shown (a series only)
+
+    void refreshSeasonWatched() {
+        const bool shown = item_.type == jellyfin::ItemType::Series && episodesRow_ != nullptr && !season_.id.empty();
+        seasonWatched_->visible = shown;
+        const std::string text = ui::tr("shell.details.season_watched");
+        seasonWatched_->setText(shown && season_.userData.played ? kCheck + text : text);
+        actions_->markDirty();
+    }
+
+    void toggleSeasonWatched() {
+        if (season_.id.empty()) {
+            return;
+        }
+        const auto client = session_.client();
+        const std::string seasonId = season_.id;  // the reply belongs to this season, whichever is shown later
+        const bool played = !season_.userData.played;
+        const core::CancelToken token = token_;
+        run<core::Result<core::Unit>>(
+            [client, seasonId, played, token] { return client->setPlayed(seasonId, played, token); },
+            [this, seasonId, played](core::Result<core::Unit> result) {
+                if (!result.ok()) {
+                    ui::Application::current()->toast(errorText(result.error()));
+                    return;
+                }
+                if (seasonsRow_ != nullptr) {
+                    auto* source = static_cast<ItemsSource*>(seasonsRow_->source());
+                    for (auto& season : source->items()) {
+                        if (season.id == seasonId) {
+                            season.userData.played = played;
+                        }
+                    }
+                    seasonsRow_->reload();
+                }
+                reloadItem();  // the series' own "Watched" follows: the server tells whether every season is
+                if (season_.id != seasonId) {
+                    return;
+                }
+                season_.userData.played = played;
+                refreshSeasonWatched();
+                // the episodes' state follows (an episode opened from the row starts with it; the cards draw no
+                // watched mark)
+                loadEpisodes(season_);
             });
     }
 
@@ -981,6 +1087,9 @@ private:
     ui::Label* directors_ = nullptr;
     ui::Button* version_ = nullptr;
     ui::Button* download_ = nullptr;
+    ui::Button* seasonWatched_ = nullptr;
+    jellyfin::Item season_;  // the season shown of a series
+    ui::HList* seasonsRow_ = nullptr;
     ui::HList* castRow_ = nullptr;
     std::string sourceId_;  // the version chosen (empty: the server's first)
     ui::ImageView* backdrop_ = nullptr;

@@ -884,6 +884,122 @@ TEST_CASE("a series opens on the first season with unwatched episodes and switch
     CHECK(shell.application->depth() == 2);
 }
 
+TEST_CASE("a series' season is marked watched and unwatched in one press") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    jellyfin::Item series;
+    series.id = "s-1";
+    series.name = "Test Show";
+    series.type = jellyfin::ItemType::Series;
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeDetails(shell.session, series));
+    shell.frames(10);
+    ui::Application& app = *shell.application;
+    CHECK(shows(app, "Season watched"));
+    CHECK_FALSE(shows(app, "\xE2\x9C\x93 Season watched"));
+    const auto episodesBefore = requestsTo(server, "GET", "/Shows/s-1/Episodes");
+    pressButton(shell, "Season watched");
+    shell.frames(10);
+    CHECK(requestsTo(server, "POST", "/UserPlayedItems/se-2") == 1);
+    CHECK(shows(app, "\xE2\x9C\x93 Season watched"));
+    CHECK(requestsTo(server, "GET", "/Shows/s-1/Episodes") == episodesBefore + 1);
+    pressButton(shell, "\xE2\x9C\x93 Season watched");
+    shell.frames(10);
+    CHECK(requestsTo(server, "DELETE", "/UserPlayedItems/se-2") == 1);
+    CHECK(shows(app, "Season watched"));
+    CHECK_FALSE(shows(app, "\xE2\x9C\x93 Season watched"));
+    // the season shown follows the button: season 1 is already watched on the server. The reply is applied to
+    // the season id it was sent for (captured), the harness cannot hold a reply in flight
+    shell.press(Action::Down);
+    shell.press(Action::Confirm);
+    shell.frames(10);
+    CHECK(shows(app, "Pilot"));
+    CHECK(shows(app, "\xE2\x9C\x93 Season watched"));
+}
+
+TEST_CASE("a series marked watched marks its seasons, and a season marked asks the series again") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    jellyfin::Item series;
+    series.id = "s-1";
+    series.name = "Test Show";
+    series.type = jellyfin::ItemType::Series;
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeDetails(shell.session, series));
+    shell.frames(10);
+    ui::Application& app = *shell.application;
+    // the series, watched: the season shown (2) and every other one with it
+    pressButton(shell, "Watched");
+    shell.frames(10);
+    CHECK(requestsTo(server, "POST", "/UserPlayedItems/s-1") == 1);
+    CHECK(shows(app, "\xE2\x9C\x93 Watched"));
+    CHECK(shows(app, "\xE2\x9C\x93 Season watched"));
+    // the series, unwatched: season 1 (watched on the server) follows it too
+    pressButton(shell, "\xE2\x9C\x93 Watched");
+    shell.frames(10);
+    CHECK(requestsTo(server, "DELETE", "/UserPlayedItems/s-1") == 1);
+    CHECK(shows(app, "Season watched"));
+    CHECK_FALSE(shows(app, "\xE2\x9C\x93 Season watched"));
+    shell.press(Action::Down);
+    shell.press(Action::Confirm);  // season 1
+    shell.frames(10);
+    CHECK(shows(app, "Pilot"));
+    CHECK(shows(app, "Season watched"));
+    CHECK_FALSE(shows(app, "\xE2\x9C\x93 Season watched"));
+    // a season marked: the series' own state is asked again (it is watched once every season is)
+    const int seriesBefore = requestsTo(server, "GET", "/Items/s-1");
+    pressButton(shell, "Season watched");
+    shell.frames(10);
+    CHECK(requestsTo(server, "DELETE", "/UserPlayedItems/se-1") == 0);
+    CHECK(requestsTo(server, "POST", "/UserPlayedItems/se-1") == 1);
+    CHECK(requestsTo(server, "GET", "/Items/s-1") == seriesBefore + 1);
+}
+
+TEST_CASE("back from an episode's page, a series asks its seasons and the season's episodes again") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    jellyfin::Item series;
+    series.id = "s-1";
+    series.name = "Test Show";
+    series.type = jellyfin::ItemType::Series;
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeDetails(shell.session, series));
+    shell.frames(10);
+    ui::Application& app = *shell.application;
+    pressButton(shell, "Season watched");  // season 2, marked here (the fake server keeps no state)
+    shell.frames(10);
+    CHECK(shows(app, "\xE2\x9C\x93 Season watched"));
+    app.push(app::makeDetails(shell.session, episode()));  // an episode's page (watched or not there)
+    shell.frames(10);
+    const int seasonsBefore = requestsTo(server, "GET", "/Shows/s-1/Seasons");
+    const int episodesBefore = requestsTo(server, "GET", "/Shows/s-1/Episodes");
+    shell.press(Action::Back);
+    shell.frames(10);
+    REQUIRE(app.depth() == 2);
+    CHECK(requestsTo(server, "GET", "/Shows/s-1/Seasons") == seasonsBefore + 1);
+    CHECK(requestsTo(server, "GET", "/Shows/s-1/Episodes") == episodesBefore + 1);
+    // the season shown is still season 2, as the server tells it now: not watched
+    CHECK(shows(app, "Season watched"));
+    CHECK_FALSE(shows(app, "\xE2\x9C\x93 Season watched"));
+}
+
+TEST_CASE("a series without seasons offers no season button") {
+    test::FakeJellyfin server;
+    Shell shell;
+    signIn(shell, server);
+    jellyfin::Item series;
+    series.id = "s-2";
+    series.name = "Other Show";
+    series.type = jellyfin::ItemType::Series;
+    shell.application->push(std::make_unique<ui::Screen>());
+    shell.application->push(app::makeDetails(shell.session, series));
+    shell.frames(10);
+    CHECK_FALSE(shows(*shell.application, "Season watched"));
+}
+
 TEST_CASE("an episode offers the next one and swaps the page for it") {
     test::FakeJellyfin server;
     Shell shell;

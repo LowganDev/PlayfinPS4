@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "お気に入り",
   "shell.details.favorite": "お気に入り",
   "shell.details.watched": "視聴済み",
+  "shell.details.season_watched": "シーズン視聴済み",
   "shell.details.previous_episode": "前のエピソード",
   "shell.details.next_episode": "次のエピソード",
   "shell.search.title": "検索",

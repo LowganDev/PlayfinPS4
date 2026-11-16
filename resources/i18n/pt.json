@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "Favoritos",
   "shell.details.favorite": "Favorito",
   "shell.details.watched": "Visto",
+  "shell.details.season_watched": "Temporada vista",
   "shell.details.previous_episode": "Episódio anterior",
   "shell.details.next_episode": "Próximo episódio",
   "shell.search.title": "Pesquisar",

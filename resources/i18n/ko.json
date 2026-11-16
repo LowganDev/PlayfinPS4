@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "즐겨찾기",
   "shell.details.favorite": "즐겨찾기",
   "shell.details.watched": "시청함",
+  "shell.details.season_watched": "시즌 시청함",
   "shell.details.previous_episode": "이전 에피소드",
   "shell.details.next_episode": "다음 에피소드",
   "shell.search.title": "검색",

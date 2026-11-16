@@ -86,6 +86,7 @@
   "shell.library.filter.favorites": "Favoriler",
   "shell.details.favorite": "Favori",
   "shell.details.watched": "İzlendi",
+  "shell.details.season_watched": "Sezon izlendi",
   "shell.details.previous_episode": "Önceki bölüm",
   "shell.details.next_episode": "Sonraki bölüm",
   "shell.search.title": "Ara",

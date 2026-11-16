@@ -87,6 +87,7 @@
   "shell.library.filter.favorites": "Oblíbené",
   "shell.details.favorite": "Oblíbené",
   "shell.details.watched": "Zhlédnuto",
+  "shell.details.season_watched": "Sezóna zhlédnuta",
   "shell.details.previous_episode": "Předchozí díl",
   "shell.details.next_episode": "Další díl",
   "shell.search.title": "Hledat",

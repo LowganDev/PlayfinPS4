@@ -88,6 +88,7 @@
   "shell.library.filter.favorites": "Обране",
   "shell.details.favorite": "Обране",
   "shell.details.watched": "Переглянуто",
+  "shell.details.season_watched": "Сезон переглянуто",
   "shell.details.previous_episode": "Попередня серія",
   "shell.details.next_episode": "Наступна серія",
   "shell.search.title": "Пошук",
