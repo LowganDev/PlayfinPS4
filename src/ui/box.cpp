@@ -27,26 +27,62 @@ float aligned(CrossAlign align, float space, float size) {
     }
 }
 
+// The visible children's sizes. A child that fills the main axis is measured within its share of what the others
+// leave, as it will be placed: a text filling a row wraps there, and the row is as high as its lines.
+std::vector<Size> childSizes(Axis axis, float gap, const std::vector<View*>& items, Size inner,
+                             TextMetrics& metrics) {
+    std::vector<Size> sizes(items.size());
+    float used = 0;
+    float weights = 0;
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        const View& child = *items[i];
+        if (mainSpec(axis, child).mode == SizeMode::Fill) {
+            weights += mainSpec(axis, child).value;
+            used += mainMargins(axis, child.margin);
+        } else {
+            sizes[i] = resolveSize(*items[i], inner, metrics);
+            used += mainOf(axis, sizes[i]) + mainMargins(axis, child.margin);
+        }
+    }
+    if (!items.empty()) {
+        used += gap * static_cast<float>(items.size() - 1);
+    }
+    const float remaining = std::max(0.0f, mainOf(axis, inner) - used);
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        View& child = *items[i];
+        const SizeSpec& spec = mainSpec(axis, child);
+        if (spec.mode != SizeMode::Fill) {
+            continue;
+        }
+        const float share = (weights > 0 ? remaining * spec.value / weights : 0) + mainMargins(axis, child.margin);
+        const Size within = axis == Axis::Row ? Size{share, inner.height} : Size{inner.width, share};
+        sizes[i] = resolveSize(child, within, metrics);
+    }
+    return sizes;
+}
+
 }  // namespace
 
 Size Box::measure(Size available, TextMetrics& metrics) {
     const Size inner{std::max(0.0f, available.width - padding.horizontal()),
                      std::max(0.0f, available.height - padding.vertical())};
+    std::vector<View*> items;
+    for (const auto& child : children()) {
+        if (child->visible) {
+            items.push_back(child.get());
+        }
+    }
+    const std::vector<Size> sizes = childSizes(axis, gap, items, inner, metrics);
     float mainSum = 0;
     float crossMax = 0;
-    int count = 0;
-    for (const auto& child : children()) {
-        if (!child->visible) {
-            continue;
-        }
-        const Size size = resolveSize(*child, inner, metrics);
-        const float main = mainSpec(axis, *child).mode == SizeMode::Fill ? 0 : mainOf(axis, size);
-        mainSum += main + mainMargins(axis, child->margin);
-        crossMax = std::max(crossMax, crossOf(axis, size) + crossMargins(axis, child->margin));
-        ++count;
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        const View& child = *items[i];
+        const float main = mainSpec(axis, child).mode == SizeMode::Fill ? 0 : mainOf(axis, sizes[i]);
+        mainSum += main + mainMargins(axis, child.margin);
+        crossMax = std::max(crossMax, crossOf(axis, sizes[i]) + crossMargins(axis, child.margin));
     }
-    if (count > 1) {
-        mainSum += gap * static_cast<float>(count - 1);
+    if (items.size() > 1) {
+        mainSum += gap * static_cast<float>(items.size() - 1);
     }
     return axis == Axis::Row ? Size{mainSum + padding.horizontal(), crossMax + padding.vertical()}
                              : Size{crossMax + padding.horizontal(), mainSum + padding.vertical()};
@@ -59,25 +95,25 @@ void Box::layout(TextMetrics& metrics) {
     const float innerCross = crossOf(axis, inner);
 
     std::vector<View*> items;
-    std::vector<Size> sizes;
-    float used = 0;
-    float weights = 0;
     for (const auto& child : children()) {
-        if (!child->visible) {
-            continue;
-        }
-        items.push_back(child.get());
-        const Size size = resolveSize(*child, inner, metrics);
-        sizes.push_back(size);
-        if (mainSpec(axis, *child).mode == SizeMode::Fill) {
-            weights += mainSpec(axis, *child).value;
-            used += mainMargins(axis, child->margin);
-        } else {
-            used += mainOf(axis, size) + mainMargins(axis, child->margin);
+        if (child->visible) {
+            items.push_back(child.get());
         }
     }
     if (items.empty()) {
         return;
+    }
+    const std::vector<Size> sizes = childSizes(axis, gap, items, inner, metrics);
+    float used = 0;
+    float weights = 0;
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        const View& child = *items[i];
+        if (mainSpec(axis, child).mode == SizeMode::Fill) {
+            weights += mainSpec(axis, child).value;
+            used += mainMargins(axis, child.margin);
+        } else {
+            used += mainOf(axis, sizes[i]) + mainMargins(axis, child.margin);
+        }
     }
     used += gap * static_cast<float>(items.size() - 1);
     const float remaining = std::max(0.0f, innerMain - used);

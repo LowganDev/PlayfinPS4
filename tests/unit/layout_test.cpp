@@ -113,6 +113,21 @@ TEST_CASE("labels wrap to their width and report their height") {
     CHECK(label.lines().size() == 2);
 }
 
+TEST_CASE("a text that fills a row wraps within what its siblings leave, and the row is as high as its lines") {
+    FixedMetrics metrics;
+    Box row(Axis::Row);
+    Label* text = row.add<Label>("aa bb cc dd ee", FontStyle{10, FontWeight::Regular});  // 70 wide on one line
+    text->width = SizeSpec::fill();
+    text->maxLines = 0;
+    fixedChild(row, 50, 10);
+    const Size natural = row.measure({100, 1000}, metrics);  // the text gets 50: "aa bb cc" / "dd ee"
+    CHECK(natural.height == doctest::Approx(2 * 12.5));
+    row.place({0, 0, 100, natural.height}, metrics);
+    CHECK(text->frame.width == doctest::Approx(50));
+    CHECK(text->frame.height == doctest::Approx(2 * 12.5));
+    CHECK(text->lines().size() == 2);
+}
+
 TEST_CASE("dirty marks propagate to the root and clear after layout") {
     FixedMetrics metrics;
     Box root(Axis::Column);
