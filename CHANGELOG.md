@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0 (2026-11-16)
+
+- A whole season marked watched or unwatched in one press: the "Season watched" button on a series.
+- Added a light mode, Plein jour, for true psychopaths.
+- Fixed: once the update was downloaded, the text of the banner at the top of the settings went past it.
+
 ## 2.2.1 (2026-11-11)
 
 - Downloads can be paused and resumed from the Downloads tab (✕ on a download on its way, the hint says which); a

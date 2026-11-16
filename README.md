@@ -25,13 +25,20 @@
 - **Downloads:** films, episodes and whole seasons kept on the console and played without the server.
 - **Live TV:** channels on now, a programme guide, recordings, M3U channels and XMLTV guides.
 - **Music:** a queue that keeps playing while you browse, with a visualizer.
-- **For the whole household:** several servers and users, Quick Connect, a Jellyfin user per PS4 account,
-  14 languages.
 - **Themes:** Playfin's own look or one of five in the style of ElegantFin, Ultrachromic, Abyss, Zesty and
   Finimalism, with the accent colour of your choice.
 - **A preview while seeking** (the server's trickplay pictures) and the **playback speed**, from 0.5× to 2×.
 - **USB drives:** videos and music played straight from a USB drive, and downloads saved to it.
-- **Updates in the app:** a new version is offered at the top of the settings and downloaded in one press.
+- **For the whole household:** several servers and users, Quick Connect, a Jellyfin user per PS4 account,
+  14 languages, and updates offered at the top of the settings and downloaded in one press.
+
+## Alternatives
+
+- [JellyFin [PS] for PS4](https://github.com/jw-notes/JellyFin-PS4) by jw-notes: a native Jellyfin client for
+  PS4, with the layout of its author's JellyFin [PS] for PS3.
+- [Switchfin](https://github.com/dragonflylee/switchfin) by dragonflylee: a native Jellyfin client for PC, PS4,
+  PS Vita and Switch. A bit unpleasant to use on PS4 in my opinion though, especially because of the controller
+  support.
 
 ![Home](images/screens/home.jpg)
 
