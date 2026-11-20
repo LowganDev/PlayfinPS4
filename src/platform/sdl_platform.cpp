@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <deque>
 #include <vector>
 
 #include "core/boot_trace.hpp"
@@ -9,6 +10,7 @@
 #include "core/log.hpp"
 #include "platform/backend.hpp"
 #include "platform/platform.hpp"
+#include "platform/remote.hpp"
 #include "platform/text_input.hpp"
 
 namespace playfin::platform {
@@ -19,6 +21,9 @@ SDL_Window* gWindow = nullptr;
 SDL_GLContext gContext = nullptr;
 EventTranslator gTranslator;
 KeyRepeat gRepeat;
+RemoteButtons gRemote;       // the TV's remote control (the console only)
+std::deque<Event> gPending;  // its events not given yet
+std::uint32_t gRemoteReadMs = 0xFFFFFFFFu;
 std::vector<SDL_GameController*> gControllers;
 
 void openController(int deviceIndex) {
@@ -128,6 +133,26 @@ bool pollEvent(Event& out, std::uint32_t nowMs) {
             gRepeat.release(translated->action);
         }
         out = *translated;
+        return true;
+    }
+    // the remote control, read once a poll time (pollEvent is called until it has nothing more)
+    if (gPending.empty() && nowMs != gRemoteReadMs) {
+        gRemoteReadMs = nowMs;
+        std::uint32_t buttons = 0;
+        std::uint8_t key = 0;
+        for (Event& fromRemote :
+             backend::readRemote(buttons, key) ? gRemote.update(buttons, key) : gRemote.release()) {
+            gPending.push_back(std::move(fromRemote));
+        }
+    }
+    if (!gPending.empty()) {
+        out = std::move(gPending.front());
+        gPending.pop_front();
+        if (out.type == Event::Type::ActionDown) {
+            gRepeat.press(out.action, nowMs);
+        } else if (out.type == Event::Type::ActionUp) {
+            gRepeat.release(out.action);
+        }
         return true;
     }
     if (const auto repeated = gRepeat.poll(nowMs)) {

@@ -8,7 +8,7 @@ if(PLATFORM_PS4 AND NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{OPENORBIS}/cmake/ps4.cmake" CACHE FILEPATH "")
 endif()
 
-project(Playfin VERSION 2.3.0 LANGUAGES C CXX)
+project(Playfin VERSION 2.3.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -105,13 +105,15 @@ playfin_set_warnings(playfin_render)
 add_library(playfin_platform STATIC
     src/platform/input.cpp
     src/platform/events.cpp
+    src/platform/remote.cpp
     src/platform/language.cpp
     src/platform/sdl_platform.cpp
     src/render/canvas.cpp
 )
 if(PLATFORM_PS4)
     target_sources(playfin_platform PRIVATE src/platform/ps4/backend_ps4.cpp src/platform/ps4/firmware_shaders.cpp
-        src/platform/ps4/present_ps4.cpp src/platform/ps4/text_input_ps4.cpp)
+        src/platform/ps4/present_ps4.cpp src/platform/ps4/text_input_ps4.cpp
+        src/platform/ps4/remote_ps4.cpp)
     option(PLAYFIN_GPU_PROBE "PS4: log GPU and firmware shader diagnostics at startup" OFF)
     if(PLAYFIN_GPU_PROBE)
         target_sources(playfin_platform PRIVATE src/platform/ps4/gpu_probe_ps4.cpp)

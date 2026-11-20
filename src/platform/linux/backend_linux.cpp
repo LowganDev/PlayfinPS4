@@ -4,6 +4,7 @@
 #include <ctime>
 
 #include "platform/backend.hpp"
+#include "platform/remote.hpp"
 #include "platform/language.hpp"
 
 namespace playfin::platform::backend {
@@ -37,6 +38,12 @@ std::string systemLanguage() {
         }
     }
     return "en-US";
+}
+
+bool readRemote(std::uint32_t& buttons, std::uint8_t& key) {
+    (void)buttons;
+    (void)key;
+    return false;  // no remote control on a PC
 }
 
 std::string resourceDir() {

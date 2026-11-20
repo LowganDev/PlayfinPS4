@@ -29,6 +29,8 @@
   Finimalism, with the accent colour of your choice.
 - **A preview while seeking** (the server's trickplay pictures) and the **playback speed**, from 0.5× to 2×.
 - **USB drives:** videos and music played straight from a USB drive, and downloads saved to it.
+- **Your TV's remote:** with HDMI-CEC, Playfin answers the TV's remote, no controller needed (turn on "Enable
+  HDMI Device Link" in the PS4's settings).
 - **For the whole household:** several servers and users, Quick Connect, a Jellyfin user per PS4 account,
   14 languages, and updates offered at the top of the settings and downloaded in one press.
 

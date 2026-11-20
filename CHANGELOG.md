@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.1 (2026-11-20)
+
+- Added HDMI-CEC support: you can now use your TV's remote in Playfin without even touching the controller, if
+  "Enable HDMI Device Link" is on in the PS4's settings and your TV is compatible.
+
 ## 2.3.0 (2026-11-16)
 
 - A whole season marked watched or unwatched in one press: the "Season watched" button on a series.
